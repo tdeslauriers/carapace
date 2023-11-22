@@ -27,7 +27,7 @@ func TestMtlsServer(t *testing.T) {
 	}
 	go func() {
 
-		log.Println("Starting mTls server on ", serv.Address)
+		log.Printf("Starting mTLS server on %s...", serv.Address[1:])
 		if err := serv.Start(); err != http.ErrServerClosed {
 			t.Log("Failed to start Server: ", err)
 		}
@@ -61,6 +61,23 @@ func TestMtlsServer(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&h); err != nil {
 		t.Log("Could not decode health check json:", err)
 	}
-	t.Log("Status: ", h.Status)
+	if h.Status != "Ok" {
+		t.Log("Health Check did not equal \"Ok\"")
+		t.Fail()
+	}
+
+	// bad request: endpooint does not exist
+	noEndpoint, err := http.NewRequest("GET", "https://localhost:8443/doesntExist", nil)
+	if err != nil {
+		t.Log("Failed to create health check request: ", err)
+	}
+	resp, err = client.Do(noEndpoint)
+	if err != nil {
+		t.Log("Health check request failed: ", err)
+	}
+	if resp.StatusCode != 404 {
+		t.Log("Expected /doesntExist to return 404, but was ", resp.StatusCode)
+		t.Fail()
+	}
 
 }

@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"log"
 	"net/http"
 )
 
@@ -14,9 +13,15 @@ type HealthCheck struct {
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
+
 	h := HealthCheck{"Ok"}
-	log.Println("Responding {\"status\":\"Ok\"}")
-	json.NewEncoder(w).Encode(h)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err := json.NewEncoder(w).Encode(h)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // base64'd *.pem file --> container env vars --> k8s secret
