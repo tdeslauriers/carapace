@@ -1,24 +1,33 @@
-package mtls
+package standard
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"net/http"
 
 	"github.com/tdeslauriers/carapace/diagnostics"
-	"github.com/tdeslauriers/carapace/standard"
 )
 
-type MutualTlsServer interface {
+// base64'd *.pem file --> container env vars --> k8s secret
+type PkiCerts struct {
+	CertFile string
+	KeyFile  string
+	CaFile   []string
+}
+
+type PkiConfigurer interface {
+	SetupPki() (*tls.Config, error)
+}
+
+type TlsServer interface {
 	Start() error
 }
 
-type MtlsServerPkiConfigurer struct {
-	Config *standard.PkiCerts
+type ServerPkiConfigurer struct {
+	Config *PkiCerts
 }
 
-func (pki *MtlsServerPkiConfigurer) SetupPki() (*tls.Config, error) {
+func (pki *ServerPkiConfigurer) SetupPki() (*tls.Config, error) {
 
 	certPem, err := base64.StdEncoding.DecodeString(pki.Config.CertFile)
 	if err != nil {
@@ -35,31 +44,19 @@ func (pki *MtlsServerPkiConfigurer) SetupPki() (*tls.Config, error) {
 		return nil, err
 	}
 
-	// ca(s) of clients
-	clientCaPool := x509.NewCertPool()
-	for _, v := range pki.Config.CaFile {
-		ca, err := base64.StdEncoding.DecodeString(v)
-		if err != nil {
-			return nil, err
-		}
-		clientCaPool.AppendCertsFromPEM(ca)
-	}
-
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		ClientCAs:    clientCaPool,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
 	}
 
 	return tlsConfig, nil
 }
 
-type MtlsServer struct {
+type Server struct {
 	Address   string
 	TlsConfig *tls.Config
 }
 
-func (s *MtlsServer) Start() error {
+func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
 

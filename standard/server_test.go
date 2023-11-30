@@ -1,4 +1,4 @@
-package mtls
+package standard
 
 import (
 	"encoding/json"
@@ -8,23 +8,21 @@ import (
 	"testing"
 
 	"github.com/tdeslauriers/carapace/diagnostics"
-	"github.com/tdeslauriers/carapace/standard"
 )
 
 func TestMtlsServer(t *testing.T) {
 
-	serverPki := &standard.PkiCerts{
+	serverPki := &PkiCerts{
 		CertFile: os.Getenv("SERVER_CERT"),
 		KeyFile:  os.Getenv("SERVER_KEY"),
-		CaFile:   []string{os.Getenv("CA_CERT")},
 	}
 
-	serverConfig := &MtlsServerPkiConfigurer{Config: serverPki}
+	serverConfig := &ServerPkiConfigurer{Config: serverPki}
 	tlsconfig, err := serverConfig.SetupPki()
 	if err != nil {
 		t.Log("Failed to set up mutual TLS config: ", err)
 	}
-	serv := &MtlsServer{
+	serv := &Server{
 		Address:   ":8443",
 		TlsConfig: tlsconfig,
 	}
@@ -38,13 +36,13 @@ func TestMtlsServer(t *testing.T) {
 
 	}()
 
-	clientPki := &standard.PkiCerts{
+	clientPki := &PkiCerts{
 		CertFile: os.Getenv("CLIENT_CERT"),
 		KeyFile:  os.Getenv("CLIENT_KEY"),
 		CaFile:   []string{os.Getenv("CA_CERT")},
 	}
 
-	clientConfig := &MtlsClientPkiConfigurer{Config: clientPki}
+	clientConfig := &ClientPkiConfigurer{Config: clientPki}
 	client, err := clientConfig.NewMtlsClient()
 	if err != nil {
 		t.Log("Failed to create mTLS client: ", err)

@@ -1,31 +1,29 @@
-package mtls
+package standard
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"net/http"
-
-	"github.com/tdeslauriers/carapace/standard"
 )
 
 type MutalTlsClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-type MtlsClient struct {
+type Client struct {
 	httpClient *http.Client
 }
 
-func (c *MtlsClient) Do(req *http.Request) (*http.Response, error) {
+func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	return c.httpClient.Do(req)
 }
 
-type MtlsClientPkiConfigurer struct {
-	Config *standard.PkiCerts
+type ClientPkiConfigurer struct {
+	Config *PkiCerts
 }
 
-func (pki *MtlsClientPkiConfigurer) NewMtlsClient() (*MtlsClient, error) {
+func (pki *ClientPkiConfigurer) NewMtlsClient() (*Client, error) {
 
 	certPem, err := base64.StdEncoding.DecodeString(pki.Config.CertFile)
 	if err != nil {
@@ -63,5 +61,5 @@ func (pki *MtlsClientPkiConfigurer) NewMtlsClient() (*MtlsClient, error) {
 		},
 	}
 
-	return &MtlsClient{httpClient: httpClient}, nil
+	return &Client{httpClient: httpClient}, nil
 }
