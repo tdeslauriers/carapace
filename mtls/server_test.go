@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"testing"
+
+	"github.com/tdeslauriers/carapace/diagnostics"
 )
 
 func TestMtlsServer(t *testing.T) {
@@ -25,6 +27,7 @@ func TestMtlsServer(t *testing.T) {
 		Address:   ":8443",
 		TlsConfig: tlsconfig,
 	}
+
 	go func() {
 
 		log.Printf("Starting mTLS server on %s...", serv.Address[1:])
@@ -57,7 +60,7 @@ func TestMtlsServer(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var h HealthCheck
+	var h diagnostics.HealthCheck
 	if err := json.NewDecoder(resp.Body).Decode(&h); err != nil {
 		t.Log("Could not decode health check json:", err)
 	}

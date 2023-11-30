@@ -4,25 +4,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
+
+	"github.com/tdeslauriers/carapace/diagnostics"
 )
-
-type HealthCheck struct {
-	Status string `json:"status"`
-}
-
-func healthCheck(w http.ResponseWriter, r *http.Request) {
-
-	h := HealthCheck{"Ok"}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	err := json.NewEncoder(w).Encode(h)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 // base64'd *.pem file --> container env vars --> k8s secret
 type PkiCerts struct {
@@ -86,7 +71,7 @@ type MtlsServer struct {
 
 func (s *MtlsServer) Start() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", healthCheck)
+	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
 
 	server := &http.Server{
 		Addr:      s.Address,
