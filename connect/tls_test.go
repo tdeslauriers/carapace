@@ -35,7 +35,7 @@ func TestStandardTls(t *testing.T) {
 	}()
 
 	clientConfig := &ClientConfig{Config: pki}
-	client, err := clientConfig.NewMtlsClient()
+	client, err := clientConfig.NewTlsClient()
 	if err != nil {
 		t.Log("Failed to create tls client: ", err)
 	}
@@ -66,7 +66,7 @@ func TestStandardTls(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&h); err != nil {
 		t.Log("Could not decode health check json:", err)
 	}
-	if h.Status != "Ok" {
+	if h.Status != "UP" {
 		t.Log("Health Check did not equal \"Ok\"")
 		t.Fail()
 	}
@@ -103,7 +103,7 @@ func TestMutalTls(t *testing.T) {
 	}
 
 	clientConfig := &ClientConfig{Config: clientPki}
-	client, err := clientConfig.NewMtlsClient()
+	client, err := clientConfig.NewTlsClient()
 	if err != nil {
 		t.Log("Failed to create tls client: ", err)
 	}
@@ -123,9 +123,8 @@ func TestMutalTls(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&h); err != nil {
 		t.Log("Could not decode health check json:", err)
 	}
-	if h.Status != "Ok" {
+	if h.Status != "UP" {
 		t.Log("Health Check did not equal \"Ok\"")
 		t.Fail()
 	}
-
 }

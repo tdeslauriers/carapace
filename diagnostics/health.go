@@ -11,7 +11,7 @@ type HealthCheck struct {
 
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
-	h := HealthCheck{"Ok"}
+	h := HealthCheck{"UP"}
 
 	w.Header().Set("Content-Type", "application/json")
 

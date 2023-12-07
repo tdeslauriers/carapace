@@ -20,7 +20,7 @@ type TlsConfig interface {
 	Configure() (*tls.Config, error)
 }
 
-type TLSConnection interface {
+type TLSServer interface {
 	Initialize() error
 }
 
@@ -132,7 +132,7 @@ func (s *TlsServer) Initialize() error {
 	return nil
 }
 
-type Client interface {
+type TLSClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
@@ -148,8 +148,7 @@ type ClientConfig struct {
 	Config *Pki
 }
 
-func (pki *ClientConfig) NewMtlsClient() (*TlsClient, error) {
-
+func (pki *ClientConfig) Build() (*tls.Config, error) {
 	certPem, err := base64.StdEncoding.DecodeString(pki.Config.CertFile)
 	if err != nil {
 		return nil, err
@@ -171,7 +170,7 @@ func (pki *ClientConfig) NewMtlsClient() (*TlsClient, error) {
 		log.Fatalf("Could not get system cert pool: %v", err)
 	}
 
-	// ca(s) of servers
+	// ca(s) of internal servers
 	for _, v := range pki.Config.CaFiles {
 		ca, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
@@ -182,16 +181,24 @@ func (pki *ClientConfig) NewMtlsClient() (*TlsClient, error) {
 		}
 	}
 
-	tlsConfig := &tls.Config{
+	return &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      systemCertPool,
+	}, nil
+}
+
+func (pki *ClientConfig) NewTlsClient() (*TlsClient, error) {
+
+	tlsConfig, err := pki.Build()
+	if err != nil {
+		return nil, err
 	}
 
-	httpClient := &http.Client{
+	tlsClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
 	}
 
-	return &TlsClient{httpClient: httpClient}, nil
+	return &TlsClient{httpClient: tlsClient}, nil
 }
