@@ -12,7 +12,7 @@ func TestDBConnect(t *testing.T) {
 	dbPki := connect.Pki{
 		CertFile: os.Getenv("CLIENT_CERT"),
 		KeyFile:  os.Getenv("CLIENT_KEY"),
-		CaFiles:  []string{os.Getenv("CA_CERT")},
+		CaFiles:  []string{os.Getenv("DB_CA_CERT")},
 	}
 	clientConfig := connect.ClientConfig{Config: &dbPki}
 
