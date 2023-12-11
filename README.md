@@ -9,5 +9,9 @@ Reusable, core functionality for building a microservice.
 * As the name suggests, there is a slant toward security and overall service hardening, ie, an exoskeleton that can house and provide functionality to any operational/business logic.
 
 ## Library Components (thus far):
+1. Health endpoint
 1. mTLS Server 
 1. mTLS Client
+1. SQL connection
+    * Maria DB
+    * Included because a distributed service will need to persist security artifacts like session tokens, access tokens, csrf tokens, etc.
