@@ -13,7 +13,7 @@ type DBConnector interface {
 	Connect() (*sql.DB, error)
 }
 
-type MariaDbConnector struct {
+type SqlDbConnector struct {
 	TlsConfig     connect.ClientConfig
 	ConnectionUrl string
 }
@@ -29,7 +29,7 @@ func (url *DbUrl) Build() string {
 	return fmt.Sprintf("%s:%s@tcp(%s)/%s", url.Username, url.Password, url.Addr, url.Name)
 }
 
-func (c *MariaDbConnector) Connect() (*sql.DB, error) {
+func (c *SqlDbConnector) Connect() (*sql.DB, error) {
 	tlsConfig, err := c.TlsConfig.Build()
 	if err != nil {
 		log.Fatalf("Unable to create TLS Config for Db Connection: %v", err)

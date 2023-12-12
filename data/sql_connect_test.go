@@ -23,7 +23,7 @@ func TestDBConnect(t *testing.T) {
 		Name:     os.Getenv("CARAPACE_MARIADB_NAME"),
 	}
 
-	dbConnector := &MariaDbConnector{
+	dbConnector := &SqlDbConnector{
 		TlsConfig:     clientConfig,
 		ConnectionUrl: url.Build(),
 	}
