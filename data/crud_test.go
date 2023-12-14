@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tdeslauriers/carapace/connect"
-	"github.com/tdeslauriers/carapace/session"
 )
 
 func TestCrud(t *testing.T) {
@@ -32,11 +31,17 @@ func TestCrud(t *testing.T) {
 	}
 
 	id, _ := uuid.NewRandom()
-	session_token, _ := uuid.NewRandom()
+	sessionToken, _ := uuid.NewRandom()
 
-	s := session.Session{
+	// anonymous struct to avoid circular imports in testing.
+	s := struct {
+		Uuid         string `db:"uuid"`
+		SessionToken string `db:"session_token"`
+		CreatedAt    string `db:"created_at"`
+		ExpiresAt    string `db:"expires_at"`
+	}{
 		Uuid:         id.String(),
-		SessionToken: session_token.String(),
+		SessionToken: sessionToken.String(),
 		CreatedAt:    time.Now().Format("2006-01-02 15:04:05"),
 		ExpiresAt:    time.Now().Add(time.Minute * 15).Format("2006-01-02 15:04:05"),
 	}
@@ -46,7 +51,13 @@ func TestCrud(t *testing.T) {
 		t.Fail()
 	}
 
-	var records []session.Session
+	// anonymous struct to avoid circular imports in testing.
+	var records []struct {
+		Uuid         string `db:"uuid"`
+		SessionToken string `db:"session_token"`
+		CreatedAt    string `db:"created_at"`
+		ExpiresAt    string `db:"expires_at"`
+	}
 	p := " order by created_at desc"
 	err := dbConnector.SelectRecords("uxsession", p, &records)
 	if err != nil {

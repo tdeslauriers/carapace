@@ -29,6 +29,7 @@ func (db *SqlDbConnector) SelectRecords(table string, sqlParams string, results 
 
 	// build query
 	query := fmt.Sprintf("SELECT %s FROM %s", strings.Join(columns, ", "), table)
+	log.Print(query)
 
 	// params (if applicable)
 	if len(sqlParams) > 0 {
