@@ -11,6 +11,8 @@ import (
 
 type DBConnector interface {
 	Connect() (*sql.DB, error)
+	SelectRecords(table string, sqlParams string, results interface{}) error
+	InsertRecord(table string, insert interface{}) error
 }
 
 type SqlDbConnector struct {
@@ -29,8 +31,8 @@ func (url *DbUrl) Build() string {
 	return fmt.Sprintf("%s:%s@tcp(%s)/%s", url.Username, url.Password, url.Addr, url.Name)
 }
 
-func (c *SqlDbConnector) Connect() (*sql.DB, error) {
-	tlsConfig, err := c.TlsConfig.Build()
+func (conn *SqlDbConnector) Connect() (*sql.DB, error) {
+	tlsConfig, err := conn.TlsConfig.Build()
 	if err != nil {
 		log.Fatalf("Unable to create TLS Config for Db Connection: %v", err)
 	}
@@ -40,7 +42,7 @@ func (c *SqlDbConnector) Connect() (*sql.DB, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("mysql", c.ConnectionUrl+"?tls=custom")
+	db, err := sql.Open("mysql", conn.ConnectionUrl+"?tls=custom")
 	if err != nil {
 		return nil, err
 	}

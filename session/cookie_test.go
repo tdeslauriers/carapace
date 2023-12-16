@@ -2,12 +2,33 @@ package session
 
 import (
 	"net/http"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/tdeslauriers/carapace/connect"
+	"github.com/tdeslauriers/carapace/diagnostics"
 )
 
 func TestCookies(t *testing.T) {
 
+	pki := &connect.Pki{
+		CertFile: os.Getenv("SERVER_CERT"),
+		KeyFile:  os.Getenv("SERVER_KEY"),
+		CaFiles:  []string{os.Getenv("CA_CERT")},
+	}
+
+	tls, _ := connect.NewTLSConfig("mutual", pki)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
+	mux.HandleFunc("/cookie", setCookies)
+
+	server := &connect.TlsServer{
+		Addr:      ":8444",
+		Mux:       mux,
+		TlsConfig: tls,
+	}
 	// dbPki := connect.Pki{
 	// 	CertFile: os.Getenv("CLIENT_CERT"),
 	// 	KeyFile:  os.Getenv("CLIENT_KEY"),
@@ -29,19 +50,14 @@ func TestCookies(t *testing.T) {
 
 	go func() {
 
-		mux := http.NewServeMux()
-		mux.HandleFunc("/cookie", setCookies)
-
-		server := &http.Server{
-			Addr:    ":8080",
-			Handler: mux,
+		if err := server.Initialize(); err != http.ErrServerClosed {
+			t.Log("Failed to start Server: ", err)
+			t.Fail()
 		}
-		t.Logf("test cookies server running on %s", server.Addr)
-		t.Log(server.ListenAndServe())
 	}()
 
 	var client http.Client
-	req, err := http.NewRequest("GET", "http://localhost:8080/cookie", nil)
+	req, err := http.NewRequest("GET", "http://localhost:8444/cookie", nil)
 	if err != nil {
 		t.Fail()
 	}

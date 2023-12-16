@@ -39,13 +39,19 @@ func BuildSession() Session {
 	}
 }
 
-func CreateSession(crud data.SqlDbConnector) Session {
+type SessionService interface {
+	CreateSession(s *Session)
+}
 
-	s := BuildSession()
+type SqlSessionService struct {
+	Db data.DBConnector
+}
 
-	if err := crud.InsertRecord("uxsession", s); err != nil {
-		log.Panicf("Unable to load session data into db: %v", err)
+func (sql *SqlSessionService) CreateSession(s *Session) error {
+
+	if err := sql.Db.InsertRecord("uxsession", s); err != nil {
+		return err
 	}
 
-	return s
+	return nil
 }

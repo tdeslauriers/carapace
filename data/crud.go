@@ -7,13 +7,13 @@ import (
 	"strings"
 )
 
-func (db *SqlDbConnector) SelectRecords(table string, sqlParams string, results interface{}) error {
+func (conn *SqlDbConnector) SelectRecords(table string, sqlParams string, results interface{}) error {
 
-	conn, err := db.Connect()
+	db, err := conn.Connect()
 	if err != nil {
 		return fmt.Errorf("failed to connect to sql database: %v", err)
 	}
-	defer conn.Close()
+	defer db.Close()
 
 	// get fields
 	v := reflect.ValueOf(results)
@@ -36,7 +36,7 @@ func (db *SqlDbConnector) SelectRecords(table string, sqlParams string, results 
 		query += sqlParams
 	}
 
-	rows, err := conn.Query(query)
+	rows, err := db.Query(query)
 	if err != nil {
 		return err
 	}
@@ -60,13 +60,13 @@ func (db *SqlDbConnector) SelectRecords(table string, sqlParams string, results 
 	return rows.Err()
 }
 
-func (db *SqlDbConnector) InsertRecord(table string, insert interface{}) error {
+func (conn *SqlDbConnector) InsertRecord(table string, insert interface{}) error {
 
-	conn, err := db.Connect()
+	db, err := conn.Connect()
 	if err != nil {
 		return fmt.Errorf("failed to connect to sql database: %v", err)
 	}
-	defer conn.Close()
+	defer db.Close()
 
 	// build query
 	query := fmt.Sprintf("INSERT INTO %s (", table)
@@ -84,7 +84,7 @@ func (db *SqlDbConnector) InsertRecord(table string, insert interface{}) error {
 	query += strings.Join(keys, ", ")
 	query += fmt.Sprintf(") VALUES (%s)", strings.Repeat("?, ", len(keys))[0:len(keys)*3-2])
 
-	stmt, err := conn.Prepare(query)
+	stmt, err := db.Prepare(query)
 	if err != nil {
 		return err
 	}
