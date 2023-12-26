@@ -20,9 +20,11 @@ func TestCertValidation(t *testing.T) {
 	caDer, _ := pem.Decode(caCertPem)
 	caCert, _ := x509.ParseCertificate(caDer.Bytes)
 
-	serverCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", leaf))
-	serverDer, _ := pem.Decode(serverCertPem)
-	serverCert, _ := x509.ParseCertificate(serverDer.Bytes)
+	leafCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", leaf))
+	leafDer, _ := pem.Decode(leafCertPem)
+	leafCert, _ := x509.ParseCertificate(leafDer.Bytes)
+
+	t.Log(leafCert.SignatureAlgorithm)
 
 	// cert pool
 	roots := x509.NewCertPool()
@@ -33,7 +35,7 @@ func TestCertValidation(t *testing.T) {
 		Roots: roots,
 	}
 
-	if _, err := serverCert.Verify(opts); err != nil {
+	if _, err := leafCert.Verify(opts); err != nil {
 		t.Logf("failed to validate server cert: %v", err)
 		t.Fail()
 	}
