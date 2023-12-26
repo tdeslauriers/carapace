@@ -118,6 +118,7 @@ func buildTemplate(certName, org string, isCA bool) x509.Certificate {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{org},
+			// CN: org + signature algo, leaf: domain
 		},
 		NotBefore:             notBefore,
 		BasicConstraintsValid: true,

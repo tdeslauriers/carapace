@@ -16,3 +16,5 @@ Reusable, core functionality for building a microservice.
     * Maria DB
     * Included because a distributed service will need to persist security artifacts like session tokens, access tokens, csrf tokens, etc.
 1. ECDSA Certificate Generation
+    * CAs
+    * Leaf
