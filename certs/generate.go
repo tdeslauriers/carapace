@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"net"
 	"os"
 	"time"
 )
@@ -17,7 +18,7 @@ import (
 func GenerateEcdsaCert(certName, org string, isCA bool) {
 
 	// priave key (golang struct w/ objects and methods)
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	certPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		log.Panicf("failed to create %s private key: %v", certName, err)
 	}
@@ -27,9 +28,11 @@ func GenerateEcdsaCert(certName, org string, isCA bool) {
 
 	// signing cert template
 	var parentTemplate x509.Certificate
-	var caKey *ecdsa.PrivateKey
+	var signingPriv *ecdsa.PrivateKey
 	if isCA {
+		// CA is self-signed
 		parentTemplate = certTemplate
+		signingPriv = certPriv
 	} else {
 		// load ca cert
 		caCertPem, err := os.ReadFile("rootCA-cert.pem")
@@ -60,11 +63,11 @@ func GenerateEcdsaCert(certName, org string, isCA bool) {
 		caPriv, _ := x509.ParseECPrivateKey(caKeyBlock.Bytes)
 
 		parentTemplate = *caCert
-		caKey = caPriv
+		signingPriv = caPriv
 	}
 
 	// create the certificate
-	derBytes, err := x509.CreateCertificate(rand.Reader, &certTemplate, &parentTemplate, &priv.PublicKey, priv)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &certTemplate, &parentTemplate, &certPriv.PublicKey, signingPriv)
 	if err != nil {
 		log.Panicf("failed to create DER for %s certificate: %v", certName, err)
 	}
@@ -89,7 +92,7 @@ func GenerateEcdsaCert(certName, org string, isCA bool) {
 	}
 	defer keyOut.Close()
 
-	key, err := x509.MarshalECPrivateKey(priv)
+	key, err := x509.MarshalECPrivateKey(certPriv)
 	if err != nil {
 		log.Panicf("failed to marshal ecdsa private key for %s: %v", certName, err)
 	}
@@ -131,6 +134,11 @@ func buildTemplate(certName, org string, isCA bool) x509.Certificate {
 		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
 		template.NotAfter = notBefore.Add(90 * 24 * time.Hour)
 		template.Subject.CommonName = "localhost"
+
+		san := []string{"localhost"}
+		sanIP := []net.IP{net.ParseIP("127.0.0.1")}
+		template.DNSNames = san
+		template.IPAddresses = sanIP
 	}
 
 	return template

@@ -1,72 +1,47 @@
 package certs
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"os"
 	"testing"
 )
 
-func TestCaGen(t *testing.T) {
+func TestCertValidation(t *testing.T) {
 
-	GenerateEcdsaCert("rootCA", "des Lauriers", true)
-}
+	// set up
+	var ca, leaf, org string = "rootCA", "server", "Rebel Alliance"
+	GenerateEcdsaCert(ca, org, true)
+	GenerateEcdsaCert(leaf, org, false)
 
-func TestGenServCert(t *testing.T) {
+	// read generated certs
+	caCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", ca))
+	caDer, _ := pem.Decode(caCertPem)
+	caCert, _ := x509.ParseCertificate(caDer.Bytes)
 
-	// load ca cert
-	caCertPem, _ := os.ReadFile("rootCA-cert.pem")
+	serverCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", leaf))
+	serverDer, _ := pem.Decode(serverCertPem)
+	serverCert, _ := x509.ParseCertificate(serverDer.Bytes)
 
-	// load ca key
-	caKeyPem, _ := os.ReadFile("rootCA-key.pem")
+	// cert pool
+	roots := x509.NewCertPool()
+	roots.AddCert(caCert)
 
-	// decode pems to der
-	caCertBlock, _ := pem.Decode(caCertPem)
-	if caCertBlock == nil || caCertBlock.Type != "CERTIFICATE" {
-		t.Log("failed to decode ca cert pem")
+	// verify server cert
+	opts := x509.VerifyOptions{
+		Roots: roots,
 	}
 
-	caKeyBlock, _ := pem.Decode(caKeyPem)
-	if caKeyBlock == nil || caKeyBlock.Type != "EC PRIVATE KEY" {
-		t.Log("failed to decode ca key pem")
+	if _, err := serverCert.Verify(opts); err != nil {
+		t.Logf("failed to validate server cert: %v", err)
+		t.Fail()
 	}
 
-	// parse root ca values
-	caCert, _ := x509.ParseCertificate(caCertBlock.Bytes)
-	caKey, _ := x509.ParseECPrivateKey(caKeyBlock.Bytes)
-
-	// generate server key
-	serverKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-
-	// server template
-	serverCertTemplate := buildTemplate("server", "des Lauriers", false)
-
-	// sign with ca
-	servCertDer, _ := x509.CreateCertificate(rand.Reader, &serverCertTemplate, caCert, &serverKey.PublicKey, caKey)
-
-	// save server cert to file
-	servCertOut, _ := os.Create("server-cert.pem")
-	defer servCertOut.Close()
-
-	pem.Encode(servCertOut, &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: servCertDer,
-	})
-	servCertOut.Close()
-
-	// save server key to file
-	servKeyOut, _ := os.Create("server-key.pem")
-	defer servKeyOut.Close()
-
-	key, _ := x509.MarshalECPrivateKey(serverKey)
-
-	pem.Encode(servKeyOut, &pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: key,
-	})
-	servKeyOut.Close()
+	// clean up
+	os.Remove(fmt.Sprintf("%s-cert.pem", ca))
+	os.Remove(fmt.Sprintf("%s-key.pem", ca))
+	os.Remove(fmt.Sprintf("%s-cert.pem", leaf))
+	os.Remove(fmt.Sprintf("%s-key.pem", leaf))
 
 }
