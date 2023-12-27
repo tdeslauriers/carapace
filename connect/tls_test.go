@@ -10,11 +10,19 @@ import (
 	"github.com/tdeslauriers/carapace/diagnostics"
 )
 
+const (
+	CA_CERT_ENV     = "CA_CERT"
+	SERVER_CERT_ENV = "SERVER_CERT"
+	SERVER_KEY_ENV  = "SERVER_KEY"
+	CLIENT_CERT_ENV = "CLIENT_CERT"
+	CLIENT_KEY_ENV  = "CLIENT_KEY"
+)
+
 func TestStandardTls(t *testing.T) {
 	pki := &Pki{
-		CertFile: os.Getenv("SERVER_CERT"),
-		KeyFile:  os.Getenv("SERVER_KEY"),
-		CaFiles:  []string{os.Getenv("CA_CERT")},
+		CertFile: os.Getenv(SERVER_CERT_ENV),
+		KeyFile:  os.Getenv(SERVER_KEY_ENV),
+		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
 
 	tls, _ := NewTLSConfig("standard", pki)
@@ -74,9 +82,9 @@ func TestStandardTls(t *testing.T) {
 
 func TestMutalTls(t *testing.T) {
 	pki := &Pki{
-		CertFile: os.Getenv("SERVER_CERT"),
-		KeyFile:  os.Getenv("SERVER_KEY"),
-		CaFiles:  []string{os.Getenv("CA_CERT")},
+		CertFile: os.Getenv(SERVER_CERT_ENV),
+		KeyFile:  os.Getenv(SERVER_KEY_ENV),
+		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
 
 	tls, _ := NewTLSConfig("mutual", pki)
@@ -97,9 +105,9 @@ func TestMutalTls(t *testing.T) {
 	}()
 
 	clientPki := &Pki{
-		CertFile: os.Getenv("CLIENT_CERT"),
-		KeyFile:  os.Getenv("CLIENT_KEY"),
-		CaFiles:  []string{os.Getenv("CA_CERT")},
+		CertFile: os.Getenv(CLIENT_CERT_ENV),
+		KeyFile:  os.Getenv(CLIENT_KEY_ENV),
+		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
 
 	clientConfig := &ClientConfig{Config: clientPki}
@@ -127,4 +135,8 @@ func TestMutalTls(t *testing.T) {
 		t.Log("Health Check did not equal \"Ok\"")
 		t.Fail()
 	}
+}
+
+func setupCerts()  {
+	
 }

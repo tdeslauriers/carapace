@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net"
 	"os"
 	"testing"
 )
@@ -11,20 +12,35 @@ import (
 func TestCertValidation(t *testing.T) {
 
 	// set up
-	var ca, leaf, org string = "rootCA", "server", "Rebel Alliance"
-	GenerateEcdsaCert(ca, org, true)
-	GenerateEcdsaCert(leaf, org, false)
+	// var ca, leaf, org string = "rootCA", "server", "Rebel Alliance"
+
+	ca := CertFields{
+		CertName:     "rootCA",
+		Organisation: []string{"Rebel Alliance"},
+		CommonName:   "RebelAlliance ECDSA-SHA256",
+		Role:         CA,
+	}
+	ca.GenerateEcdsaCert()
+
+	leaf := CertFields{
+		CertName:     "server",
+		Organisation: []string{"Rebel Alliance"},
+		CommonName:   "localhost",
+		San:          []string{"localhost"},
+		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
+		Role:         Server,
+		CaCertName:   ca.CertName,
+	}
+	leaf.GenerateEcdsaCert()
 
 	// read generated certs
-	caCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", ca))
+	caCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", ca.CertName))
 	caDer, _ := pem.Decode(caCertPem)
 	caCert, _ := x509.ParseCertificate(caDer.Bytes)
 
-	leafCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", leaf))
+	leafCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", leaf.CertName))
 	leafDer, _ := pem.Decode(leafCertPem)
 	leafCert, _ := x509.ParseCertificate(leafDer.Bytes)
-
-	t.Log(leafCert.SignatureAlgorithm)
 
 	// cert pool
 	roots := x509.NewCertPool()
@@ -41,9 +57,9 @@ func TestCertValidation(t *testing.T) {
 	}
 
 	// clean up
-	os.Remove(fmt.Sprintf("%s-cert.pem", ca))
-	os.Remove(fmt.Sprintf("%s-key.pem", ca))
-	os.Remove(fmt.Sprintf("%s-cert.pem", leaf))
-	os.Remove(fmt.Sprintf("%s-key.pem", leaf))
+	os.Remove(fmt.Sprintf("%s-cert.pem", ca.CertName))
+	os.Remove(fmt.Sprintf("%s-key.pem", ca.CertName))
+	os.Remove(fmt.Sprintf("%s-cert.pem", leaf.CertName))
+	os.Remove(fmt.Sprintf("%s-key.pem", leaf.CertName))
 
 }
