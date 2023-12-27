@@ -1,12 +1,16 @@
 package connect
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"testing"
 
+	"github.com/tdeslauriers/carapace/certs"
 	"github.com/tdeslauriers/carapace/diagnostics"
 )
 
@@ -18,7 +22,81 @@ const (
 	CLIENT_KEY_ENV  = "CLIENT_KEY"
 )
 
+const (
+	CaName     string = "rootCa"
+	ServerName string = "server"
+	ClientName string = "client"
+)
+
+func setUpCerts() {
+
+	// create *.pem files
+	ca := certs.CertFields{
+		CertName:     CaName,
+		Organisation: []string{"Rebel Alliance"},
+		CommonName:   "RebelAlliance ECDSA-SHA256",
+		Role:         certs.CA,
+	}
+	ca.GenerateEcdsaCert()
+
+	leafServer := certs.CertFields{
+		CertName:     ServerName,
+		Organisation: []string{"Rebel Alliance"},
+		CommonName:   "localhost",
+		San:          []string{"localhost"},
+		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
+		Role:         certs.Server,
+		CaCertName:   ca.CertName,
+	}
+	leafServer.GenerateEcdsaCert()
+
+	leafClient := certs.CertFields{
+		CertName:     ClientName,
+		Organisation: []string{"Rebel Alliance"},
+		CommonName:   "localhost",
+		San:          []string{"localhost"},
+		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
+		Role:         certs.Client,
+		CaCertName:   ca.CertName,
+	}
+	leafClient.GenerateEcdsaCert()
+
+	// make base64 strings from pem files
+	// set cert base64 vals files to environmental vars to be injested by docker/k8s
+	// expected by tls package code
+	var envVars [][]string
+	envVars = append(envVars, []string{CA_CERT_ENV, fmt.Sprintf("%s-cert.pem", CaName)})
+	envVars = append(envVars, []string{SERVER_CERT_ENV, fmt.Sprintf("%s-cert.pem", ServerName)})
+	envVars = append(envVars, []string{SERVER_KEY_ENV, fmt.Sprintf("%s-key.pem", ServerName)})
+	envVars = append(envVars, []string{CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", ClientName)})
+	envVars = append(envVars, []string{CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", ClientName)})
+
+	// loop thru setting env
+	for _, v := range envVars {
+
+		fileData, _ := os.ReadFile(v[1])
+		encodedData := base64.StdEncoding.EncodeToString(fileData)
+		if err := os.Setenv(v[0], encodedData); err != nil {
+			log.Fatalf("Unable to load env var: %s", v[0])
+		}
+
+		// clean up/remove pems
+		if err := os.Remove(v[1]); err != nil {
+			log.Fatalf("Unable to remove pem file: %s", v[1])
+		}
+	}
+
+	// remove ca key pem
+	if err := os.Remove(fmt.Sprintf("%s-key.pem", CaName)); err != nil {
+		log.Fatalf("Unable to remove pem file: %s", fmt.Sprintf("%s-key.pem", CaName))
+	}
+
+}
+
 func TestStandardTls(t *testing.T) {
+
+	setUpCerts()
+
 	pki := &Pki{
 		CertFile: os.Getenv(SERVER_CERT_ENV),
 		KeyFile:  os.Getenv(SERVER_KEY_ENV),
@@ -80,7 +158,10 @@ func TestStandardTls(t *testing.T) {
 	}
 }
 
-func TestMutalTls(t *testing.T) {
+func TestMutualTls(t *testing.T) {
+
+	setUpCerts()
+
 	pki := &Pki{
 		CertFile: os.Getenv(SERVER_CERT_ENV),
 		KeyFile:  os.Getenv(SERVER_KEY_ENV),
@@ -135,8 +216,4 @@ func TestMutalTls(t *testing.T) {
 		t.Log("Health Check did not equal \"Ok\"")
 		t.Fail()
 	}
-}
-
-func setupCerts()  {
-	
 }

@@ -12,8 +12,6 @@ import (
 func TestCertValidation(t *testing.T) {
 
 	// set up
-	// var ca, leaf, org string = "rootCA", "server", "Rebel Alliance"
-
 	ca := CertFields{
 		CertName:     "rootCA",
 		Organisation: []string{"Rebel Alliance"},

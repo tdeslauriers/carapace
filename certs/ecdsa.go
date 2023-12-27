@@ -124,13 +124,13 @@ func (fields *CertFields) GenerateEcdsaCert() {
 
 func (fields *CertFields) buildTemplate() x509.Certificate {
 
-	// validity period:
-	notBefore := time.Now()
-
 	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
 		log.Panicf("unable to generate serial number for %s certificate template: %v", fields.CertName, err)
 	}
+
+	// validity period:
+	notBefore := time.Now()
 
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
