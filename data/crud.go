@@ -1,15 +1,26 @@
 package data
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"reflect"
 	"strings"
 )
 
-func (conn *SqlDbConnector) SelectRecords(table string, sqlParams string, results interface{}) error {
+type SqlRepository interface {
+	Connect() (*sql.DB, error)
+	SelectRecords(table string, sqlParams string, results interface{}) error
+	InsertRecord(table string, insert interface{}) error
+}
 
-	db, err := conn.Connect()
+type Repository struct {
+	SqlDb SqlDbConnector
+}
+
+func (dao *Repository) SelectRecords(table string, sqlParams string, results interface{}) error {
+
+	db, err := dao.SqlDb.Connect()
 	if err != nil {
 		return fmt.Errorf("failed to connect to sql database: %v", err)
 	}
@@ -60,9 +71,9 @@ func (conn *SqlDbConnector) SelectRecords(table string, sqlParams string, result
 	return rows.Err()
 }
 
-func (conn *SqlDbConnector) InsertRecord(table string, insert interface{}) error {
+func (dao *Repository) InsertRecord(table string, insert interface{}) error {
 
-	db, err := conn.Connect()
+	db, err := dao.SqlDb.Connect()
 	if err != nil {
 		return fmt.Errorf("failed to connect to sql database: %v", err)
 	}

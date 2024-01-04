@@ -9,13 +9,13 @@ import (
 	"github.com/tdeslauriers/carapace/connect"
 )
 
-type DBConnector interface {
+type SqlDbConnector interface {
 	Connect() (*sql.DB, error)
-	SelectRecords(table string, sqlParams string, results interface{}) error
-	InsertRecord(table string, insert interface{}) error
+	// SelectRecords(table string, sqlParams string, results interface{}) error
+	// InsertRecord(table string, insert interface{}) error
 }
 
-type SqlDbConnector struct {
+type MariaDbConnector struct {
 	TlsConfig     connect.ClientConfig
 	ConnectionUrl string
 }
@@ -31,7 +31,7 @@ func (url *DbUrl) Build() string {
 	return fmt.Sprintf("%s:%s@tcp(%s)/%s", url.Username, url.Password, url.Addr, url.Name)
 }
 
-func (conn *SqlDbConnector) Connect() (*sql.DB, error) {
+func (conn *MariaDbConnector) Connect() (*sql.DB, error) {
 	tlsConfig, err := conn.TlsConfig.Build()
 	if err != nil {
 		log.Fatalf("Unable to create TLS Config for Db Connection: %v", err)

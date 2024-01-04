@@ -30,10 +30,10 @@ type LoginService interface {
 }
 
 type S2sLoginService struct {
-	Sql data.DBConnector
+	Sql data.SqlDbConnector
 }
 
-func NewS2SLoginService(sql data.DBConnector) *S2sLoginService {
+func NewS2SLoginService(sql data.SqlDbConnector) *S2sLoginService {
 	return &S2sLoginService{
 		Sql: sql,
 	}
@@ -41,8 +41,6 @@ func NewS2SLoginService(sql data.DBConnector) *S2sLoginService {
 
 func (s *S2sLoginService) ValidateCredentials(creds S2sLoginCmd) (bool, error) {
 
-	
-	
 }
 
 // s2s login handler

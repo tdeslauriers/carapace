@@ -71,7 +71,7 @@ func TestDBConnect(t *testing.T) {
 		Name:     os.Getenv(MariaDbName),
 	}
 
-	dbConnector := &SqlDbConnector{
+	dbConnector := &MariaDbConnector{
 		TlsConfig:     clientConfig,
 		ConnectionUrl: url.Build(),
 	}
