@@ -15,6 +15,7 @@ import (
 	"github.com/tdeslauriers/carapace/certs"
 	"github.com/tdeslauriers/carapace/connect"
 	"github.com/tdeslauriers/carapace/diagnostics"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -42,9 +43,11 @@ func TestS2sLogin(t *testing.T) {
 
 	tls, _ := connect.NewTLSConfig("mutual", serverPki)
 
+	// set up db client
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
-	mux.HandleFunc("/login", s2sLoginHandler)
+	// mux.Handle("/login", S2sLoginHandler)
 
 	server := &connect.TlsServer{
 		Addr:      ":8443",
@@ -71,7 +74,7 @@ func TestS2sLogin(t *testing.T) {
 	cmd := S2sLoginCmd{
 
 		ClientId:     serviceId.String(),
-		ClientSecret: "super-sercret-password",
+		ClientSecret: "",
 	}
 	jsonData, _ := json.Marshal(cmd)
 	req, _ := http.NewRequest("POST", "https://localhost:8443/login", bytes.NewBuffer(jsonData))
@@ -82,22 +85,7 @@ func TestS2sLogin(t *testing.T) {
 
 }
 
-func s2sLoginHandler(w http.ResponseWriter, r *http.Request) {
 
-	if r.Method != "POST" {
-		http.Error(w, "Only Post requests allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var cmd S2sLoginCmd
-	err := json.NewDecoder(r.Body).Decode(&cmd)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	log.Printf("S2S Creds: %+v", cmd)
-}
 
 const (
 	CA_CERT_ENV                     = "CA_CERT"
@@ -180,4 +168,19 @@ func setUpCerts() {
 		// 	log.Fatalf("Unable to remove pem file: %s", v[1])
 		// }
 	}
+
+}
+
+func TestBcrypt(t *testing.T) {
+
+	pt := "You are part of the Rebel Alliance..."
+	hash, _ := bcrypt.GenerateFromPassword([]byte(pt), 13)
+	t.Logf("%s", hash)
+
+	err := bcrypt.CompareHashAndPassword(hash, []byte(pt))
+	if err != nil {
+		t.Log("pw doesnt match.")
+		t.Fail()
+	}
+
 }
