@@ -28,14 +28,14 @@ func TestCrud(t *testing.T) {
 		San:          []string{"localhost"},
 		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
 		Role:         certs.Client,
-		CaCertName:   "db-ca",
+		CaCertName:   "ca",
 	}
 	leafClient.GenerateEcdsaCert()
 
 	// read in db-ca-cert.pem, new db-client .pems to env vars
 	// need to use ca that signed maria's tls leaf certs
 	var envVars [][]string
-	envVars = append(envVars, []string{DbServerCaCert, fmt.Sprintf("%s-cert.pem", "db-ca")})
+	envVars = append(envVars, []string{DbServerCaCert, fmt.Sprintf("%s-cert.pem", "ca")})
 	envVars = append(envVars, []string{DbClientCert, fmt.Sprintf("%s-cert.pem", leafClient.CertName)})
 	envVars = append(envVars, []string{DbClientKey, fmt.Sprintf("%s-key.pem", leafClient.CertName)})
 
@@ -68,6 +68,8 @@ func TestCrud(t *testing.T) {
 		ConnectionUrl: url.Build(),
 	}
 
+	dao := Repository{dbConnector}
+
 	id, _ := uuid.NewRandom()
 	sessionToken, _ := uuid.NewRandom()
 	csrf, _ := uuid.NewRandom()
@@ -87,7 +89,7 @@ func TestCrud(t *testing.T) {
 		ExpiresAt:    time.Now().Add(time.Minute * 15).Format("2006-01-02 15:04:05"),
 	}
 
-	if err := dbConnector.InsertRecord("uxsession", s); err != nil {
+	if err := dao.InsertRecord("uxsession", s); err != nil {
 		t.Logf("Failed to insert session: %v, Error: %v", s, err)
 		t.Fail()
 	}
@@ -101,7 +103,7 @@ func TestCrud(t *testing.T) {
 		ExpiresAt    string `db:"expires_at"`
 	}
 	p := " order by created_at desc"
-	err := dbConnector.SelectRecords("uxsession", p, &records)
+	err := dao.SelectRecords("uxsession", p, &records)
 	if err != nil {
 		t.Log(err)
 		t.Fail()

@@ -35,14 +35,14 @@ func TestDBConnect(t *testing.T) {
 		San:          []string{"localhost"},
 		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
 		Role:         certs.Client,
-		CaCertName:   "db-ca",
+		CaCertName:   "ca",
 	}
 	leafClient.GenerateEcdsaCert()
 
 	// read in db-ca-cert.pem, new db-client .pems to env vars
 	// need to use ca that signed maria's tls leaf certs
 	var envVars [][]string
-	envVars = append(envVars, []string{DbServerCaCert, fmt.Sprintf("%s-cert.pem", "db-ca")})
+	envVars = append(envVars, []string{DbServerCaCert, fmt.Sprintf("%s-cert.pem", "ca")})
 	envVars = append(envVars, []string{DbClientCert, fmt.Sprintf("%s-cert.pem", leafClient.CertName)})
 	envVars = append(envVars, []string{DbClientKey, fmt.Sprintf("%s-key.pem", leafClient.CertName)})
 

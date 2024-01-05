@@ -44,7 +44,7 @@ type SessionService interface {
 }
 
 type SqlSessionService struct {
-	Db data.SqlDbConnector
+	Db data.Repository
 }
 
 func (sql *SqlSessionService) CreateSession(s *Session) error {
