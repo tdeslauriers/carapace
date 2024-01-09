@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tdeslauriers/carapace/certs"
 	"github.com/tdeslauriers/carapace/connect"
+	"github.com/tdeslauriers/carapace/data"
 	"github.com/tdeslauriers/carapace/diagnostics"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -44,10 +45,31 @@ func TestS2sLogin(t *testing.T) {
 	tls, _ := connect.NewTLSConfig("mutual", serverPki)
 
 	// set up db client
+	serverDbClientPki := &connect.Pki{
+		CertFile: os.Getenv(LOGIN_SERVER_DB_CLIENT_CERT_ENV),
+		KeyFile:  os.Getenv(LOGIN_SERVER_DB_CLIENT_KEY_ENV),
+		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
+	}
+	serverDbClientConfig := connect.ClientConfig{Config: serverDbClientPki}
+
+	dbUrl := data.DbUrl{
+		Name:     os.Getenv(ServerMariaDbName),
+		Addr:     os.Getenv(ServerMariaDbUrl),
+		Username: os.Getenv(ServerMariaDbUsername),
+		Password: os.Getenv(ServerMariaDbPassword),
+	}
+
+	dbConnector := &data.MariaDbConnector{
+		TlsConfig:     serverDbClientConfig,
+		ConnectionUrl: dbUrl.Build(),
+	}
+
+	loginService := NewS2SLoginService(dbConnector)
+	loginHander := NewS2sLoginHandler(loginService)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
-	// mux.Handle("/login", S2sLoginHandler)
+	mux.HandleFunc("/login", loginHander.HandleS2sLogin)
 
 	server := &connect.TlsServer{
 		Addr:      ":8443",
@@ -70,11 +92,10 @@ func TestS2sLogin(t *testing.T) {
 	clientConfig := connect.ClientConfig{Config: &clientPki}
 	client, _ := clientConfig.NewTlsClient()
 
-	serviceId, _ := uuid.NewRandom()
 	cmd := S2sLoginCmd{
 
-		ClientId:     serviceId.String(),
-		ClientSecret: "",
+		ClientId:     "669543c1-e3b4-414a-bb6f-039f3b4bb301",
+		ClientSecret: "3, 2, 1, let's jam!",
 	}
 	jsonData, _ := json.Marshal(cmd)
 	req, _ := http.NewRequest("POST", "https://localhost:8443/login", bytes.NewBuffer(jsonData))
@@ -84,8 +105,6 @@ func TestS2sLogin(t *testing.T) {
 	defer resp.Body.Close()
 
 }
-
-
 
 const (
 	CA_CERT_ENV                     = "CA_CERT"
@@ -173,8 +192,10 @@ func setUpCerts() {
 
 func TestBcrypt(t *testing.T) {
 
-	pt := "You are part of the Rebel Alliance..."
+	pt := "3, 2, 1, let's jam!"
 	hash, _ := bcrypt.GenerateFromPassword([]byte(pt), 13)
+	uuid, _ := uuid.NewRandom()
+	t.Logf("%s", uuid.String())
 	t.Logf("%s", hash)
 
 	err := bcrypt.CompareHashAndPassword(hash, []byte(pt))

@@ -4,9 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/tdeslauriers/carapace/data"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,12 +30,12 @@ type S2sClientData struct {
 }
 
 // repository functions
-func FindRecord[T any](db *sql.DB, query string, args ...interface{}) (*T, error) {
-	var record T
+func FindRecord[T any](db *sql.DB, query string, args ...interface{}) (*S2sClientData, error) {
+	var record S2sClientData
 
 	// returns only first row => uuids should be unique.
 	row := db.QueryRow(query, args...)
-	err := row.Scan(any(&record))
+	err := row.Scan(&record)
 	if err != nil {
 		return nil, err
 	}
@@ -65,14 +68,14 @@ func FindRecords[T any](db *sql.DB, query string, args ...interface{}) ([]T, err
 
 // s2s login service
 type S2sLoginService interface {
-	ValidateCredentials(creds S2sLoginCmd) (bool, error)
+	ValidateCredentials(creds S2sLoginCmd) error
 }
 
 type MariaS2sLoginService struct {
-	Db *sql.DB
+	Db *data.MariaDbConnector
 }
 
-func NewS2SLoginService(sql *sql.DB) *MariaS2sLoginService {
+func NewS2SLoginService(sql *data.MariaDbConnector) *MariaS2sLoginService {
 	return &MariaS2sLoginService{
 		Db: sql,
 	}
@@ -80,11 +83,18 @@ func NewS2SLoginService(sql *sql.DB) *MariaS2sLoginService {
 
 func (s *MariaS2sLoginService) ValidateCredentials(creds S2sLoginCmd) error {
 
-	qry := "SELECT * FROM client WHERE uuid = $1"
-
-	client, err := FindRecord[S2sClientData](s.Db, qry, creds.ClientId)
+	db, err := s.Db.Connect()
 	if err != nil {
-		return err // errors also return false because could not validate.
+		log.Panicf("unable to connect to s2s auth database: %v", err)
+		return err
+	}
+
+	qry := "SELECT * FROM client WHERE uuid = ?"
+
+	client, err := FindRecord[S2sClientData](db, qry, creds.ClientId)
+	if err != nil {
+		log.Panicf("unable to find s2s client record: %v", err)
+		return err
 	}
 
 	if !client.Enabled {
@@ -133,5 +143,9 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// valid, err := h.Service.ValidateCredentials(cmd)
+	if err := h.Service.ValidateCredentials(cmd); err != nil {
+		http.Error(w, fmt.Sprintf("invalid credentials: %s", err), http.StatusUnauthorized)
+		return
+	}
+
 }
