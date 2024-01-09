@@ -1,20 +1,18 @@
 package data
 
 import (
-	"database/sql"
 	"fmt"
 	"reflect"
 )
 
 type SqlRepository interface {
-	Connect() (*sql.DB, error)
 	SelectRecords(query string, records interface{}, args ...interface{}) error
 	SelectRecord(query string, record interface{}, args ...interface{}) error
 	InsertRecord(query string, record interface{}) error
 }
 
 type MariaDbRepository struct {
-	SqlDb *MariaDbConnector
+	SqlDb SqlDbConnector
 }
 
 func (dao *MariaDbRepository) SelectRecords(query string, records interface{}, args ...interface{}) error {
