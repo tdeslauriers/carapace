@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -64,7 +65,11 @@ func TestS2sLogin(t *testing.T) {
 		ConnectionUrl: dbUrl.Build(),
 	}
 
-	loginService := NewS2SLoginService(dbConnector)
+	dao := &data.MariaDbRepository{
+		SqlDb: dbConnector,
+	}
+
+	loginService := NewS2SLoginService(dao)
 	loginHander := NewS2sLoginHandler(loginService)
 
 	mux := http.NewServeMux()
@@ -104,6 +109,11 @@ func TestS2sLogin(t *testing.T) {
 	resp, _ := client.Do(req)
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		t.Logf("Did not get 200 for correct credentials: %s", string(body))
+		t.Fail()
+	}
 }
 
 const (

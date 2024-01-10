@@ -1,13 +1,11 @@
 package session
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/tdeslauriers/carapace/data"
 	"golang.org/x/crypto/bcrypt"
@@ -19,51 +17,14 @@ type S2sLoginCmd struct {
 }
 
 type S2sClientData struct {
-	Uuid           string    `db:"uuid"`
-	Password       string    `db:"password"`
-	Name           string    `db:"name"`
-	Owner          string    `db:"owner"`
-	CreatedAt      time.Time `db:"created_at"`
-	Enabled        bool      `db:"enabled"`
-	AccountExpired bool      `db:"acccount_expired"`
-	AccountLocked  bool      `db:"account_locked"`
-}
-
-// repository functions
-func FindRecord[T any](db *sql.DB, query string, args ...interface{}) (*S2sClientData, error) {
-	var record S2sClientData
-
-	// returns only first row => uuids should be unique.
-	row := db.QueryRow(query, args...)
-	err := row.Scan(&record)
-	if err != nil {
-		return nil, err
-	}
-	return &record, nil
-}
-
-func FindRecords[T any](db *sql.DB, query string, args ...interface{}) ([]T, error) {
-	var records []T
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var record T
-		if err := rows.Scan(any(&record)); err != nil {
-			return nil, err
-		}
-		records = append(records, record)
-	}
-
-	// error check
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return records, nil
+	Uuid           string `db:"uuid"`
+	Password       string `db:"password"`
+	Name           string `db:"name"`
+	Owner          string `db:"owner"`
+	CreatedAt      string `db:"created_at"`
+	Enabled        bool   `db:"enabled"`
+	AccountExpired bool   `db:"acccount_expired"`
+	AccountLocked  bool   `db:"account_locked"`
 }
 
 // s2s login service
@@ -72,47 +33,41 @@ type S2sLoginService interface {
 }
 
 type MariaS2sLoginService struct {
-	Db *data.MariaDbConnector
+	Dao data.SqlRepository
 }
 
-func NewS2SLoginService(sql *data.MariaDbConnector) *MariaS2sLoginService {
+func NewS2SLoginService(sql data.SqlRepository) *MariaS2sLoginService {
 	return &MariaS2sLoginService{
-		Db: sql,
+		Dao: sql,
 	}
 }
 
 func (s *MariaS2sLoginService) ValidateCredentials(creds S2sLoginCmd) error {
 
-	db, err := s.Db.Connect()
-	if err != nil {
-		log.Panicf("unable to connect to s2s auth database: %v", err)
-		return err
-	}
-
+	var s2sClient S2sClientData
 	qry := "SELECT * FROM client WHERE uuid = ?"
 
-	client, err := FindRecord[S2sClientData](db, qry, creds.ClientId)
-	if err != nil {
-		log.Panicf("unable to find s2s client record: %v", err)
+	if err := s.Dao.SelectRecord(qry, &s2sClient, creds.ClientId); err != nil {
+		log.Panicf("unable to retrieve s2s client record: %v", err)
 		return err
-	}
-
-	if !client.Enabled {
-		return errors.New("service account disabled")
-	}
-
-	if client.AccountLocked {
-		return errors.New("service account locked")
-	}
-
-	if client.AccountExpired {
-		return errors.New("service account expired")
 	}
 
 	secret := []byte(creds.ClientSecret)
-	hash := []byte(client.Password)
+	hash := []byte(s2sClient.Password)
 	if err := bcrypt.CompareHashAndPassword(hash, secret); err != nil {
 		return err
+	}
+
+	if !s2sClient.Enabled {
+		return errors.New("service account disabled")
+	}
+
+	if s2sClient.AccountLocked {
+		return errors.New("service account locked")
+	}
+
+	if s2sClient.AccountExpired {
+		return errors.New("service account expired")
 	}
 
 	return nil
