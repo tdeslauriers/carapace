@@ -13,10 +13,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/tdeslauriers/carapace/certs"
 	"github.com/tdeslauriers/carapace/connect"
 	"github.com/tdeslauriers/carapace/data"
 	"github.com/tdeslauriers/carapace/diagnostics"
+	"github.com/tdeslauriers/carapace/sign"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -135,38 +135,38 @@ const (
 
 func setUpCerts() {
 	// setup server
-	leafServer := certs.CertFields{
+	leafServer := sign.CertFields{
 		CertName:     LoginServerName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
 		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
-		Role:         certs.Server,
+		Role:         sign.Server,
 		CaCertName:   CaCert,
 	}
 	leafServer.GenerateEcdsaCert()
 
 	// gen db client certs
 	// need to use ca installed in maria as rootCA
-	leafDbClient := certs.CertFields{
+	leafDbClient := sign.CertFields{
 		CertName:     LoginServerDbClientName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
 		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
-		Role:         certs.Client,
+		Role:         sign.Client,
 		CaCertName:   CaCert,
 	}
 	leafDbClient.GenerateEcdsaCert()
 
 	// gen s2s client certs
-	leafS2sClient := certs.CertFields{
+	leafS2sClient := sign.CertFields{
 		CertName:     S2sCLientName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
 		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
-		Role:         certs.Client,
+		Role:         sign.Client,
 		CaCertName:   CaCert,
 	}
 	leafS2sClient.GenerateEcdsaCert()

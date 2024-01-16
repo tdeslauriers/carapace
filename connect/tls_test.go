@@ -10,8 +10,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tdeslauriers/carapace/certs"
 	"github.com/tdeslauriers/carapace/diagnostics"
+	"github.com/tdeslauriers/carapace/sign"
 )
 
 const (
@@ -31,32 +31,32 @@ const (
 func setUpCerts() {
 
 	// create *.pem files
-	ca := certs.CertFields{
+	ca := sign.CertFields{
 		CertName:     CaName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "RebelAlliance ECDSA-SHA256",
-		Role:         certs.CA,
+		Role:         sign.CA,
 	}
 	ca.GenerateEcdsaCert()
 
-	leafServer := certs.CertFields{
+	leafServer := sign.CertFields{
 		CertName:     ServerName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
 		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
-		Role:         certs.Server,
+		Role:         sign.Server,
 		CaCertName:   ca.CertName,
 	}
 	leafServer.GenerateEcdsaCert()
 
-	leafClient := certs.CertFields{
+	leafClient := sign.CertFields{
 		CertName:     ClientName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
 		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
-		Role:         certs.Client,
+		Role:         sign.Client,
 		CaCertName:   ca.CertName,
 	}
 	leafClient.GenerateEcdsaCert()

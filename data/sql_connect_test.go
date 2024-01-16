@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tdeslauriers/carapace/certs"
 	"github.com/tdeslauriers/carapace/connect"
+	"github.com/tdeslauriers/carapace/sign"
 )
 
 // env vars
@@ -28,13 +28,13 @@ func TestDBConnect(t *testing.T) {
 	// setup
 	// gen client certs
 	// need to use ca installed in maria as rootCA
-	leafClient := certs.CertFields{
+	leafClient := sign.CertFields{
 		CertName:     "db-client",
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
 		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
-		Role:         certs.Client,
+		Role:         sign.Client,
 		CaCertName:   "ca",
 	}
 	leafClient.GenerateEcdsaCert()
