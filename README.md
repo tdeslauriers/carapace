@@ -25,3 +25,6 @@ Reusable, core functionality for building a microservice.
 1. Service to Service login credential validation.
     * Needs field level validation
     * Will be added as part of user login dev
+1. Jwt Mint:
+    * signs
+    * verifies
