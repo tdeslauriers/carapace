@@ -6,7 +6,9 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
+	"math/big"
 	"strings"
 )
 
@@ -52,10 +54,12 @@ func (jwt *JwtToken) SignatureBaseString() (string, error) {
 	}
 	encodedClaims := base64.URLEncoding.EncodeToString(jsonClaims)
 
-	chunks := [2]string{encodedHeader, encodedClaims}
-	return strings.Join(chunks[:], "."), nil
+	// chunks := [2]string{encodedHeader, encodedClaims}
+	// return strings.Join(chunks[:], "."), nil
+	return encodedHeader + "." + encodedClaims, nil
 }
 
+// Signing
 type JwtSigner interface {
 	CreateJwtSignature(*JwtToken) error
 	MintJwt(*JwtToken) error
@@ -115,4 +119,47 @@ func (sign *JwtSignerService) MintJwt(jwt *JwtToken) error {
 	jwt.Token = msg + "." + sig
 
 	return nil
+}
+
+// Verifying Signatures
+type JwtVerifier interface {
+	VerifyJwtSignature(string) error
+}
+
+type JwtVerifierService struct {
+	PublicKey *ecdsa.PublicKey
+}
+
+func (v *JwtVerifierService) VerifyJwtSignature(token string) error {
+
+	segments := strings.Split(token, ".")
+	if len(segments) > 3 {
+		return fmt.Errorf("jwt token not properly formatted")
+	}
+
+	// hash base signature string
+	msg := segments[0] + "." + segments[1]
+
+	hasher := sha512.New()
+	hasher.Write([]byte(msg))
+
+	hashedMsg := hasher.Sum(nil)
+
+	// decode signature from base64
+	sig, err := base64.URLEncoding.DecodeString(segments[2])
+	if err != nil {
+		return err
+	}
+
+	// divide signature in half to get r and s
+	// 66 bit keysize was looked up for ecdsa 512
+	r := big.NewInt(0).SetBytes(sig[:66])
+	s := big.NewInt(0).SetBytes(sig[66:])
+
+	// verify signature
+	if verified := ecdsa.Verify(v.PublicKey, hashedMsg, r, s); verified {
+		return nil
+	}
+
+	return fmt.Errorf("unable to verify jwt signature")
 }
