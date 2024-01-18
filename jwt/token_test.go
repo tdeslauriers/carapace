@@ -5,10 +5,11 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/base64"
+	"strings"
 	"testing"
 )
 
-var issuer, subject, audience string = "shaw.com", "erebor_abf7c176-3f3b-4226-98de-a9a6f00e3a6c", "api.ran.com"
+var issuer, subject, audience string = "api.ran.com", "erebor_abf7c176-3f3b-4226-98de-a9a6f00e3a6c", "api.shaw.com"
 
 func TestJwtSignatures(t *testing.T) {
 
@@ -28,15 +29,37 @@ func TestJwtSignatures(t *testing.T) {
 		1704992428,
 		1704992428,
 		1704996028,
-		nil,
+		"r:shaw:* r:otherservice:* w:otherservice:*",
 	}
 
 	jwt := JwtToken{Header: header, Claims: claims1}
 	signer.MintJwt(&jwt)
 
 	verifier := JwtVerifierService{&privateKey.PublicKey}
-	if err := verifier.VerifyJwtSignature(jwt.Token); err != nil {
+	segments := strings.Split(jwt.Token, ".")
+	msg := segments[0] + "." + segments[1]
+	sig, _ := base64.URLEncoding.DecodeString(segments[2])
+
+	if err := verifier.VerifyJwtSignature(msg, sig); err != nil {
 		t.Logf("failed to verify jwt token signature: %v", err)
+		t.Fail()
+	}
+
+	rebuild, err := verifier.BuildJwtFromToken(jwt.Token)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	if rebuild.Claims.Issuer != issuer ||
+		rebuild.Claims.Subject != subject ||
+		rebuild.Claims.Audience != audience {
+		t.Fail()
+	}
+
+	allowed := []string{"r:shaw:*", "w:shaw:*"}
+	if !verifier.IsAuthorized(allowed, rebuild) {
+		t.Log("Authz failed")
 		t.Fail()
 	}
 
@@ -48,16 +71,22 @@ func TestJwtSignatures(t *testing.T) {
 		1704992428,
 		1704992428,
 		1704996028,
-		nil,
+		"",
 	}
 
 	fake := JwtToken{Header: header, Claims: claims2}
 	badMsg, _ := fake.SignatureBaseString()
-	legitSig := base64.URLEncoding.EncodeToString(jwt.Signature)
+	legitSig := jwt.Signature
+	forgery := badMsg + "." + base64.URLEncoding.EncodeToString(legitSig)
 
-	forgery := badMsg + "." + legitSig
-	if err := verifier.VerifyJwtSignature(forgery); err == nil {
+	if err := verifier.VerifyJwtSignature(badMsg, legitSig); err == nil {
 		t.Logf("incorrectly validated jwt w/ a tampered message, but real signature.")
+		t.Fail()
+	}
+
+	_, err = verifier.BuildJwtFromToken(forgery)
+	if err == nil {
+		t.Log("Invalid signature means jwt should not be built")
 		t.Fail()
 	}
 
