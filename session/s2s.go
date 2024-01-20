@@ -68,7 +68,7 @@ func NewS2SLoginService(sql data.SqlRepository, mint jwt.JwtSigner) *MariaS2sLog
 func (s *MariaS2sLoginService) ValidateCredentials(creds S2sLoginCmd) error {
 
 	var s2sClient S2sClientData
-	qry := "SELECT * FROM client WHERE uuid = ?"
+	qry := "SELECT uuid, password, name, owner, created_at, enabled, account_expired, account_locked FROM client WHERE uuid = ?"
 
 	if err := s.Dao.SelectRecord(qry, &s2sClient, creds.ClientId); err != nil {
 		log.Panicf("unable to retrieve s2s client record: %v", err)
@@ -110,8 +110,7 @@ func (s *MariaS2sLoginService) GetScopes(uuid string) ([]S2sScope, error) {
 			s.active
 		FROM scope s 
 			LEFT JOIN client_scope cs ON s.uuid = cs.scope_uuid
-		WHERE client_uuid = ?
-			`
+		WHERE client_uuid = ?`
 	if err := s.Dao.SelectRecord(qry, scopes, uuid); err != nil {
 		return scopes, fmt.Errorf("unable to retrieve scopes for client %s: %v", uuid, err)
 	}
