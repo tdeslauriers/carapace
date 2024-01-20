@@ -22,14 +22,14 @@ type JwtHeader struct {
 }
 
 type JwtClaims struct {
-	Jti       string `json:"jti"` // jwt unique identifier / uuid
-	Issuer    string `json:"iss"` // url of issuing service
-	Subject   string `json:"sub"` // email or user/client uuid
-	Audience  string `json:"aud"` // intended recipient(s) -> restricted service
-	IssuedAt  int64  `json:"iat"`
-	NotBefore int64  `json:"nbf,omitempty"`
-	Expires   int64  `json:"exp"`
-	Scopes    string `json:"scp,omitempty"` // OAuth2: not array, space delimited string: "r:service* w:othersevice:*"
+	Jti       string   `json:"jti"` // jwt unique identifier / uuid
+	Issuer    string   `json:"iss"` // url of issuing service
+	Subject   string   `json:"sub"` // email or user/client uuid
+	Audience  []string `json:"aud"` // intended recipient(s) -> restricted service
+	IssuedAt  int64    `json:"iat"`
+	NotBefore int64    `json:"nbf,omitempty"`
+	Expires   int64    `json:"exp"`
+	Scopes    string   `json:"scp,omitempty"` // OAuth2: not array, space delimited string: "r:service* w:othersevice:*"
 }
 
 type JwtToken struct {
@@ -109,11 +109,11 @@ func (sign *JwtSignerService) MintJwt(jwt *JwtToken) error {
 
 	msg, err := jwt.SignatureBaseString()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create jwt signature base string(message): %v", err)
 	}
 
 	if err := sign.CreateJwtSignature(jwt); err != nil {
-		return err
+		return fmt.Errorf("unable to create jwt signature: %v", err)
 	}
 	sig := base64.URLEncoding.EncodeToString(jwt.Signature)
 

@@ -9,7 +9,8 @@ import (
 	"testing"
 )
 
-var issuer, subject, audience string = "api.ran.com", "erebor_abf7c176-3f3b-4226-98de-a9a6f00e3a6c", "api.shaw.com"
+var issuer, subject string = "api.ran.com", "erebor_abf7c176-3f3b-4226-98de-a9a6f00e3a6c"
+var audience = []string{"api.shaw.com"}
 
 func TestJwtSignatures(t *testing.T) {
 
@@ -53,7 +54,7 @@ func TestJwtSignatures(t *testing.T) {
 
 	if rebuild.Claims.Issuer != issuer ||
 		rebuild.Claims.Subject != subject ||
-		rebuild.Claims.Audience != audience {
+		rebuild.Claims.Audience[0] != audience[0] {
 		t.Fail()
 	}
 

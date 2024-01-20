@@ -12,7 +12,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/tdeslauriers/carapace/connect"
 	"github.com/tdeslauriers/carapace/data"
 	"github.com/tdeslauriers/carapace/diagnostics"
@@ -30,6 +29,9 @@ const (
 	ClientMariaDbUrl      = "CARAPACE_CLIENT_MARIADB_URL"
 	ClientMariaDbUsername = "CARAPACE_CLIENT_MARIADB_USERNAME"
 	ClientMariaDbPassword = "CARAPACE_CLIENT_MARIADB_PASSWORD"
+
+	S2sClientId     = "CARAPACE_S2S_CLIENT_ID"
+	S2sClientSecret = "CARAPACE_S2S_CLIENT_SECRET"
 )
 
 func TestS2sLogin(t *testing.T) {
@@ -88,6 +90,7 @@ func TestS2sLogin(t *testing.T) {
 		}
 	}()
 
+	// set up s2s client config
 	clientPki := connect.Pki{
 		CertFile: os.Getenv(S2S_CLIENT_CERT_ENV),
 		KeyFile:  os.Getenv(S2S_CLIENT_KEY_ENV),
@@ -97,25 +100,45 @@ func TestS2sLogin(t *testing.T) {
 	clientConfig := connect.ClientConfig{Config: &clientPki}
 	client, _ := clientConfig.NewTlsClient()
 
+	// set up s2s client-side db config
+	s2sClientDbPki := connect.Pki{
+		CertFile: os.Getenv(S2S_CLIENT_DB_CLIENT_CERT_ENV),
+		KeyFile:  os.Getenv(S2S_CLIENT_DB_CLIENT_KEY_ENV),
+		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
+	}
+	s2sClientDbClientConfig := connect.ClientConfig{Config: &s2sClientDbPki}
+
+	s2sDbUrl := data.DbUrl{
+		Name:     os.Getenv(ClientMariaDbName),
+		Addr:     os.Getenv(ClientMariaDbUrl),
+		Username: os.Getenv(ClientMariaDbUsername),
+		Password: os.Getenv(ClientMariaDbName),
+	}
+
+	s2sDbConnector := &data.MariaDbConnector{
+		TlsConfig:     s2sClientDbClientConfig,
+		ConnectionUrl: s2sDbUrl.Build(),
+	}
+
+	repository := data.MariaDbRepository{
+		SqlDb: s2sDbConnector,
+	}
+
 	cmd := S2sLoginCmd{
-
-		ClientId:     "669543c1-e3b4-414a-bb6f-039f3b4bb301",
-		ClientSecret: "3, 2, 1, let's jam!",
+		ClientId:     os.Getenv(S2sClientId),
+		ClientSecret: os.Getenv(S2sClientSecret),
 	}
-	jsonData, _ := json.Marshal(cmd)
-	req, _ := http.NewRequest("POST", "https://localhost:8443/login", bytes.NewBuffer(jsonData))
-	req.Header.Set("Content-Type", "application/json")
 
-	resp, _ := client.Do(req)
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		t.Logf("Did not get 200 for correct credentials: %s", string(body))
-		t.Fail()
+	s2sJwtProvider := S2sTokenProvider{
+		Credentials: cmd,
+		S2sClient: client,
+		Dao: &repository,
 	}
+
+
 }
 
+// set up test env vars
 const (
 	CA_CERT_ENV                     = "CA_CERT"
 	LOGIN_SERVER_CERT_ENV           = "LOGIN_SERVER_CERT"
@@ -124,13 +147,16 @@ const (
 	LOGIN_SERVER_DB_CLIENT_KEY_ENV  = "LOGIN_SERVER_DB_CLIENT_KEY"
 	S2S_CLIENT_CERT_ENV             = "S2S_CLIENT_CERT"
 	S2S_CLIENT_KEY_ENV              = "S2S_CLIENT_KEY"
+	S2S_CLIENT_DB_CLIENT_CERT_ENV   = "S2S_CLIENT_DB_CLIENT_CERT"
+	S2S_CLIENT_DB_CLIENT_KEY_ENV    = "S2S_CLIENT_DB_CLIENT_KEY"
 )
 
 const (
 	CaCert                  string = "../data/ca"
 	LoginServerName         string = "login-server"
-	LoginServerDbClientName string = "db-client"
+	LoginServerDbClientName        = "db-client"
 	S2sCLientName                  = "s2s-client"
+	S2sClientDbClientName          = "s2s-db-client"
 )
 
 func setUpCerts() {
@@ -182,6 +208,8 @@ func setUpCerts() {
 	envVars = append(envVars, []string{LOGIN_SERVER_DB_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", LoginServerDbClientName)})
 	envVars = append(envVars, []string{S2S_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", S2sCLientName)})
 	envVars = append(envVars, []string{S2S_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sCLientName)})
+	envVars = append(envVars, []string{S2S_CLIENT_DB_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", S2sClientDbClientName)})
+	envVars = append(envVars, []string{S2S_CLIENT_DB_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sClientDbClientName)})
 
 	// loop thru setting env
 	for _, v := range envVars {
@@ -202,11 +230,8 @@ func setUpCerts() {
 
 func TestBcrypt(t *testing.T) {
 
-	pt := "3, 2, 1, let's jam!"
+	pt := os.Getenv(S2sClientSecret)
 	hash, _ := bcrypt.GenerateFromPassword([]byte(pt), 13)
-	uuid, _ := uuid.NewRandom()
-	t.Logf("%s", uuid.String())
-	t.Logf("%s", hash)
 
 	err := bcrypt.CompareHashAndPassword(hash, []byte(pt))
 	if err != nil {
