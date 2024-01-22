@@ -1,11 +1,10 @@
 package session
 
 import (
-	"bytes"
+	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/pem"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"github.com/tdeslauriers/carapace/connect"
 	"github.com/tdeslauriers/carapace/data"
 	"github.com/tdeslauriers/carapace/diagnostics"
+	"github.com/tdeslauriers/carapace/jwt"
 	"github.com/tdeslauriers/carapace/sign"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -71,7 +71,15 @@ func TestS2sLogin(t *testing.T) {
 		SqlDb: dbConnector,
 	}
 
-	loginService := NewS2SLoginService(dao)
+	// set up signer
+	priv, _ := sign.GenerateEcdsaSigningKey()           // pub not used here
+	privPem, _ := base64.StdEncoding.DecodeString(priv) // read from env var in prod
+	privBlock, _ := pem.Decode(privPem)
+
+	privateKey, _ := x509.ParseECPrivateKey(privBlock.Bytes)
+	signer := jwt.JwtSignerService{PrivateKey: privateKey}
+
+	loginService := NewS2SLoginService("ran", dao, &signer)
 	loginHander := NewS2sLoginHandler(loginService)
 
 	mux := http.NewServeMux()
@@ -130,11 +138,17 @@ func TestS2sLogin(t *testing.T) {
 	}
 
 	s2sJwtProvider := S2sTokenProvider{
-		Credentials: cmd,
-		S2sClient: client,
-		Dao: &repository,
+		S2sServiceUrl: "https://localhost:8443/login",
+		Credentials:   cmd,
+		S2sClient:     client,
+		Dao:           &repository,
 	}
 
+	auth, err := s2sJwtProvider.GetServiceToken()
+	if err != nil {
+		t.Log(err)
+	}
+	t.Logf("%+v", auth)
 
 }
 
@@ -196,6 +210,18 @@ func setUpCerts() {
 		CaCertName:   CaCert,
 	}
 	leafS2sClient.GenerateEcdsaCert()
+
+	// gen s2s client db client certs
+	leafS2sClientDbClient := sign.CertFields{
+		CertName:     S2sClientDbClientName,
+		Organisation: []string{"Rebel Alliance"},
+		CommonName:   "localhost",
+		San:          []string{"localhost"},
+		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
+		Role:         sign.Client,
+		CaCertName:   CaCert,
+	}
+	leafS2sClientDbClient.GenerateEcdsaCert()
 
 	// make base64 strings from pem files
 	// set cert base64 vals files to environmental vars to be injested by docker/k8s

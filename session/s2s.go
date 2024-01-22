@@ -58,10 +58,11 @@ type MariaS2sLoginService struct {
 	Mint        jwt.JwtSigner
 }
 
-func NewS2SLoginService(sql data.SqlRepository, mint jwt.JwtSigner) *MariaS2sLoginService {
+func NewS2SLoginService(serviceName string, sql data.SqlRepository, mint jwt.JwtSigner) *MariaS2sLoginService {
 	return &MariaS2sLoginService{
-		Dao:  sql,
-		Mint: mint,
+		ServiceName: serviceName,
+		Dao:         sql,
+		Mint:        mint,
 	}
 }
 
@@ -110,8 +111,8 @@ func (s *MariaS2sLoginService) GetScopes(uuid string) ([]S2sScope, error) {
 			s.active
 		FROM scope s 
 			LEFT JOIN client_scope cs ON s.uuid = cs.scope_uuid
-		WHERE client_uuid = ?`
-	if err := s.Dao.SelectRecord(qry, scopes, uuid); err != nil {
+		WHERE cs.client_uuid = ?`
+	if err := s.Dao.SelectRecords(qry, &scopes, uuid); err != nil {
 		return scopes, fmt.Errorf("unable to retrieve scopes for client %s: %v", uuid, err)
 	}
 
@@ -129,7 +130,7 @@ func (s *MariaS2sLoginService) PersistRefresh(r Refresh) error {
 }
 
 // assumes credentials already validated
-func (s *MariaS2sLoginService) MintJwt(clientId string) (*jwt.JwtToken, error) {
+func (s *MariaS2sLoginService) MintToken(clientId string) (*jwt.JwtToken, error) {
 
 	// jwt header
 	header := jwt.JwtHeader{Alg: jwt.ES512, Typ: jwt.TokenType}
@@ -197,13 +198,11 @@ func buildAudiences(scopes []S2sScope) (unique []string) {
 
 // s2s login handler -> handles incoming login
 type S2sLoginHandler struct {
-	ServiceName  string
 	LoginService S2sLoginService
 }
 
-func NewS2sLoginHandler(name string, service S2sLoginService) *S2sLoginHandler {
+func NewS2sLoginHandler(service S2sLoginService) *S2sLoginHandler {
 	return &S2sLoginHandler{
-		ServiceName:  name,
 		LoginService: service,
 	}
 }
@@ -301,9 +300,10 @@ type S2STokenProvider interface {
 }
 
 type S2sTokenProvider struct {
-	Credentials S2sLoginCmd
-	S2sClient   connect.TLSClient
-	Dao         data.SqlRepository
+	S2sServiceUrl string
+	Credentials   S2sLoginCmd
+	S2sClient     connect.TLSClient
+	Dao           data.SqlRepository
 }
 
 func (p *S2sTokenProvider) GetServiceToken() (token string, e error) {
