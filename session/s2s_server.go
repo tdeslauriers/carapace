@@ -213,8 +213,39 @@ func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, erro
 		} else {
 			return nil, fmt.Errorf("unable to look up refresh token %s: %v", err)
 		}
-
 	}
+
+	// check revoke status
+	if refresh.Revoked {
+		return nil, fmt.Errorf("refresh token %s has been revoked", refresh.RefreshToken)
+	}
+
+	// validate refresh token not expired/active server-side
+	if refresh.CreatedAt.Add(1 * time.Hour).Before(time.Now()) {
+		return nil, fmt.Errorf("refresh token %s is expired", refresh.RefreshToken)
+	}
+
+	// delete current refresh: single use
+	go func() {
+		qry := "DELETE FROM refresh WHERE uuid = ?"
+		if err := s.Dao.DeleteRecord(qry, refresh.Uuid); err != nil {
+			// log clean up failure
+			log.Printf("unable to delete refresh token %s, id - %s according to single-use reqs: %v", refresh.RefreshToken, refresh.Uuid, err)
+		}
+	}()
+
+	// create new refresh token: expiry not updated
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create new refresh token: %v:", err)
+	}
+	replace, err := uuid.NewRandom()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create new refresh token: %v:", err)
+	}
+	refresh.Uuid = id.String()
+	refresh.RefreshToken = replace.String()
+
 }
 
 // s2s login handler -> handles incoming login
