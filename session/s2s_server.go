@@ -1,18 +1,16 @@
 package session
 
 import (
-	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tdeslauriers/carapace/connect"
 	"github.com/tdeslauriers/carapace/data"
 	"github.com/tdeslauriers/carapace/jwt"
 	"golang.org/x/crypto/bcrypt"
@@ -48,8 +46,9 @@ type S2sScope struct {
 type S2sLoginService interface {
 	ValidateCredentials(creds S2sLoginCmd) error
 	GetScopes(clientId string) ([]S2sScope, error)
-	PersistRefresh(Refresh) error
 	MintToken(clientId string) (*jwt.JwtToken, error) // assumes valid creds
+	RefreshToken(string) (*Refresh, error)            // will not reset refresh expiry
+	PersistRefresh(Refresh) error
 }
 
 type MariaS2sLoginService struct {
@@ -125,7 +124,6 @@ func (s *MariaS2sLoginService) PersistRefresh(r Refresh) error {
 	if err := s.Dao.InsertRecord(qry, r); err != nil {
 		return fmt.Errorf("unable to save refresh token: %v", err)
 	}
-
 	return nil
 }
 
@@ -196,6 +194,26 @@ func buildAudiences(scopes []S2sScope) (unique []string) {
 	return unique
 }
 
+func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, error) {
+
+	// look up refresh
+	var refresh Refresh
+	qry := `
+		SELECT 
+			uuid, 
+			refresh_token, 
+			client_id, 
+			created_at, 
+			revoked 
+		FROM refresh
+		WHERE refresh_token = ?`
+	if err := s.Dao.SelectRecord(qry, &refresh, refreshToken); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("Refresh token %s does not exist", refreshToken)
+		}
+	}
+}
+
 // s2s login handler -> handles incoming login
 type S2sLoginHandler struct {
 	LoginService S2sLoginService
@@ -235,7 +253,7 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 	}
 
 	// create refresh
-	id, err := uuid.NewRandom()
+	refreshId, err := uuid.NewRandom()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -246,14 +264,14 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	refresh := Refresh{
-		Uuid:         id.String(),
+		Uuid:         refreshId.String(),
 		RefreshToken: refreshToken.String(),
 		ClientId:     cmd.ClientId,
 		CreatedAt:    time.Unix(token.Claims.IssuedAt, 0),
 		Revoked:      false,
 	}
 
-	// don't wait
+	// don't wait to return jwt
 	go func() {
 		err := h.LoginService.PersistRefresh(refresh)
 		if err != nil {
@@ -266,9 +284,9 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 	auth := Authorization{
 		Jti:            token.Claims.Jti,
 		ServiceToken:   token.Token,
-		TokenExpires:   token.Claims.Expires,
+		TokenExpires:   time.Unix(token.Claims.Expires, 0),
 		RefreshToken:   refresh.RefreshToken,
-		RefreshExpires: time.Unix(token.Claims.IssuedAt, 0).Add(1 * time.Hour).Unix(),
+		RefreshExpires: time.Unix(token.Claims.IssuedAt, 0).Add(1 * time.Hour),
 	}
 	authJson, err := json.Marshal(auth)
 	if err != nil {
@@ -278,82 +296,4 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(authJson)
-}
-
-// client side
-// response
-type Authorization struct {
-	Jti            string `json:"jti" db:"uuid"` // gen'd by s2s service at token creation
-	ServiceToken   string `json:"service_token" db:"service_token"`
-	TokenExpires   int64  `json:"token_expires" db:"service_expires"`
-	RefreshToken   string `json:"refresh_token" db:"refresh_token"`
-	RefreshExpires int64  `json:"refresh_expires" db:"refresh_expires"`
-}
-
-// s2s token provider -> calls s2s service for tokens, stores and retrieves tokens from local db
-type S2STokenProvider interface {
-	GetServiceToken() (string, error)
-	S2sLogin() (*Authorization, error)                               // login client call
-	RefreshServiceToken(refreshToken string) (*Authorization, error) // refresh client call
-	PersistServiceToken(*Authorization) error                        // save to db
-	RetrieveServiceToken() (string, error)
-}
-
-type S2sTokenProvider struct {
-	S2sServiceUrl string
-	Credentials   S2sLoginCmd
-	S2sClient     connect.TLSClient
-	Dao           data.SqlRepository
-}
-
-func (p *S2sTokenProvider) GetServiceToken() (token string, e error) {
-
-	// check db for active token
-
-	// check db for active refresh token
-	// persist new access token
-
-	// login to s2s authn endpoint
-	auth, err := p.S2sLogin()
-	if err != nil {
-		return "", fmt.Errorf("s2s login failed: %v", err)
-	}
-
-	// persist new access token, etc.
-	go p.PersistServiceToken(auth)
-
-	return auth.ServiceToken, nil
-}
-
-func (p *S2sTokenProvider) S2sLogin() (*Authorization, error) {
-
-	jsonData, _ := json.Marshal(p.Credentials)
-	req, _ := http.NewRequest("POST", "https://localhost:8443/login", bytes.NewBuffer(jsonData))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, _ := p.S2sClient.Do(req)
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read response body: %v", err)
-	}
-
-	// unmarshal to json
-	var auth Authorization
-	if err = json.Unmarshal(body, &auth); err != nil {
-		return nil, fmt.Errorf("unable to unmarshall s2s response body to json: %v", err)
-	}
-
-	return &auth, nil
-}
-
-func (p *S2sTokenProvider) PersistServiceToken(auth *Authorization) error {
-
-	qry := "INSERT INTO servicetoken (uuid, service_token, service_expires, refresh_token, refresh_expires) VALUES (?, ?, ?, ?, ?)"
-	if err := p.Dao.InsertRecord(qry, auth); err != nil {
-		return fmt.Errorf("unable to persist service token: %v", err)
-	}
-
-	return nil
 }

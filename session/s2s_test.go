@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/tdeslauriers/carapace/connect"
 	"github.com/tdeslauriers/carapace/data"
@@ -120,7 +121,7 @@ func TestS2sLogin(t *testing.T) {
 		Name:     os.Getenv(ClientMariaDbName),
 		Addr:     os.Getenv(ClientMariaDbUrl),
 		Username: os.Getenv(ClientMariaDbUsername),
-		Password: os.Getenv(ClientMariaDbName),
+		Password: os.Getenv(ClientMariaDbPassword),
 	}
 
 	s2sDbConnector := &data.MariaDbConnector{
@@ -149,6 +150,7 @@ func TestS2sLogin(t *testing.T) {
 		t.Log(err)
 	}
 	t.Logf("%+v", auth)
+	time.Sleep(1 * time.Second) // so refresh persist go funcs can complete.
 
 }
 
