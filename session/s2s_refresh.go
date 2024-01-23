@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -43,7 +44,10 @@ func (h *S2sRefreshHandler) HandleS2sRefresh(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// look up refresh 
-	refresh, err := RefreshToken(cmd.RefreshToken)
+	// look up refresh
+	refresh, err := h.LoginService.RefreshToken(cmd.RefreshToken)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid refresh token: %v", err), http.StatusUnauthorized)
+	}
 
 }
