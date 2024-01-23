@@ -9,6 +9,7 @@ type SqlRepository interface {
 	SelectRecords(query string, records interface{}, args ...interface{}) error
 	SelectRecord(query string, record interface{}, args ...interface{}) error
 	InsertRecord(query string, record interface{}) error
+	UpdateRecord(query string, args ...interface{}) error
 	DeleteRecord(query string, args ...interface{}) error
 }
 
@@ -120,6 +121,31 @@ func (dao *MariaDbRepository) InsertRecord(query string, record interface{}) err
 	return nil
 }
 
+func (dao *MariaDbRepository) UpdateRecord(query string, args ...interface{}) error {
+
+	// connect to db
+	db, err := dao.SqlDb.Connect()
+	if err != nil {
+		return fmt.Errorf("failed to connect to sql database: %v", err)
+	}
+	defer db.Close()
+
+	// prepared statement
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare update statement: %v", err)
+	}
+	defer stmt.Close()
+
+	// execute the statement with the provided arguments
+	_, err = stmt.Exec(args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute update query: %v", err)
+	}
+
+	return nil
+}
+
 func (dao *MariaDbRepository) DeleteRecord(query string, args ...interface{}) error {
 
 	// connect to db
@@ -132,11 +158,15 @@ func (dao *MariaDbRepository) DeleteRecord(query string, args ...interface{}) er
 	// prepared statement
 	stmt, err := db.Prepare(query)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare delete statement: %v", err)
 	}
 	defer stmt.Close()
 
 	// execute
 	_, err = stmt.Exec(args...)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to execute delete query: %v", err)
+	}
+
+	return nil
 }
