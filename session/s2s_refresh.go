@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -44,10 +45,34 @@ func (h *S2sRefreshHandler) HandleS2sRefresh(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// look up refresh
+	// lookup -> replace single-use refresh
 	refresh, err := h.LoginService.RefreshToken(cmd.RefreshToken)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid refresh token: %v", err), http.StatusUnauthorized)
 	}
 
+	// mint new token/s2s access token
+	token, err := h.LoginService.MintToken(refresh.ClientId)
+	if err != nil {
+		log.Printf("unable to mint new jwt for client id %s: %v", refresh.ClientId, err)
+		http.Error(w, fmt.Sprintf("unable to create new s2s token from refresh: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// respond with authorization data
+	authz := &Authorization{
+		Jti:            token.Claims.Jti,
+		ServiceToken:   token.Token,
+		TokenExpires:   time.Unix(token.Claims.Expires, 0),
+		RefreshToken:   refresh.RefreshToken,                 // new refresh token
+		RefreshExpires: refresh.CreatedAt.Add(1 * time.Hour), //  same expiry
+	}
+	authzJson, err := json.Marshal(authz)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(authzJson)
 }

@@ -327,19 +327,19 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 	}()
 
 	// respond with authorization data
-	auth := Authorization{
+	authz := Authorization{
 		Jti:            token.Claims.Jti,
 		ServiceToken:   token.Token,
 		TokenExpires:   time.Unix(token.Claims.Expires, 0),
 		RefreshToken:   refresh.RefreshToken,
 		RefreshExpires: time.Unix(token.Claims.IssuedAt, 0).Add(1 * time.Hour),
 	}
-	authJson, err := json.Marshal(auth)
+	authzJson, err := json.Marshal(authz)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(authJson)
+	w.Write(authzJson)
 }
