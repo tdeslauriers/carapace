@@ -87,7 +87,10 @@ func getActiveToken(tokens []Authorization) (*Authorization, bool) {
 
 func (p *S2sTokenProvider) S2sLogin() (*Authorization, error) {
 
-	jsonData, _ := json.Marshal(p.Credentials)
+	jsonData, err := json.Marshal(p.Credentials)
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshall login cmd to json: %v", err)
+	}
 	req, _ := http.NewRequest("POST", "https://localhost:8443/login", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -137,7 +140,11 @@ func (p *S2sTokenProvider) RetrieveServiceTokens() ([]Authorization, error) {
 	return tokens, nil
 }
 
-func (p *S2sTokenProvider)RefreshServiceToken(refreshToken string) (*Authorization, error){
+func (p *S2sTokenProvider) RefreshServiceToken(refreshToken string) (*Authorization, error) {
 
-	
+	// create cmd
+	data, err := json.Marshal(RefreshCmd{RefreshToken: refreshToken})
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshall refresh cmd to json: %v", err)
+	}
 }
