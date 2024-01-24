@@ -209,9 +209,9 @@ func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, erro
 		WHERE refresh_token = ?`
 	if err := s.Dao.SelectRecord(qry, &refresh, refreshToken); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("Refresh token %s does not exist", refreshToken)
+			return nil, fmt.Errorf("Refresh token does not exist")
 		} else {
-			return nil, fmt.Errorf("unable to look up refresh token %s: %v", err)
+			return nil, fmt.Errorf("unable to look up refresh token: %v", err)
 		}
 	}
 
