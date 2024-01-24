@@ -217,12 +217,12 @@ func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, erro
 
 	// check revoke status
 	if refresh.Revoked {
-		return nil, fmt.Errorf("refresh token %s has been revoked", refresh.RefreshToken)
+		return nil, fmt.Errorf("refresh token id %s has been revoked", refresh.Uuid)
 	}
 
 	// validate refresh token not expired/active server-side
 	if refresh.CreatedAt.Add(1 * time.Hour).Before(time.Now()) {
-		return nil, fmt.Errorf("refresh token %s is expired", refresh.RefreshToken)
+		return nil, fmt.Errorf("refresh token id %s is expired", refresh.Uuid)
 	}
 
 	// delete current refresh: single use
@@ -230,7 +230,7 @@ func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, erro
 		qry := "DELETE FROM refresh WHERE uuid = ?"
 		if err := s.Dao.DeleteRecord(qry, refresh.Uuid); err != nil {
 			// log clean up failure
-			log.Printf("unable to delete refresh token %s, id - %s according to single-use reqs: %v", refresh.RefreshToken, refresh.Uuid, err)
+			log.Printf("unable to delete refresh token id - %s according to single-use reqs: %v", refresh.Uuid, err)
 		}
 	}()
 
@@ -239,12 +239,23 @@ func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, erro
 	if err != nil {
 		return nil, fmt.Errorf("unable to create new refresh token: %v:", err)
 	}
-	replace, err := uuid.NewRandom()
+	fresh, err := uuid.NewRandom()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create new refresh token: %v:", err)
 	}
+
+	// expiry, client id, and revoked left in place
 	refresh.Uuid = id.String()
-	refresh.RefreshToken = replace.String()
+	refresh.RefreshToken = fresh.String()
+
+	// persist new refresh
+	go func() {
+
+		if err := s.PersistRefresh(refresh); err != nil {
+			// log failure only; refresh is convenience
+			log.Println("Unable to re")
+		}
+	}()
 
 }
 
