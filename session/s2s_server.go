@@ -253,10 +253,11 @@ func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, erro
 
 		if err := s.PersistRefresh(refresh); err != nil {
 			// log failure only; refresh is convenience
-			log.Println("Unable to re")
+			log.Println("unable to persist new refresh token: %v", err)
 		}
 	}()
 
+	return &refresh, nil
 }
 
 // s2s login handler -> handles incoming login
