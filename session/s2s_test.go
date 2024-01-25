@@ -82,10 +82,12 @@ func TestS2sLogin(t *testing.T) {
 
 	loginService := NewS2SLoginService("ran", dao, &signer)
 	loginHander := NewS2sLoginHandler(loginService)
+	refreshHandler := NewS2sRefreshHandler(loginService)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
 	mux.HandleFunc("/login", loginHander.HandleS2sLogin)
+	mux.HandleFunc("/refresh", refreshHandler.HandleS2sRefresh)
 
 	server := &connect.TlsServer{
 		Addr:      ":8443",
@@ -97,6 +99,7 @@ func TestS2sLogin(t *testing.T) {
 		if err := server.Initialize(); err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
+		time.Sleep(1 * time.Second)
 	}()
 
 	// set up s2s client config
@@ -139,7 +142,7 @@ func TestS2sLogin(t *testing.T) {
 	}
 
 	s2sJwtProvider := S2sTokenProvider{
-		S2sServiceUrl: "https://localhost:8443/login",
+		S2sServiceUrl: "https://localhost:8443",
 		Credentials:   cmd,
 		S2sClient:     client,
 		Dao:           &repository,
@@ -147,10 +150,13 @@ func TestS2sLogin(t *testing.T) {
 
 	auth, err := s2sJwtProvider.GetServiceToken()
 	if err != nil {
-		t.Log(err)
+		t.Logf("Failed to get service token: %v", err)
 	}
-	t.Logf("%+v", auth)
 	time.Sleep(1 * time.Second) // so refresh persist go funcs can complete.
+	if auth == "" {
+		t.Logf("s2s service token not returned.")
+		t.Fail()
+	}
 
 }
 

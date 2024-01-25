@@ -6,15 +6,17 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/tdeslauriers/carapace/data"
 )
 
 // refresh table data
 type Refresh struct {
-	Uuid         string    `db:"uuid"`
-	RefreshToken string    `db:"refresh_token"`
-	ClientId     string    `db:"client_uuid"`
-	CreatedAt    time.Time `db:"created_at"`
-	Revoked      bool      `db:"revoked"`
+	Uuid         string          `db:"uuid"`
+	RefreshToken string          `db:"refresh_token"`
+	ClientId     string          `db:"client_uuid"`
+	CreatedAt    data.CustomTime `db:"created_at"`
+	Revoked      bool            `db:"revoked"`
 }
 
 type RefreshCmd struct {
@@ -37,7 +39,6 @@ func (h *S2sRefreshHandler) HandleS2sRefresh(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	var cmd RefreshCmd
 	err := json.NewDecoder(r.Body).Decode(&cmd)
 	if err != nil {
@@ -45,34 +46,36 @@ func (h *S2sRefreshHandler) HandleS2sRefresh(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// lookup -> replace single-use refresh
-	refresh, err := h.LoginService.RefreshToken(cmd.RefreshToken)
+	// lookup refresh
+	refresh, err := h.LoginService.GetRefreshToken(cmd.RefreshToken)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid refresh token: %v", err), http.StatusUnauthorized)
 	}
 
-	// mint new token/s2s access token
-	token, err := h.LoginService.MintToken(refresh.ClientId)
-	if err != nil {
-		log.Printf("unable to mint new jwt for client id %s: %v", refresh.ClientId, err)
-		http.Error(w, fmt.Sprintf("unable to create new s2s token from refresh: %v", err), http.StatusBadRequest)
-		return
-	}
+	if refresh != nil {
+		// mint new token/s2s access token
+		token, err := h.LoginService.MintToken(refresh.ClientId)
+		if err != nil {
+			log.Printf("unable to mint new jwt for client id %v: %v", &refresh.ClientId, err)
+			http.Error(w, fmt.Sprintf("unable to create new s2s token from refresh: %v", err), http.StatusBadRequest)
+			return
+		}
 
-	// respond with authorization data
-	authz := &Authorization{
-		Jti:            token.Claims.Jti,
-		ServiceToken:   token.Token,
-		TokenExpires:   time.Unix(token.Claims.Expires, 0),
-		RefreshToken:   refresh.RefreshToken,                 // new refresh token
-		RefreshExpires: refresh.CreatedAt.Add(1 * time.Hour), //  same expiry
-	}
-	authzJson, err := json.Marshal(authz)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		// respond with authorization data
+		authz := &Authorization{
+			Jti:            token.Claims.Jti,
+			ServiceToken:   token.Token,
+			TokenExpires:   data.CustomTime{Time: time.Unix(token.Claims.Expires, 0)},
+			RefreshToken:   refresh.RefreshToken,
+			RefreshExpires: data.CustomTime{Time: refresh.CreatedAt.Add(1 * time.Hour)}, //  same expiry
+		}
+		authzJson, err := json.Marshal(authz)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(authzJson)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(authzJson)
+	}
 }

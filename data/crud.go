@@ -1,8 +1,11 @@
 package data
 
 import (
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"reflect"
+	"time"
 )
 
 type SqlRepository interface {
@@ -29,7 +32,7 @@ func (dao *MariaDbRepository) SelectRecords(query string, records interface{}, a
 	// execute query
 	rows, err := db.Query(query, args...)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to execute select records query: %v", err)
 	}
 	defer rows.Close()
 
@@ -94,13 +97,6 @@ func (dao *MariaDbRepository) InsertRecord(query string, record interface{}) err
 	}
 	defer db.Close()
 
-	// create prepared statement
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
 	// map record interface to prepared statement args
 	insert := reflect.ValueOf(record)
 	if insert.Kind() != reflect.Struct {
@@ -110,7 +106,23 @@ func (dao *MariaDbRepository) InsertRecord(query string, record interface{}) err
 	fields := make([]interface{}, insert.NumField())
 	for i := 0; i < insert.NumField(); i++ {
 		fields[i] = insert.Field(i).Interface()
+
+		// If the field is of type CustomTime, call its Value method
+		if ct, ok := fields[i].(CustomTime); ok {
+			timeValue, err := ct.Value()
+			if err != nil {
+				return err
+			}
+			fields[i] = timeValue
+		}
 	}
+
+	// create prepared statement
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
 
 	// execute prepared statement
 	_, err = stmt.Exec(fields...)
@@ -169,4 +181,41 @@ func (dao *MariaDbRepository) DeleteRecord(query string, args ...interface{}) er
 	}
 
 	return nil
+}
+
+type CustomTime struct {
+	time.Time
+}
+
+// implements the sql.Scanner interface
+func (ct *CustomTime) Scan(value interface{}) error {
+	var t time.Time
+	switch v := value.(type) {
+	case []byte:
+		var err error
+		t, err = time.Parse("2006-01-02 15:04:05", string(v))
+		if err != nil {
+			return err
+		}
+	case string:
+		var err error
+		t, err = time.Parse("2006-01-02 15:04:05", v)
+		if err != nil {
+			return err
+		}
+	case time.Time:
+		t = v
+	default:
+		return errors.New("unsupported data type")
+	}
+	ct.Time = t
+	return nil
+}
+
+func (ct CustomTime) Value() (driver.Value, error) {
+	// return a driver.Value representation of CustomTime
+	if ct.IsZero() {
+		return nil, nil // Use NULL for zero time
+	}
+	return ct.UTC().Format("2006-01-02 15:04:05"), nil
 }

@@ -47,7 +47,7 @@ type S2sLoginService interface {
 	ValidateCredentials(creds S2sLoginCmd) error
 	GetScopes(clientId string) ([]S2sScope, error)
 	MintToken(clientId string) (*jwt.JwtToken, error) // assumes valid creds
-	RefreshToken(string) (*Refresh, error)            // will not reset refresh expiry
+	GetRefreshToken(string) (*Refresh, error)
 	PersistRefresh(Refresh) error
 }
 
@@ -139,7 +139,7 @@ func (s *MariaS2sLoginService) MintToken(clientId string) (*jwt.JwtToken, error)
 		log.Panicf("Unable to create jti uuid")
 	}
 
-	currentTime := time.Now()
+	currentTime := time.Now().UTC()
 
 	scopes, err := s.GetScopes(clientId)
 	if err != nil {
@@ -160,7 +160,7 @@ func (s *MariaS2sLoginService) MintToken(clientId string) (*jwt.JwtToken, error)
 		Audience:  buildAudiences(scopes),
 		IssuedAt:  currentTime.Unix(),
 		NotBefore: currentTime.Unix(),
-		Expires:   currentTime.Add(15 * time.Minute).Unix(),
+		Expires:   currentTime.Add(1 * time.Minute).Unix(),
 		Scopes:    builder.String(),
 	}
 
@@ -194,7 +194,7 @@ func buildAudiences(scopes []S2sScope) (unique []string) {
 	return unique
 }
 
-func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, error) {
+func (s *MariaS2sLoginService) GetRefreshToken(refreshToken string) (*Refresh, error) {
 
 	// look up refresh
 	var refresh Refresh
@@ -202,60 +202,27 @@ func (s *MariaS2sLoginService) RefreshToken(refreshToken string) (*Refresh, erro
 		SELECT 
 			uuid, 
 			refresh_token, 
-			client_id, 
+			client_uuid, 
 			created_at, 
 			revoked 
 		FROM refresh
 		WHERE refresh_token = ?`
 	if err := s.Dao.SelectRecord(qry, &refresh, refreshToken); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("Refresh token does not exist")
-		} else {
-			return nil, fmt.Errorf("unable to look up refresh token: %v", err)
+			return nil, fmt.Errorf("refresh token does not exist")
 		}
+		return nil, fmt.Errorf("refresh token lookup failed: %v", err)
 	}
 
 	// check revoke status
 	if refresh.Revoked {
-		return nil, fmt.Errorf("refresh token id %s has been revoked", refresh.Uuid)
+		return nil, fmt.Errorf("refresh token has been revoked")
 	}
 
-	// validate refresh token not expired/active server-side
-	if refresh.CreatedAt.Add(1 * time.Hour).Before(time.Now()) {
-		return nil, fmt.Errorf("refresh token id %s is expired", refresh.Uuid)
+	// validate refresh token not expired server-side
+	if refresh.CreatedAt.Time.Add(1 * time.Hour).Before(time.Now().UTC()) {
+		return nil, fmt.Errorf("refresh token is expired")
 	}
-
-	// delete current refresh: single use
-	go func() {
-		qry := "DELETE FROM refresh WHERE uuid = ?"
-		if err := s.Dao.DeleteRecord(qry, refresh.Uuid); err != nil {
-			// log clean up failure
-			log.Printf("unable to delete refresh token id - %s according to single-use reqs: %v", refresh.Uuid, err)
-		}
-	}()
-
-	// create new refresh token: expiry not updated
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, fmt.Errorf("unable to create new refresh token: %v:", err)
-	}
-	fresh, err := uuid.NewRandom()
-	if err != nil {
-		return nil, fmt.Errorf("unable to create new refresh token: %v:", err)
-	}
-
-	// expiry, client id, and revoked left in place
-	refresh.Uuid = id.String()
-	refresh.RefreshToken = fresh.String()
-
-	// persist new refresh
-	go func() {
-
-		if err := s.PersistRefresh(refresh); err != nil {
-			// log failure only; refresh is convenience
-			log.Println("unable to persist new refresh token: %v", err)
-		}
-	}()
 
 	return &refresh, nil
 }
@@ -313,7 +280,7 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 		Uuid:         refreshId.String(),
 		RefreshToken: refreshToken.String(),
 		ClientId:     cmd.ClientId,
-		CreatedAt:    time.Unix(token.Claims.IssuedAt, 0),
+		CreatedAt:    data.CustomTime{Time: time.Unix(token.Claims.IssuedAt, 0)},
 		Revoked:      false,
 	}
 
@@ -330,9 +297,9 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 	authz := Authorization{
 		Jti:            token.Claims.Jti,
 		ServiceToken:   token.Token,
-		TokenExpires:   time.Unix(token.Claims.Expires, 0),
+		TokenExpires:   data.CustomTime{Time: time.Unix(token.Claims.Expires, 0)},
 		RefreshToken:   refresh.RefreshToken,
-		RefreshExpires: time.Unix(token.Claims.IssuedAt, 0).Add(1 * time.Hour),
+		RefreshExpires: data.CustomTime{Time: time.Unix(token.Claims.IssuedAt, 0).Add(1 * time.Hour)},
 	}
 	authzJson, err := json.Marshal(authz)
 	if err != nil {
