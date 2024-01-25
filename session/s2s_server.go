@@ -221,6 +221,17 @@ func (s *MariaS2sLoginService) GetRefreshToken(refreshToken string) (*Refresh, e
 
 	// validate refresh token not expired server-side
 	if refresh.CreatedAt.Time.Add(30 * time.Minute).Before(time.Now().UTC()) {
+
+		// opportunistically delete expired refresh tokens
+		go func(id string) {
+			qry := "DELETE FROM refresh WHERE uuid = ?"
+			if err := s.Dao.DeleteRecord(qry, id); err != nil {
+				log.Printf("unable to delete expired refresh token %s", id)
+			}
+
+			log.Printf("deleted expired refresh token id: %s", id)
+		}(refresh.Uuid)
+
 		return nil, fmt.Errorf("refresh token is expired")
 	}
 

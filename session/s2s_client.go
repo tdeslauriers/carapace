@@ -53,7 +53,7 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 		for _, token := range tokens {
 
 			if token.TokenExpires.Time.After(time.Now().UTC()) {
-				log.Printf("active access token present: %s", token.Jti)
+				log.Printf("active s2s access token present: %s", token.Jti)
 				return token.ServiceToken, err
 			} else {
 				// opportunistically delete expired access token
@@ -69,7 +69,7 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 
 		}
 
-		log.Printf("refreshing access token")
+		log.Printf("refreshing s2s access token")
 		// get new service access token via refresh
 		authz, err := p.RefreshServiceToken(tokens[0].RefreshToken)
 		if err != nil {
