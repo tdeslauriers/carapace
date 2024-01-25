@@ -160,7 +160,7 @@ func (s *MariaS2sLoginService) MintToken(clientId string) (*jwt.JwtToken, error)
 		Audience:  buildAudiences(scopes),
 		IssuedAt:  currentTime.Unix(),
 		NotBefore: currentTime.Unix(),
-		Expires:   currentTime.Add(1 * time.Minute).Unix(),
+		Expires:   currentTime.Add(10 * time.Minute).Unix(),
 		Scopes:    builder.String(),
 	}
 
@@ -220,7 +220,7 @@ func (s *MariaS2sLoginService) GetRefreshToken(refreshToken string) (*Refresh, e
 	}
 
 	// validate refresh token not expired server-side
-	if refresh.CreatedAt.Time.Add(1 * time.Hour).Before(time.Now().UTC()) {
+	if refresh.CreatedAt.Time.Add(30 * time.Minute).Before(time.Now().UTC()) {
 		return nil, fmt.Errorf("refresh token is expired")
 	}
 
@@ -299,7 +299,7 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 		ServiceToken:   token.Token,
 		TokenExpires:   data.CustomTime{Time: time.Unix(token.Claims.Expires, 0)},
 		RefreshToken:   refresh.RefreshToken,
-		RefreshExpires: data.CustomTime{Time: time.Unix(token.Claims.IssuedAt, 0).Add(1 * time.Hour)},
+		RefreshExpires: data.CustomTime{Time: time.Unix(token.Claims.IssuedAt, 0).Add(30 * time.Minute)},
 	}
 	authzJson, err := json.Marshal(authz)
 	if err != nil {
