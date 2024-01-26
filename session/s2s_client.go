@@ -53,16 +53,16 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 		for _, token := range tokens {
 
 			if token.TokenExpires.Time.After(time.Now().UTC()) {
-				log.Printf("active s2s access token present: %s", token.Jti)
+				log.Printf("active s2s access token present, jti: %s", token.Jti)
 				return token.ServiceToken, err
 			} else {
 				// opportunistically delete expired access token
 				go func(id string) {
 					qry := "DELETE FROM servicetoken WHERE uuid = ?"
 					if err := p.Dao.DeleteRecord(qry, id); err != nil {
-						log.Printf("failed to delete expired access token %s: %v", id, err)
+						log.Printf("failed to delete expired access token, jti %s: %v", id, err)
 					} else {
-						log.Printf("deleted expired access token %s", id)
+						log.Printf("deleted expired access token, jti %s", id)
 					}
 				}(token.Jti)
 			}
@@ -81,7 +81,7 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 			// persist new access token, etc.
 			go func(a *Authorization) {
 				if err := p.PersistServiceToken(a); err != nil {
-					log.Printf("Error persisting refreshed access token: %v", err)
+					log.Printf("Error persisting refreshed access token, jit %s: %v", a.Jti, err)
 				}
 			}(authz)
 
