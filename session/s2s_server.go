@@ -16,6 +16,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// s2s login service -> validates incoming login
+type LoginService interface {
+	ValidateCredentials(id, secret string) error
+	GetScopes(uuid string) ([]Scope, error)
+	MintToken(subject string) (*jwt.JwtToken, error) // assumes valid creds
+	GetRefreshToken(token string) (*Refresh, error)
+	PersistRefresh(refresh Refresh) error
+}
+
 type S2sLoginCmd struct {
 	ClientId     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
@@ -33,22 +42,13 @@ type S2sClientData struct {
 }
 
 // maps db table data, not jwt string
-type S2sScope struct {
+type Scope struct {
 	Uuid        string `db:"uuid" json:"scope_id"`
 	Scope       string `db:"scope" json:"scope"`
 	Name        string `db:"name"  json:"name"`
 	Description string `db:"description" json:"description"`
 	CreatedAt   string `db:"created_at" json:"created_at"`
 	Active      bool   `db:"active" json:"active"`
-}
-
-// s2s login service -> validates incoming login
-type S2sLoginService interface {
-	ValidateCredentials(creds S2sLoginCmd) error
-	GetScopes(clientId string) ([]S2sScope, error)
-	MintToken(clientId string) (*jwt.JwtToken, error) // assumes valid creds
-	GetRefreshToken(string) (*Refresh, error)
-	PersistRefresh(Refresh) error
 }
 
 type MariaS2sLoginService struct {
@@ -65,18 +65,18 @@ func NewS2SLoginService(serviceName string, sql data.SqlRepository, mint jwt.Jwt
 	}
 }
 
-func (s *MariaS2sLoginService) ValidateCredentials(creds S2sLoginCmd) error {
+func (s *MariaS2sLoginService) ValidateCredentials(clientId, clientSecret string) error {
 
 	var s2sClient S2sClientData
 	qry := "SELECT uuid, password, name, owner, created_at, enabled, account_expired, account_locked FROM client WHERE uuid = ?"
 
-	if err := s.Dao.SelectRecord(qry, &s2sClient, creds.ClientId); err != nil {
+	if err := s.Dao.SelectRecord(qry, &s2sClient, clientId); err != nil {
 		log.Panicf("unable to retrieve s2s client record: %v", err)
 		return err
 	}
 
 	// password checked first to prevent account enumeration
-	secret := []byte(creds.ClientSecret)
+	secret := []byte(clientSecret)
 	hash := []byte(s2sClient.Password)
 	if err := bcrypt.CompareHashAndPassword(hash, secret); err != nil {
 		return fmt.Errorf("unable to validate password: %v", err)
@@ -97,9 +97,9 @@ func (s *MariaS2sLoginService) ValidateCredentials(creds S2sLoginCmd) error {
 	return nil
 }
 
-func (s *MariaS2sLoginService) GetScopes(uuid string) ([]S2sScope, error) {
+func (s *MariaS2sLoginService) GetScopes(uuid string) ([]Scope, error) {
 
-	var scopes []S2sScope
+	var scopes []Scope
 	qry := `
 		SELECT 
 			s.uuid,
@@ -128,7 +128,7 @@ func (s *MariaS2sLoginService) PersistRefresh(r Refresh) error {
 }
 
 // assumes credentials already validated
-func (s *MariaS2sLoginService) MintToken(clientId string) (*jwt.JwtToken, error) {
+func (s *MariaS2sLoginService) MintToken(subject string) (*jwt.JwtToken, error) {
 
 	// jwt header
 	header := jwt.JwtHeader{Alg: jwt.ES512, Typ: jwt.TokenType}
@@ -141,7 +141,7 @@ func (s *MariaS2sLoginService) MintToken(clientId string) (*jwt.JwtToken, error)
 
 	currentTime := time.Now().UTC()
 
-	scopes, err := s.GetScopes(clientId)
+	scopes, err := s.GetScopes(subject)
 	if err != nil {
 		return nil, err
 	}
@@ -156,8 +156,8 @@ func (s *MariaS2sLoginService) MintToken(clientId string) (*jwt.JwtToken, error)
 	claims := jwt.JwtClaims{
 		Jti:       jti.String(),
 		Issuer:    s.ServiceName,
-		Subject:   clientId,
-		Audience:  buildAudiences(scopes),
+		Subject:   subject,
+		Audience:  BuildAudiences(scopes),
 		IssuedAt:  currentTime.Unix(),
 		NotBefore: currentTime.Unix(),
 		Expires:   currentTime.Add(10 * time.Minute).Unix(),
@@ -175,7 +175,7 @@ func (s *MariaS2sLoginService) MintToken(clientId string) (*jwt.JwtToken, error)
 }
 
 // helper func to build audience []string
-func buildAudiences(scopes []S2sScope) (unique []string) {
+func BuildAudiences(scopes []Scope) (unique []string) {
 
 	var services []string
 	for _, v := range scopes {
@@ -240,10 +240,10 @@ func (s *MariaS2sLoginService) GetRefreshToken(refreshToken string) (*Refresh, e
 
 // s2s login handler -> handles incoming login
 type S2sLoginHandler struct {
-	LoginService S2sLoginService
+	LoginService LoginService
 }
 
-func NewS2sLoginHandler(service S2sLoginService) *S2sLoginHandler {
+func NewS2sLoginHandler(service LoginService) *S2sLoginHandler {
 	return &S2sLoginHandler{
 		LoginService: service,
 	}
@@ -264,7 +264,7 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 	}
 
 	// validate creds
-	if err := h.LoginService.ValidateCredentials(cmd); err != nil {
+	if err := h.LoginService.ValidateCredentials(cmd.ClientId, cmd.ClientSecret); err != nil {
 		http.Error(w, fmt.Sprintf("invalid credentials: %s", err), http.StatusUnauthorized)
 		return
 	}
@@ -296,16 +296,16 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 	}
 
 	// don't wait to return jwt
-	go func() {
-		err := h.LoginService.PersistRefresh(refresh)
+	go func(r Refresh) {
+		err := h.LoginService.PersistRefresh(r)
 		if err != nil {
 			// only logging since refresh is a convenience
 			log.Print(err)
 		}
-	}()
+	}(refresh)
 
 	// respond with authorization data
-	authz := Authorization{
+	authz := S2sAuthorization{
 		Jti:            token.Claims.Jti,
 		ServiceToken:   token.Token,
 		TokenExpires:   data.CustomTime{Time: time.Unix(token.Claims.Expires, 0)},

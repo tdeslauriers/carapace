@@ -15,7 +15,7 @@ import (
 
 // client side
 // response
-type Authorization struct {
+type S2sAuthorization struct {
 	Jti            string          `json:"jti" db:"uuid"` // gen'd by s2s service at token creation
 	ServiceToken   string          `json:"service_token" db:"service_token"`
 	TokenExpires   data.CustomTime `json:"token_expires" db:"service_expires"`
@@ -26,10 +26,10 @@ type Authorization struct {
 // s2s token provider -> calls s2s service for tokens, stores and retrieves tokens from local db
 type S2STokenProvider interface {
 	GetServiceToken() (string, error)
-	S2sLogin() (*Authorization, error)                               // login client call
-	RefreshServiceToken(refreshToken string) (*Authorization, error) // refresh client call
-	PersistServiceToken(*Authorization) error                        // save to db
-	RetrieveServiceToken() (string, error)                           // active token from local store
+	S2sLogin() (*S2sAuthorization, error)                               // login client call
+	RefreshServiceToken(refreshToken string) (*S2sAuthorization, error) // refresh client call
+	PersistServiceToken(*S2sAuthorization) error                        // save to db
+	RetrieveServiceToken() (string, error)                              // active token from local store
 }
 
 type S2sTokenProvider struct {
@@ -79,7 +79,7 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 		// only return and persist if successful
 		if authz != nil {
 			// persist new access token, etc.
-			go func(a *Authorization) {
+			go func(a *S2sAuthorization) {
 				if err := p.PersistServiceToken(a); err != nil {
 					log.Printf("Error persisting refreshed access token, jit %s: %v", a.Jti, err)
 				}
@@ -97,7 +97,7 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 	}
 
 	// persist new access token, etc.
-	go func(a *Authorization) {
+	go func(a *S2sAuthorization) {
 		if err := p.PersistServiceToken(a); err != nil {
 			log.Printf("Error persisting access token: %v", err)
 		}
@@ -106,7 +106,7 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 	return authz.ServiceToken, nil
 }
 
-func (p *S2sTokenProvider) S2sLogin() (*Authorization, error) {
+func (p *S2sTokenProvider) S2sLogin() (*S2sAuthorization, error) {
 
 	jsonData, err := json.Marshal(p.Credentials)
 	if err != nil {
@@ -124,7 +124,7 @@ func (p *S2sTokenProvider) S2sLogin() (*Authorization, error) {
 	}
 
 	// unmarshal json
-	var s2sAuthz Authorization
+	var s2sAuthz S2sAuthorization
 	if err = json.Unmarshal(body, &s2sAuthz); err != nil {
 		return nil, fmt.Errorf("unable to unmarshall s2s response body to json: %v", err)
 	}
@@ -132,7 +132,7 @@ func (p *S2sTokenProvider) S2sLogin() (*Authorization, error) {
 	return &s2sAuthz, nil
 }
 
-func (p *S2sTokenProvider) PersistServiceToken(authz *Authorization) error {
+func (p *S2sTokenProvider) PersistServiceToken(authz *S2sAuthorization) error {
 
 	qry := "INSERT INTO servicetoken (uuid, service_token, service_expires, refresh_token, refresh_expires) VALUES (?, ?, ?, ?, ?)"
 	if err := p.Dao.InsertRecord(qry, *authz); err != nil {
@@ -142,9 +142,9 @@ func (p *S2sTokenProvider) PersistServiceToken(authz *Authorization) error {
 	return nil
 }
 
-func (p *S2sTokenProvider) RetrieveServiceTokens() ([]Authorization, error) {
+func (p *S2sTokenProvider) RetrieveServiceTokens() ([]S2sAuthorization, error) {
 
-	var tokens []Authorization
+	var tokens []S2sAuthorization
 	qry := `
 			SELECT 
 				uuid, 
@@ -161,7 +161,7 @@ func (p *S2sTokenProvider) RetrieveServiceTokens() ([]Authorization, error) {
 	return tokens, nil
 }
 
-func (p *S2sTokenProvider) RefreshServiceToken(refreshToken string) (*Authorization, error) {
+func (p *S2sTokenProvider) RefreshServiceToken(refreshToken string) (*S2sAuthorization, error) {
 	// create cmd
 	data, err := json.Marshal(RefreshCmd{RefreshToken: refreshToken})
 	if err != nil {
@@ -181,7 +181,7 @@ func (p *S2sTokenProvider) RefreshServiceToken(refreshToken string) (*Authorizat
 
 	if resp.StatusCode == http.StatusOK {
 		// unmarshal json
-		var s2sAuthz Authorization
+		var s2sAuthz S2sAuthorization
 		if err = json.Unmarshal(body, &s2sAuthz); err != nil {
 			return nil, fmt.Errorf("unable to unmarshall s2s response body to json: %v", err)
 		}

@@ -24,10 +24,10 @@ type RefreshCmd struct {
 }
 
 type S2sRefreshHandler struct {
-	LoginService S2sLoginService
+	LoginService LoginService
 }
 
-func NewS2sRefreshHandler(service S2sLoginService) *S2sRefreshHandler {
+func NewS2sRefreshHandler(service LoginService) *S2sRefreshHandler {
 	return &S2sRefreshHandler{
 		LoginService: service,
 	}
@@ -62,7 +62,7 @@ func (h *S2sRefreshHandler) HandleS2sRefresh(w http.ResponseWriter, r *http.Requ
 		}
 
 		// respond with authorization data
-		authz := &Authorization{
+		authz := &S2sAuthorization{
 			Jti:            token.Claims.Jti,
 			ServiceToken:   token.Token,
 			TokenExpires:   data.CustomTime{Time: time.Unix(token.Claims.Expires, 0)},
