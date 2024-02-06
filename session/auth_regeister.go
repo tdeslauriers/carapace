@@ -1,9 +1,15 @@
 package session
 
-import "github.com/tdeslauriers/carapace/data"
+import (
+	"errors"
+	"fmt"
 
-type RegistrationService interface{
-	Register(RegisterCmd) error 
+	"github.com/tdeslauriers/carapace/data"
+	"github.com/tdeslauriers/carapace/validate"
+)
+
+type RegistrationService interface {
+	Register(RegisterCmd) error
 }
 
 type RegisterCmd struct {
@@ -19,6 +25,25 @@ type MariaAuthRegistrationService struct {
 	Dao data.SqlRepository
 }
 
-func (r *MariaAuthRegistrationService) Register() error {
-	
+func NewAuthRegistrationService(sql data.SqlRepository) *MariaAuthRegistrationService {
+	return &MariaAuthRegistrationService{
+		Dao: sql,
+	}
+}
+
+func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
+
+	if err := validate.ValidateEmail(cmd.Username); err != nil {
+		return fmt.Errorf("invalid username: %v", err)
+	}
+
+	if cmd.Password != cmd.Confirm {
+		return errors.New("password does not match confirm password")
+	}
+
+	if err := validate.ValidatePassword(cmd.Password); err != nil {
+		return fmt.Errorf("invalid password: %v", err)
+	}
+
+	return nil
 }
