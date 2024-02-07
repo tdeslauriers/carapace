@@ -112,3 +112,20 @@ func TestNames(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateBirthDay(t *testing.T) {
+
+	good := []string{"1969-01-10", "2002-02-02"}
+	for _, v := range good {
+		if err := ValidateBirthday(v); err != nil {
+			t.Logf("%s should be valid dob: %v", v, err)
+		}
+	}
+
+	fail := []string{"1900-01-10", "2202-02-02"}
+	for _, v := range fail {
+		if err := ValidateBirthday(v); err == nil {
+			t.Logf("%s should be valid dob: %v", v, err)
+		}
+	}
+}

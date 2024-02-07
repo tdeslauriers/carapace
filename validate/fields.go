@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -56,6 +57,34 @@ func ValidateName(name string) error {
 
 	if !MatchesRegex(name, NameRegex) {
 		return errors.New("name includes illegal characters")
+	}
+
+	return nil
+}
+
+func ValidateBirthday(dob string) error {
+
+	// parse
+	birthday, err := time.Parse("2006-01-02", dob)
+	if err != nil {
+		return fmt.Errorf("birthday not properly formatted: %v", err)
+	}
+
+	now := time.Now()
+
+	if birthday.After(now) {
+		return fmt.Errorf("birthday cannot be in the future")
+	}
+
+	age := now.Year() - birthday.Year()
+
+	// adjust age in case birthday hasn't occurred yet this year
+	if now.Month() < birthday.Month() || (now.Month() == birthday.Month() && now.Day() < birthday.Day()) {
+		age--
+	}
+
+	if age >= 110 {
+		return fmt.Errorf("birth year greater than 110 years ago")
 	}
 
 	return nil
