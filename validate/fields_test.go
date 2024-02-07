@@ -93,3 +93,22 @@ func TestValidatePassword(t *testing.T) {
 	}
 
 }
+
+func TestNames(t *testing.T) {
+
+	good := []string{"Darth", "柔道", "de la Riva", "O'Brian", "Jean-Luc", "Muñoz"}
+	for _, v := range good {
+		if err := ValidateName(v); err != nil {
+			t.Logf("name: %s should pass regex: %v", v, err)
+			t.Fail()
+		}
+	}
+
+	fail := []string{"Fonz👍", "Darth+Vader", "Bond; James Bond", "Henry8", "hulk@smash", "new\\nline"}
+	for _, v := range fail {
+		if err := ValidateName(v); err == nil {
+			t.Logf("name: %s should fail regex: %v", v, err)
+			t.Fail()
+		}
+	}
+}

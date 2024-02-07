@@ -16,6 +16,10 @@ const (
 	EmailMax   int    = 254
 	EmailMin   int    = 6 // min length is 3, tho domain rules make them longer: 6
 
+	NameMin   int    = 1
+	NameMax   int    = 32
+	NameRegex string = `^[\p{L}\p{M}'\-\s]+$`
+
 	PasswordMin         int    = 16
 	PasswordMax         int    = 64
 	UpperCase           string = `[A-Z]`
@@ -39,6 +43,19 @@ func ValidateEmail(email string) error {
 
 	if !MatchesRegex(email, EmailRegex) {
 		return fmt.Errorf("email address not properly formatted")
+	}
+
+	return nil
+}
+
+func ValidateName(name string) error {
+
+	if TooShort(name, NameMin) || TooLong(name, NameMax) {
+		return fmt.Errorf("name should be between 16 and 64 characters in length")
+	}
+
+	if !MatchesRegex(name, NameRegex) {
+		return errors.New("name includes illegal characters")
 	}
 
 	return nil
