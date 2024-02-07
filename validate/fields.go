@@ -37,8 +37,7 @@ func ValidateEmail(email string) error {
 		return fmt.Errorf("email must be between 6 and 254 characters in length")
 	}
 
-	regex := regexp.MustCompile(EmailRegex)
-	if !regex.MatchString(email) {
+	if !MatchesRegex(email, EmailRegex) {
 		return fmt.Errorf("email address not properly formatted")
 	}
 
@@ -51,23 +50,19 @@ func ValidatePassword(password string) error {
 		return fmt.Errorf("password should be between 16 and 64 characters in length")
 	}
 
-	// upper case:
-	if matched, _ := regexp.MatchString(UpperCase, password); !matched {
+	if !MatchesRegex(password, UpperCase) {
 		return errors.New("password must include at least 1 uppercase letter")
 	}
 
-	// lower case:
-	if matched, _ := regexp.MatchString(LowerCase, password); !matched {
+	if !MatchesRegex(password, LowerCase) {
 		return errors.New("password must include at least 1 lowercase letter")
 	}
 
-	// number:
-	if matched, _ := regexp.MatchString(Number, password); !matched {
+	if !MatchesRegex(password, Number) {
 		return errors.New("password must include at least 1 number")
 	}
 
-	// special:
-	if matched, _ := regexp.MatchString(SpecialChar, password); !matched {
+	if !MatchesRegex(password, SpecialChar) {
 		return errors.New("password must include at least 1 special character")
 	}
 
@@ -82,6 +77,16 @@ func ValidatePassword(password string) error {
 	}
 
 	return nil
+}
+
+func MatchesRegex(s, pattern string) bool {
+
+	rgx, err := regexp.Compile(pattern)
+	if err != nil {
+		log.Panicf("unable to compile regex pattern: %s: %v", pattern, err)
+	}
+
+	return rgx.MatchString(s)
 }
 
 func RepeatChar(password string) error {
@@ -145,6 +150,7 @@ func ContainsKeyboardSequence(password string) error {
 	return nil
 }
 
+// includes reverse of any sequence
 func IsKeyboardSequence(password, sequence string) bool {
 
 	lowerPassword := strings.ToLower(password)
@@ -180,7 +186,6 @@ func contains(password, sequence string) bool {
 	if len(sequence) == 0 || len(password) < len(sequence) {
 		return false
 	}
-
 	return strings.Contains(password, sequence)
 }
 
