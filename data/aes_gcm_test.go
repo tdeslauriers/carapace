@@ -22,17 +22,17 @@ func TestAesCipher(t *testing.T) {
 	}
 
 	serviceKey := ServiceAesGcmKey{
-		Name: "TestService",
-		Env:  ServiceDataKey,
+		Name:   "TestService",
+		Secret: ServiceDataKey,
 	}
 
-	encrypted, err := serviceKey.encyptServiceData(Plaintext)
+	encrypted, err := serviceKey.EncyptServiceData(Plaintext)
 	if err != nil {
 		t.Logf("Failed to encrypt test data: %v", err)
 		t.Fail()
 	}
 
-	decrypted, err := serviceKey.decyptServiceData(encrypted)
+	decrypted, err := serviceKey.DecyptServiceData(encrypted)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -42,7 +42,7 @@ func TestAesCipher(t *testing.T) {
 		t.Fail()
 	}
 
-	sameCrypted, err := serviceKey.encyptServiceData(Plaintext)
+	sameCrypted, err := serviceKey.EncyptServiceData(Plaintext)
 	if err != nil {
 		t.Logf("Failed to encrypt test data: %v", err)
 		t.Fail()

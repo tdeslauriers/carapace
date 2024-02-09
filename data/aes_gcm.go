@@ -11,8 +11,8 @@ import (
 )
 
 type Cryptor interface {
-	encyptServiceData(string) (string, error)
-	decyptServiceData(string) (string, error)
+	EncyptServiceData(string) (string, error)
+	DecyptServiceData(string) (string, error)
 }
 
 func GenerateAesGcmKey() []byte {
@@ -26,13 +26,13 @@ func GenerateAesGcmKey() []byte {
 }
 
 type ServiceAesGcmKey struct {
-	Name string
-	Env  string // Env Var
+	Name   string
+	Secret string // Env Var
 }
 
-func (key *ServiceAesGcmKey) encyptServiceData(plaintext string) (string, error) {
+func (key *ServiceAesGcmKey) EncyptServiceData(plaintext string) (string, error) {
 
-	keyBytes, err := base64.StdEncoding.DecodeString(os.Getenv(key.Env))
+	keyBytes, err := base64.StdEncoding.DecodeString(os.Getenv(key.Secret))
 	if err != nil {
 		return "", err
 	}
@@ -59,10 +59,10 @@ func (key *ServiceAesGcmKey) encyptServiceData(plaintext string) (string, error)
 	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 
-func (key *ServiceAesGcmKey) decyptServiceData(ciphertext string) (string, error) {
+func (key *ServiceAesGcmKey) DecyptServiceData(ciphertext string) (string, error) {
 
 	// get service key from env var
-	keyEnv := os.Getenv(key.Env)
+	keyEnv := os.Getenv(key.Secret)
 
 	keyBytes, err := base64.StdEncoding.DecodeString(keyEnv)
 	if err != nil {

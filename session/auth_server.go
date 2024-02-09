@@ -5,7 +5,7 @@ type AuthLoginCmd struct {
 	Password string `json:"password"`
 }
 
-type AuthClientData struct {
+type AuthAccountData struct {
 	Uuid           string `db:"uuid" json:"uuid"`
 	Username       string `db:"username" json:"username"`
 	UserIndex      string `db:"user_index" json:"user_index,omitempty"`
