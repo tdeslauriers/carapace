@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tdeslauriers/carapace/data"
 	"github.com/tdeslauriers/carapace/validate"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type RegistrationService interface {
@@ -26,12 +27,14 @@ type RegisterCmd struct {
 type MariaAuthRegistrationService struct {
 	Dao    data.SqlRepository
 	Cipher data.Cryptor
+	Indexer data.Indexer
 }
 
-func NewAuthRegistrationService(sql data.SqlRepository, ciph data.Cryptor) *MariaAuthRegistrationService {
+func NewAuthRegistrationService(sql data.SqlRepository, ciph data.Cryptor, i data.Indexer) *MariaAuthRegistrationService {
 	return &MariaAuthRegistrationService{
 		Dao:    sql,
 		Cipher: ciph,
+		Indexer: i,
 	}
 }
 
@@ -74,11 +77,28 @@ func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
 	}
 
 	// create blind index
-	
+	index, err := r.Indexer.ObtainBlindIndex(cmd.Username)
+	if err != nil {
+		log.Panic("unable to create username blind index: %v", err)
+	}
+
+	// bcrypt hash password
+	password := bcrypt.
+
+	first, err := r.Cipher.EncyptServiceData(cmd.Firstname)
+	if err != nil {
+		log.Panic("unable to field level encrypt user registration firstname: %v", err)
+	}
 
 	user := AuthAccountData{
 		Uuid: id.String(),
+		Username: username,
+		UserIndex: index,
+		Password: ,
+		Firstname: first,
 	}
+
+
 
 	// insert into database
 
