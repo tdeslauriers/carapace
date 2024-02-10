@@ -34,7 +34,7 @@ func (url *DbUrl) Build() string {
 func (conn *MariaDbConnector) Connect() (*sql.DB, error) {
 	tlsConfig, err := conn.TlsConfig.Build()
 	if err != nil {
-		log.Fatalf("Unable to create TLS Config for Db Connection: %v", err)
+		log.Fatalf("unable to create TLS Config for Db Connection: %v", err)
 	}
 
 	// register tls => "custom" key comes from mysql lib

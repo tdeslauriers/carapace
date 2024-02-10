@@ -258,6 +258,8 @@ func setUpCerts() {
 	envVars = append(envVars, []string{S2S_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sClientName)})
 	envVars = append(envVars, []string{S2S_CLIENT_DB_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", S2sClientDbClientName)})
 	envVars = append(envVars, []string{S2S_CLIENT_DB_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sClientDbClientName)})
+	envVars = append(envVars, []string{AUTH_SERVER_DB_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", AuthServerDbClientName)})
+	envVars = append(envVars, []string{AUTH_SERVER_DB_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", AuthServerDbClientName)})
 
 	// loop thru setting env
 	for _, v := range envVars {

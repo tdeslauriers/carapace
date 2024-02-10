@@ -48,12 +48,27 @@ func TestRegister(t *testing.T) {
 
 	// set up field level encryption cryptor
 	aes, _ := base64.StdEncoding.DecodeString(os.Getenv(AuthServerAesKey))
+	t.Logf("%d", len(aes))
 	cryptor := data.NewServiceAesGcmKey(aes)
 
 	// set up indexer
-	hmacSecret := os.Getenv(AuthServerMariaDbIndexHmac)
+	hmacSecret, _ := base64.StdEncoding.DecodeString(os.Getenv(AuthServerAesKey))
 	indexer := data.NewHmacIndexer(hmacSecret)
 
 	authRegistrationService := NewAuthRegistrationService(authServerDao, cryptor, indexer)
+
+	cmd := RegisterCmd{
+		Username:  "darth.vader@empire.com",
+		Password:  "2-Suns-Tattooine",
+		Confirm:   "2-Suns-Tattooine",
+		Firstname: "Darth",
+		Lastname:  "Vader",
+		Birthdate: "1977-05-25", // A New Hope release date
+	}
+
+	if err := authRegistrationService.Register(cmd); err != nil {
+		t.Logf("test registration failed")
+		t.Fail()
+	}
 
 }

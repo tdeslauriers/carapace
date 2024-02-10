@@ -1,14 +1,12 @@
 package data
 
 import (
-	"encoding/base64"
 	"testing"
 )
 
 func TestHmac(t *testing.T) {
 
-	secret := base64.StdEncoding.EncodeToString([]byte("super-duper-secret"))
-	hmac := NewHmacIndexer(secret)
+	hmac := NewHmacIndexer([]byte("DeathStarPlans"))
 
 	index, err := hmac.ObtainBlindIndex("darth.vader@empire.com")
 	if err != nil {
