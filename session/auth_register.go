@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/tdeslauriers/carapace/data"
@@ -25,15 +26,15 @@ type RegisterCmd struct {
 }
 
 type MariaAuthRegistrationService struct {
-	Dao    data.SqlRepository
-	Cipher data.Cryptor
+	Dao     data.SqlRepository
+	Cipher  data.Cryptor
 	Indexer data.Indexer
 }
 
 func NewAuthRegistrationService(sql data.SqlRepository, ciph data.Cryptor, i data.Indexer) *MariaAuthRegistrationService {
 	return &MariaAuthRegistrationService{
-		Dao:    sql,
-		Cipher: ciph,
+		Dao:     sql,
+		Cipher:  ciph,
 		Indexer: i,
 	}
 }
@@ -68,39 +69,70 @@ func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
 	// create user record
 	id, err := uuid.NewRandom()
 	if err != nil {
-		log.Panicf("unable to create uuid for user registration request: %v", err)
+		log.Printf("unable to create uuid for user registration request: %v", err)
+		return fmt.Errorf("unable to create user record")
 	}
 
 	username, err := r.Cipher.EncyptServiceData(cmd.Username)
 	if err != nil {
-		log.Panic("unable to field level encrypt user registration username/email: %v", err)
+		log.Printf("unable to field level encrypt user registration username/email: %v", err)
+		return fmt.Errorf("unable to create user record")
 	}
 
 	// create blind index
 	index, err := r.Indexer.ObtainBlindIndex(cmd.Username)
 	if err != nil {
-		log.Panic("unable to create username blind index: %v", err)
+		log.Printf("unable to create username blind index: %v", err)
+		return fmt.Errorf("unable to create user record")
 	}
 
 	// bcrypt hash password
-	password := bcrypt.
+	password, err := bcrypt.GenerateFromPassword([]byte(cmd.Password), 13)
+	if err != nil {
+		log.Printf("unable to generate bcrypt password hash: %v", err)
+		return fmt.Errorf("unable to create user record")
+	}
 
 	first, err := r.Cipher.EncyptServiceData(cmd.Firstname)
 	if err != nil {
-		log.Panic("unable to field level encrypt user registration firstname: %v", err)
+		log.Printf("unable to field level encrypt user registration firstname: %v", err)
+		return fmt.Errorf("unable to create user record")
 	}
+
+	last, err := r.Cipher.EncyptServiceData(cmd.Lastname)
+	if err != nil {
+		log.Printf("unable to field level encrypt user registration lastname: %v", err)
+		return fmt.Errorf("unable to create user record")
+	}
+
+	dob, err := r.Cipher.EncyptServiceData(cmd.Birthdate)
+	if err != nil {
+		log.Printf("unable to field level encrypt user registration dob: %v", err)
+		return fmt.Errorf("unable to create user record")
+	}
+
+	createdAt := time.Now()
 
 	user := AuthAccountData{
-		Uuid: id.String(),
-		Username: username,
-		UserIndex: index,
-		Password: ,
-		Firstname: first,
+		Uuid:           id.String(),
+		Username:       username,
+		UserIndex:      index,
+		Password:       string(password),
+		Firstname:      first,
+		Lastname:       last,
+		Birthdate:      dob,
+		CreatedAt:      createdAt.Format("2006-01-02 15:04:05"),
+		Enabled:        true, // this will change to false when email verification built
+		AccountExpired: false,
+		AccountLocked:  false,
 	}
 
-
-
-	// insert into database
+	// insert user into database
+	query := "INSERT INTO account (uuid, username, user_index, password, firstname, lastname, birth_date, created_at, enabled, account_expired, account_locked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	if err := r.Dao.InsertRecord(query, user); err != nil {
+		log.Printf("unable to enter registeration record into account table in db: %v", err)
+		return fmt.Errorf("unable to perst user registration to db")
+	}
 
 	return nil
 }
