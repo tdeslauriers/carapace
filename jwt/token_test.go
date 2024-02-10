@@ -59,8 +59,19 @@ func TestJwtSignatures(t *testing.T) {
 	}
 
 	allowed := []string{"r:shaw:*", "w:shaw:*"}
-	if !verifier.IsAuthorized(allowed, rebuild) {
-		t.Log("Authz failed")
+	if !verifier.HasValidScopes(allowed, rebuild) {
+		t.Log("Scopes failed")
+		t.Fail()
+	}
+
+	// whole enchilada
+	authd, err := verifier.IsAuthorized(allowed, jwt.Token)
+	if err != nil {
+		t.Logf("error generated trying to validate token comprehensively: %v", err)
+		t.Fail()
+	}
+	if !authd {
+		t.Logf("Should have checked signature, built jwt, and verified scopes, and returned true, but was false.")
 		t.Fail()
 	}
 

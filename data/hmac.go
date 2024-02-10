@@ -16,6 +16,12 @@ type HmacIndexer struct {
 	Secret string
 }
 
+func NewHmacIndexer(secret string) *HmacIndexer {
+	return &HmacIndexer{
+		Secret: secret,
+	}
+}
+
 func (i *HmacIndexer) ObtainBlindIndex(s string) (string, error) {
 
 	key, err := base64.StdEncoding.DecodeString(i.Secret)

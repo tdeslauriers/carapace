@@ -21,15 +21,15 @@ import (
 )
 
 const (
-	ServerMariaDbName     = "CARAPACE_SERVER_MARIADB_NAME"
-	ServerMariaDbUrl      = "CARAPACE_SERVER_MARIADB_URL"
-	ServerMariaDbUsername = "CARAPACE_SERVER_MARIADB_USERNAME"
-	ServerMariaDbPassword = "CARAPACE_SERVER_MARIADB_PASSWORD"
+	S2sServerMariaDbName     = "CARAPACE_SERVER_MARIADB_NAME"
+	S2sServerMariaDbUrl      = "CARAPACE_SERVER_MARIADB_URL"
+	S2sServerMariaDbUsername = "CARAPACE_SERVER_MARIADB_USERNAME"
+	S2sServerMariaDbPassword = "CARAPACE_SERVER_MARIADB_PASSWORD"
 
-	ClientMariaDbName     = "CARAPACE_CLIENT_MARIADB_NAME"
-	ClientMariaDbUrl      = "CARAPACE_CLIENT_MARIADB_URL"
-	ClientMariaDbUsername = "CARAPACE_CLIENT_MARIADB_USERNAME"
-	ClientMariaDbPassword = "CARAPACE_CLIENT_MARIADB_PASSWORD"
+	S2sClientMariaDbName     = "CARAPACE_CLIENT_MARIADB_NAME"
+	S2sClientMariaDbUrl      = "CARAPACE_CLIENT_MARIADB_URL"
+	S2sClientMariaDbUsername = "CARAPACE_CLIENT_MARIADB_USERNAME"
+	S2sClientMariaDbPassword = "CARAPACE_CLIENT_MARIADB_PASSWORD"
 
 	S2sClientId     = "CARAPACE_S2S_CLIENT_ID"
 	S2sClientSecret = "CARAPACE_S2S_CLIENT_SECRET"
@@ -39,37 +39,37 @@ func TestS2sLogin(t *testing.T) {
 
 	setUpCerts()
 
-	// set up server
+	// set up s2s server
 	serverPki := &connect.Pki{
-		CertFile: os.Getenv(LOGIN_SERVER_CERT_ENV),
-		KeyFile:  os.Getenv(LOGIN_SERVER_KEY_ENV),
+		CertFile: os.Getenv(S2S_SERVER_CERT_ENV),
+		KeyFile:  os.Getenv(S2S_SERVER_KEY_ENV),
 		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
 
 	tls, _ := connect.NewTLSConfig("mutual", serverPki)
 
-	// set up db client
-	serverDbClientPki := &connect.Pki{
-		CertFile: os.Getenv(LOGIN_SERVER_DB_CLIENT_CERT_ENV),
-		KeyFile:  os.Getenv(LOGIN_SERVER_DB_CLIENT_KEY_ENV),
+	// set up s2s server db client
+	s2sServerDbClientPki := &connect.Pki{
+		CertFile: os.Getenv(S2S_SERVER_DB_CLIENT_CERT_ENV),
+		KeyFile:  os.Getenv(S2S_SERVER_DB_CLIENT_KEY_ENV),
 		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
-	serverDbClientConfig := connect.ClientConfig{Config: serverDbClientPki}
+	s2sServerDbClientConfig := connect.ClientConfig{Config: s2sServerDbClientPki}
 
-	dbUrl := data.DbUrl{
-		Name:     os.Getenv(ServerMariaDbName),
-		Addr:     os.Getenv(ServerMariaDbUrl),
-		Username: os.Getenv(ServerMariaDbUsername),
-		Password: os.Getenv(ServerMariaDbPassword),
+	s2sServerDbUrl := data.DbUrl{
+		Name:     os.Getenv(S2sServerMariaDbName),
+		Addr:     os.Getenv(S2sServerMariaDbUrl),
+		Username: os.Getenv(S2sServerMariaDbUsername),
+		Password: os.Getenv(S2sServerMariaDbPassword),
 	}
 
-	dbConnector := &data.MariaDbConnector{
-		TlsConfig:     serverDbClientConfig,
-		ConnectionUrl: dbUrl.Build(),
+	s2sServerDbConnector := &data.MariaDbConnector{
+		TlsConfig:     s2sServerDbClientConfig,
+		ConnectionUrl: s2sServerDbUrl.Build(),
 	}
 
-	dao := &data.MariaDbRepository{
-		SqlDb: dbConnector,
+	s2sServerDao := &data.MariaDbRepository{
+		SqlDb: s2sServerDbConnector,
 	}
 
 	// set up signer
@@ -77,40 +77,40 @@ func TestS2sLogin(t *testing.T) {
 	privPem, _ := base64.StdEncoding.DecodeString(priv) // read from env var in prod
 	privBlock, _ := pem.Decode(privPem)
 
-	privateKey, _ := x509.ParseECPrivateKey(privBlock.Bytes)
-	signer := jwt.JwtSignerService{PrivateKey: privateKey}
+	s2sPrivateKey, _ := x509.ParseECPrivateKey(privBlock.Bytes)
+	s2sSigner := jwt.JwtSignerService{PrivateKey: s2sPrivateKey}
 
-	loginService := NewS2SLoginService("ran", dao, &signer)
-	loginHander := NewS2sLoginHandler(loginService)
-	refreshHandler := NewS2sRefreshHandler(loginService)
+	s2sLoginService := NewS2SLoginService("ran", s2sServerDao, &s2sSigner)
+	s2sLoginHander := NewS2sLoginHandler(s2sLoginService)
+	s2sRefreshHandler := NewS2sRefreshHandler(s2sLoginService)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
-	mux.HandleFunc("/login", loginHander.HandleS2sLogin)
-	mux.HandleFunc("/refresh", refreshHandler.HandleS2sRefresh)
+	mux.HandleFunc("/login", s2sLoginHander.HandleS2sLogin)
+	mux.HandleFunc("/refresh", s2sRefreshHandler.HandleS2sRefresh)
 
-	server := &connect.TlsServer{
+	s2sServer := &connect.TlsServer{
 		Addr:      ":8443",
 		Mux:       mux,
 		TlsConfig: tls,
 	}
 
 	go func() {
-		if err := server.Initialize(); err != http.ErrServerClosed {
+		if err := s2sServer.Initialize(); err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 		time.Sleep(1 * time.Second)
 	}()
 
 	// set up s2s client config
-	clientPki := connect.Pki{
+	s2sClientPki := connect.Pki{
 		CertFile: os.Getenv(S2S_CLIENT_CERT_ENV),
 		KeyFile:  os.Getenv(S2S_CLIENT_KEY_ENV),
 		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
 
-	clientConfig := connect.ClientConfig{Config: &clientPki}
-	client, _ := clientConfig.NewTlsClient()
+	s2sClientConfig := connect.ClientConfig{Config: &s2sClientPki}
+	s2sClient, _ := s2sClientConfig.NewTlsClient()
 
 	// set up s2s client-side db config
 	s2sClientDbPki := connect.Pki{
@@ -120,20 +120,20 @@ func TestS2sLogin(t *testing.T) {
 	}
 	s2sClientDbClientConfig := connect.ClientConfig{Config: &s2sClientDbPki}
 
-	s2sDbUrl := data.DbUrl{
-		Name:     os.Getenv(ClientMariaDbName),
-		Addr:     os.Getenv(ClientMariaDbUrl),
-		Username: os.Getenv(ClientMariaDbUsername),
-		Password: os.Getenv(ClientMariaDbPassword),
+	s2sClientDbUrl := data.DbUrl{
+		Name:     os.Getenv(S2sClientMariaDbName),
+		Addr:     os.Getenv(S2sClientMariaDbUrl),
+		Username: os.Getenv(S2sClientMariaDbUsername),
+		Password: os.Getenv(S2sClientMariaDbPassword),
 	}
 
-	s2sDbConnector := &data.MariaDbConnector{
+	s2sClientDbConnector := &data.MariaDbConnector{
 		TlsConfig:     s2sClientDbClientConfig,
-		ConnectionUrl: s2sDbUrl.Build(),
+		ConnectionUrl: s2sClientDbUrl.Build(),
 	}
 
 	repository := data.MariaDbRepository{
-		SqlDb: s2sDbConnector,
+		SqlDb: s2sClientDbConnector,
 	}
 
 	cmd := S2sLoginCmd{
@@ -144,7 +144,7 @@ func TestS2sLogin(t *testing.T) {
 	s2sJwtProvider := S2sTokenProvider{
 		S2sServiceUrl: "https://localhost:8443",
 		Credentials:   cmd,
-		S2sClient:     client,
+		S2sClient:     s2sClient,
 		Dao:           &repository,
 	}
 
@@ -162,29 +162,32 @@ func TestS2sLogin(t *testing.T) {
 
 // set up test env vars
 const (
-	CA_CERT_ENV                     = "CA_CERT"
-	LOGIN_SERVER_CERT_ENV           = "LOGIN_SERVER_CERT"
-	LOGIN_SERVER_KEY_ENV            = "LOGIN_SERVER_KEY"
-	LOGIN_SERVER_DB_CLIENT_CERT_ENV = "LOGIN_SERVER_DB_CLIENT_CERT"
-	LOGIN_SERVER_DB_CLIENT_KEY_ENV  = "LOGIN_SERVER_DB_CLIENT_KEY"
-	S2S_CLIENT_CERT_ENV             = "S2S_CLIENT_CERT"
-	S2S_CLIENT_KEY_ENV              = "S2S_CLIENT_KEY"
-	S2S_CLIENT_DB_CLIENT_CERT_ENV   = "S2S_CLIENT_DB_CLIENT_CERT"
-	S2S_CLIENT_DB_CLIENT_KEY_ENV    = "S2S_CLIENT_DB_CLIENT_KEY"
+	CA_CERT_ENV                    = "CA_CERT"
+	S2S_SERVER_CERT_ENV            = "S2S_SERVER_CERT"
+	S2S_SERVER_KEY_ENV             = "S2S_SERVER_KEY"
+	S2S_SERVER_DB_CLIENT_CERT_ENV  = "S2S_SERVER_DB_CLIENT_CERT"
+	S2S_SERVER_DB_CLIENT_KEY_ENV   = "S2S_SERVER_DB_CLIENT_KEY"
+	S2S_CLIENT_CERT_ENV            = "S2S_CLIENT_CERT"
+	S2S_CLIENT_KEY_ENV             = "S2S_CLIENT_KEY"
+	S2S_CLIENT_DB_CLIENT_CERT_ENV  = "S2S_CLIENT_DB_CLIENT_CERT"
+	S2S_CLIENT_DB_CLIENT_KEY_ENV   = "S2S_CLIENT_DB_CLIENT_KEY"
+	AUTH_SERVER_DB_CLIENT_CERT_ENV = "AUTH_SERVER_DB_CLIENT_CERT"
+	AUTH_SERVER_DB_CLIENT_KEY_ENV  = "AUTH_SERVER_DB_CLIENT_KEY"
 )
 
 const (
-	CaCert                  string = "../data/ca"
-	LoginServerName         string = "login-server"
-	LoginServerDbClientName        = "db-client"
-	S2sCLientName                  = "s2s-client"
-	S2sClientDbClientName          = "s2s-db-client"
+	CaCert                 string = "../data/ca"
+	S2sServerName          string = "s2s-server"
+	S2sServerDbClientName         = "s2s-server-db-client"
+	S2sClientName                 = "s2s-client"
+	S2sClientDbClientName         = "s2s-client-db-client"
+	AuthServerDbClientName        = "auth-db-client"
 )
 
 func setUpCerts() {
 	// setup server
 	leafServer := sign.CertFields{
-		CertName:     LoginServerName,
+		CertName:     S2sServerName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
@@ -197,7 +200,7 @@ func setUpCerts() {
 	// gen db client certs
 	// need to use ca installed in maria as rootCA
 	leafDbClient := sign.CertFields{
-		CertName:     LoginServerDbClientName,
+		CertName:     S2sServerDbClientName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
@@ -209,7 +212,7 @@ func setUpCerts() {
 
 	// gen s2s client certs
 	leafS2sClient := sign.CertFields{
-		CertName:     S2sCLientName,
+		CertName:     S2sClientName,
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},
@@ -231,17 +234,28 @@ func setUpCerts() {
 	}
 	leafS2sClientDbClient.GenerateEcdsaCert()
 
+	leafAuthClientDbClient := sign.CertFields{
+		CertName:     AuthServerDbClientName,
+		Organisation: []string{"Rebel Alliance"},
+		CommonName:   "localhost",
+		San:          []string{"localhost"},
+		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
+		Role:         sign.Client,
+		CaCertName:   CaCert,
+	}
+	leafAuthClientDbClient.GenerateEcdsaCert()
+
 	// make base64 strings from pem files
 	// set cert base64 vals files to environmental vars to be injested by docker/k8s
 	// expected by tls package code
 	var envVars [][]string
 	envVars = append(envVars, []string{CA_CERT_ENV, fmt.Sprintf("%s-cert.pem", CaCert)})
-	envVars = append(envVars, []string{LOGIN_SERVER_CERT_ENV, fmt.Sprintf("%s-cert.pem", LoginServerName)})
-	envVars = append(envVars, []string{LOGIN_SERVER_KEY_ENV, fmt.Sprintf("%s-key.pem", LoginServerName)})
-	envVars = append(envVars, []string{LOGIN_SERVER_DB_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", LoginServerDbClientName)})
-	envVars = append(envVars, []string{LOGIN_SERVER_DB_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", LoginServerDbClientName)})
-	envVars = append(envVars, []string{S2S_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", S2sCLientName)})
-	envVars = append(envVars, []string{S2S_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sCLientName)})
+	envVars = append(envVars, []string{S2S_SERVER_CERT_ENV, fmt.Sprintf("%s-cert.pem", S2sServerName)})
+	envVars = append(envVars, []string{S2S_SERVER_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sServerName)})
+	envVars = append(envVars, []string{S2S_SERVER_DB_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", S2sServerDbClientName)})
+	envVars = append(envVars, []string{S2S_SERVER_DB_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sServerDbClientName)})
+	envVars = append(envVars, []string{S2S_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", S2sClientName)})
+	envVars = append(envVars, []string{S2S_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sClientName)})
 	envVars = append(envVars, []string{S2S_CLIENT_DB_CLIENT_CERT_ENV, fmt.Sprintf("%s-cert.pem", S2sClientDbClientName)})
 	envVars = append(envVars, []string{S2S_CLIENT_DB_CLIENT_KEY_ENV, fmt.Sprintf("%s-key.pem", S2sClientDbClientName)})
 

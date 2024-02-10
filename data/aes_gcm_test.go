@@ -1,30 +1,17 @@
 package data
 
 import (
-	"encoding/base64"
-	"os"
 	"testing"
 )
 
-const (
-	ServiceDataKey string = "SERVICE_AES_KEY"
-	Plaintext      string = "firstname.lastname@email.com"
-)
+const Plaintext string = "firstname.lastname@email.com"
 
 func TestAesCipher(t *testing.T) {
 
 	// set key to env var
 	r := GenerateAesGcmKey()
-	encoded := base64.StdEncoding.EncodeToString(r)
 
-	if err := os.Setenv(ServiceDataKey, encoded); err != nil {
-		t.Log("Could not set env var")
-	}
-
-	serviceKey := ServiceAesGcmKey{
-		Name:   "TestService",
-		Secret: ServiceDataKey,
-	}
+	serviceKey := NewServiceAesGcmKey(r)
 
 	encrypted, err := serviceKey.EncyptServiceData(Plaintext)
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 func TestHmac(t *testing.T) {
 
 	secret := base64.StdEncoding.EncodeToString([]byte("super-duper-secret"))
-	hmac := HmacIndexer{secret}
+	hmac := NewHmacIndexer(secret)
 
 	index, err := hmac.ObtainBlindIndex("darth.vader@empire.com")
 	if err != nil {

@@ -66,7 +66,7 @@ func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
 		return fmt.Errorf("invalid password: %v", err)
 	}
 
-	// create user record
+	// build user record
 	id, err := uuid.NewRandom()
 	if err != nil {
 		log.Printf("unable to create uuid for user registration request: %v", err)
@@ -133,6 +133,8 @@ func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
 		log.Printf("unable to enter registeration record into account table in db: %v", err)
 		return fmt.Errorf("unable to perst user registration to db")
 	}
+
+	// add profile service scopes r, w
 
 	return nil
 }
