@@ -28,3 +28,4 @@ Reusable, core functionality for building a microservice.
 1. Jwt Mint:
     * signs
     * verifies
+1. User Registration
