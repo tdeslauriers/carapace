@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tdeslauriers/carapace/data"
 	"github.com/tdeslauriers/carapace/jwt"
+	"github.com/tdeslauriers/carapace/validate"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -261,6 +262,15 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// field input restrictions
+	if !validate.IsValidUuid(cmd.ClientId) {
+		http.Error(w, "invalid client credentials", http.StatusUnauthorized)
+	}
+
+	if err := validate.ValidatePassword(cmd.ClientSecret); err != nil {
+		http.Error(w, "invalid client credentials", http.StatusUnauthorized)
 	}
 
 	// validate creds

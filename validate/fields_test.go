@@ -129,3 +129,22 @@ func TestValidateBirthDay(t *testing.T) {
 		}
 	}
 }
+
+func TestValidUuid(t *testing.T) {
+
+	uuids := []string{
+		"123e4567-e89b-12d3-a456-426614174000",
+		"not-a-uuid",
+	}
+
+	for i := range uuids {
+		if !IsValidUuid(uuids[0]) {
+			t.Logf("'%s' is a valid Uuid.\n", uuids[i])
+			t.Fail()
+		}
+		if IsValidUuid(uuids[1]) {
+			t.Logf("'%s' is NOT valid Uuid.\n", uuids[i])
+			t.Fail()
+		}
+	}
+}

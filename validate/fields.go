@@ -29,6 +29,8 @@ const (
 	SpecialChar         string = `[\@\!\#\$\%\^\&\*\(\)\_\+\{\}\:\;\"\'<>\,\.\?\/\|\\\=\-\[\]\~]`
 	KeyboardSequenceMax int    = 5
 	RepeatCharMax       int    = 4 // allowing 4 for true randomness and ggGg scenarios
+
+	UuidPattern string = `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`
 )
 
 // includes alphabet
@@ -259,4 +261,18 @@ func TooLong(field interface{}, max int) bool {
 		log.Panicf("Max length check only takes string or byte slice: %v", reflect.TypeOf(field))
 		return false
 	}
+}
+
+func IsValidUuid(uuid string) bool {
+
+	if TooShort(uuid, 36) || TooLong(uuid, 36) {
+		return false
+	}
+
+	rgx, err := regexp.Compile(UuidPattern)
+	if err != nil {
+		log.Panicf("unable to compile uuid regex")
+	}
+
+	return rgx.MatchString(uuid)
 }

@@ -23,8 +23,6 @@ Reusable, core functionality for building a microservice.
     * Leaf
 1. Field level encryption for sensitive service data using AES GCM 256.
 1. Service to Service login credential validation.
-    * Needs field level validation
-    * Will be added as part of user login dev
 1. Jwt Mint:
     * signs
     * verifies
