@@ -150,7 +150,7 @@ func TestS2sLogin(t *testing.T) {
 
 	auth, err := s2sJwtProvider.GetServiceToken()
 	if err != nil {
-		t.Logf("Failed to get service token: %v", err)
+		t.Logf("failed to get service token: %v", err)
 	}
 	time.Sleep(1 * time.Second) // so refresh persist go funcs can complete.
 	if auth == "" {
