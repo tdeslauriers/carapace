@@ -11,6 +11,7 @@ import (
 type SqlRepository interface {
 	SelectRecords(query string, records interface{}, args ...interface{}) error
 	SelectRecord(query string, record interface{}, args ...interface{}) error
+	SelectExists(query string, args ...interface{}) (bool, error)
 	InsertRecord(query string, record interface{}) error
 	UpdateRecord(query string, args ...interface{}) error
 	DeleteRecord(query string, args ...interface{}) error
@@ -86,6 +87,23 @@ func (dao *MariaDbRepository) SelectRecord(query string, record interface{}, arg
 	}
 
 	return row.Err()
+}
+
+func (dao *MariaDbRepository) SelectExists(query string, args ...interface{}) (bool, error) {
+
+	// connect to db
+	db, err := dao.SqlDb.Connect()
+	if err != nil {
+		return false, fmt.Errorf("unable to connect to sql database")
+	}
+
+	var exists bool
+	err = db.QueryRow(query, args...).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
 
 func (dao *MariaDbRepository) InsertRecord(query string, record interface{}) error {

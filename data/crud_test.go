@@ -84,15 +84,17 @@ func TestCrud(t *testing.T) {
 		CsrfToken    string
 		CreatedAt    string
 		ExpiresAt    string
+		Revoked      bool
 	}{
 		Uuid:         id.String(),
 		SessionToken: sessionToken.String(),
 		CsrfToken:    csrf.String(),
 		CreatedAt:    created.Format("2006-01-02 15:04:05"),
 		ExpiresAt:    exprires.Format("2006-01-02 15:04:05"),
+		Revoked:      false,
 	}
 
-	query := "INSERT INTO uxsession (uuid, session_token, csrf_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)"
+	query := "INSERT INTO uxsession (uuid, session_token, csrf_token, created_at, expires_at, revoked) VALUES (?, ?, ?, ?, ?, ?)"
 	if err := dao.InsertRecord(query, insert); err != nil {
 		t.Logf("Failed to insert session: %v, Error: %v", insert, err)
 		t.Fail()
@@ -105,6 +107,7 @@ func TestCrud(t *testing.T) {
 		CsrfToken    string
 		CreatedAt    string
 		ExpiresAt    string
+		Revoked      bool
 	}
 	query = "SELECT * FROM uxsession WHERE DATE(created_at) = ?"
 	year, month, day := created.Date()
@@ -124,6 +127,7 @@ func TestCrud(t *testing.T) {
 		CsrfToken    string
 		CreatedAt    string
 		ExpiresAt    string
+		Revoked      bool
 	}
 	query = "SELECT * FROM uxsession WHERE uuid = ?"
 	err = dao.SelectRecord(query, &record, id)
@@ -132,4 +136,12 @@ func TestCrud(t *testing.T) {
 		t.Fail()
 	}
 	t.Logf("Select record output:\n%v", record)
+
+	query = "SELECT EXISTS(SELECT 1 FROM uxsession WHERE uuid = ?) AS record_exists"
+	exists, err := dao.SelectExists(query, "candy")
+	if err != nil {
+		t.Logf("Record should exist but was %v: %v", exists, err)
+		t.Fail()
+	}
+	t.Logf("exists: %t", exists)
 }

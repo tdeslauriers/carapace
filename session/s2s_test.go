@@ -280,6 +280,10 @@ func setUpCerts() {
 
 func TestBcrypt(t *testing.T) {
 
+	// p := ""
+	// h, _ := bcrypt.GenerateFromPassword([]byte(p), 13)
+	// t.Logf("%s", h)
+
 	pt := os.Getenv(S2sClientSecret)
 	hash, _ := bcrypt.GenerateFromPassword([]byte(pt), 13)
 

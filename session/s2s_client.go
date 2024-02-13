@@ -26,10 +26,6 @@ type S2sAuthorization struct {
 // s2s token provider -> calls s2s service for tokens, stores and retrieves tokens from local db
 type S2STokenProvider interface {
 	GetServiceToken() (string, error)
-	S2sLogin() (*S2sAuthorization, error)                               // login client call
-	RefreshServiceToken(refreshToken string) (*S2sAuthorization, error) // refresh client call
-	PersistServiceToken(*S2sAuthorization) error                        // save to db
-	RetrieveServiceToken() (string, error)                              // active token from local store
 }
 
 type S2sTokenProvider struct {
@@ -39,10 +35,19 @@ type S2sTokenProvider struct {
 	Dao           data.SqlRepository
 }
 
+func NewS2sTokenProvider(url string, creds S2sLoginCmd, client connect.TLSClient, dao data.SqlRepository) *S2sTokenProvider {
+	return &S2sTokenProvider{
+		S2sServiceUrl: url,
+		Credentials:   creds,
+		S2sClient:     client,
+		Dao:           dao,
+	}
+}
+
 func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 
 	// pull tokens with un-expired refresh
-	tokens, err := p.RetrieveServiceTokens()
+	tokens, err := p.RetrieveServiceToken()
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve service tokens: %v", err)
 	}
@@ -106,6 +111,7 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 	return authz.ServiceToken, nil
 }
 
+// login client call
 func (p *S2sTokenProvider) S2sLogin() (*S2sAuthorization, error) {
 
 	jsonData, err := json.Marshal(p.Credentials)
@@ -132,6 +138,7 @@ func (p *S2sTokenProvider) S2sLogin() (*S2sAuthorization, error) {
 	return &s2sAuthz, nil
 }
 
+// save to maria db
 func (p *S2sTokenProvider) PersistServiceToken(authz *S2sAuthorization) error {
 
 	qry := "INSERT INTO servicetoken (uuid, service_token, service_expires, refresh_token, refresh_expires) VALUES (?, ?, ?, ?, ?)"
@@ -142,7 +149,8 @@ func (p *S2sTokenProvider) PersistServiceToken(authz *S2sAuthorization) error {
 	return nil
 }
 
-func (p *S2sTokenProvider) RetrieveServiceTokens() ([]S2sAuthorization, error) {
+// active token from local store
+func (p *S2sTokenProvider) RetrieveServiceToken() ([]S2sAuthorization, error) {
 
 	var tokens []S2sAuthorization
 	qry := `
@@ -161,6 +169,7 @@ func (p *S2sTokenProvider) RetrieveServiceTokens() ([]S2sAuthorization, error) {
 	return tokens, nil
 }
 
+// refresh client call
 func (p *S2sTokenProvider) RefreshServiceToken(refreshToken string) (*S2sAuthorization, error) {
 	// create cmd
 	data, err := json.Marshal(RefreshCmd{RefreshToken: refreshToken})
