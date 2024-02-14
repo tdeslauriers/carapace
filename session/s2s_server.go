@@ -269,7 +269,7 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "invalid client credentials", http.StatusUnauthorized)
 	}
 
-	if err := validate.ValidatePassword(cmd.ClientSecret); err != nil {
+	if err := validate.IsValidPassword(cmd.ClientSecret); err != nil {
 		http.Error(w, "invalid client credentials", http.StatusUnauthorized)
 	}
 
