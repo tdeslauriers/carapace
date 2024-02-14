@@ -36,7 +36,7 @@ const (
 // includes alphabet
 var KeyboardSequences = []string{"`1234567890-=", `~!@#$\%^&*()_+`, "qwertyuiop[]\\", "qwertyuiop{}|", "asdfghjkl;'", "asdfghjkl:\"", "zxcvbnm,./", "zxcvbnm<>?", "1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/-['=]", "!qaz@wsx#edc$rfv%tgb^yhn&ujm*ik,(ol.)p:?_{\"+}", "=[;.-pl,0okm9ijn8uhb7ygv6tfc5rdx4esz3wa2q1]", `}"?+{:>_pl<)okm(ijn*uhb&ygv^tfc\%rdx$esz#wa@q!`, "abcdefghijklmnopqrstuvwxyz"}
 
-func ValidateEmail(email string) error {
+func IsValidateEmail(email string) error {
 
 	// technically, min length of email is 3, but must be 6 to pass regex
 	// max length of email can be 254 chars
@@ -51,7 +51,7 @@ func ValidateEmail(email string) error {
 	return nil
 }
 
-func ValidateName(name string) error {
+func IsValidateName(name string) error {
 
 	if TooShort(name, NameMin) || TooLong(name, NameMax) {
 		return fmt.Errorf("name should be between 16 and 64 characters in length")
@@ -64,7 +64,7 @@ func ValidateName(name string) error {
 	return nil
 }
 
-func ValidateBirthday(dob string) error {
+func IsValidateBirthday(dob string) error {
 
 	// parse
 	birthday, err := time.Parse("2006-01-02", dob)
@@ -92,7 +92,7 @@ func ValidateBirthday(dob string) error {
 	return nil
 }
 
-func ValidatePassword(password string) error {
+func IsValidatePassword(password string) error {
 
 	if TooShort(password, PasswordMin) || TooLong(password, PasswordMax) {
 		return fmt.Errorf("password should be between 16 and 64 characters in length")
