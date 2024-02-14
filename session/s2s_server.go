@@ -20,7 +20,7 @@ import (
 // s2s login service -> validates incoming login
 type LoginService interface {
 	ValidateCredentials(id, secret string) error
-	GetScopes(uuid string) ([]Scope, error)
+	GetUserScopes(uuid string) ([]Scope, error)
 	MintToken(subject string) (*jwt.JwtToken, error) // assumes valid creds
 	GetRefreshToken(token string) (*Refresh, error)
 	PersistRefresh(refresh Refresh) error
@@ -98,7 +98,7 @@ func (s *MariaS2sLoginService) ValidateCredentials(clientId, clientSecret string
 	return nil
 }
 
-func (s *MariaS2sLoginService) GetScopes(uuid string) ([]Scope, error) {
+func (s *MariaS2sLoginService) GetUserScopes(uuid string) ([]Scope, error) {
 
 	var scopes []Scope
 	qry := `
@@ -142,7 +142,7 @@ func (s *MariaS2sLoginService) MintToken(subject string) (*jwt.JwtToken, error) 
 
 	currentTime := time.Now().UTC()
 
-	scopes, err := s.GetScopes(subject)
+	scopes, err := s.GetUserScopes(subject)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ func (h *S2sLoginHandler) HandleS2sLogin(w http.ResponseWriter, r *http.Request)
 
 	// validate creds
 	if err := h.LoginService.ValidateCredentials(cmd.ClientId, cmd.ClientSecret); err != nil {
-		http.Error(w, fmt.Sprintf("invalid credentials: %s", err), http.StatusUnauthorized)
+		http.Error(w, fmt.Sprintf("invalid client credentials: %s", err), http.StatusUnauthorized)
 		return
 	}
 

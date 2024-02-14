@@ -75,7 +75,7 @@ func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
 		return fmt.Errorf("unable to create user record")
 	}
 
-	// check user does not already exist
+	// check if user already exists
 	query := "SELECT EXISTS(SELECT 1 from account WHERE user_index = ?) AS record_exists"
 	exists, err := r.Dao.SelectExists(query, index)
 	if err != nil {
@@ -86,7 +86,7 @@ func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
 		return fmt.Errorf("username unavailable")
 	}
 
-	// build user record
+	// build user record / encrypt user data
 	id, err := uuid.NewRandom()
 	if err != nil {
 		log.Printf("unable to create uuid for user registration request: %v", err)
@@ -150,8 +150,6 @@ func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
 	// add profile service scopes r, w
 	// get token
 	r.S2s.GetServiceToken()
-	
-	
 
 	return nil
 }
