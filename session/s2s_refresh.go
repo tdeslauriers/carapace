@@ -23,13 +23,15 @@ type RefreshCmd struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+
+
 type S2sRefreshHandler struct {
-	LoginService LoginService
+	AuthService AuthService
 }
 
-func NewS2sRefreshHandler(service LoginService) *S2sRefreshHandler {
+func NewS2sRefreshHandler(service AuthService) *S2sRefreshHandler {
 	return &S2sRefreshHandler{
-		LoginService: service,
+		AuthService: service,
 	}
 }
 
@@ -47,14 +49,14 @@ func (h *S2sRefreshHandler) HandleS2sRefresh(w http.ResponseWriter, r *http.Requ
 	}
 
 	// lookup refresh
-	refresh, err := h.LoginService.GetRefreshToken(cmd.RefreshToken)
+	refresh, err := h.AuthService.GetRefreshToken(cmd.RefreshToken)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid refresh token: %v", err), http.StatusUnauthorized)
 	}
 
 	if refresh != nil {
 		// mint new token/s2s access token
-		token, err := h.LoginService.MintToken(refresh.ClientId)
+		token, err := h.AuthService.MintAuthzToken(refresh.ClientId)
 		if err != nil {
 			log.Printf("unable to mint new jwt for client id %v: %v", &refresh.ClientId, err)
 			http.Error(w, fmt.Sprintf("unable to create new s2s token from refresh: %v", err), http.StatusBadRequest)
