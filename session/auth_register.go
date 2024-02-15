@@ -126,7 +126,7 @@ func (r *MariaAuthRegistrationService) Register(cmd RegisterCmd) error {
 
 	createdAt := time.Now()
 
-	user := AuthAccountData{
+	user := UserAccountData{
 		Uuid:           id.String(),
 		Username:       username,
 		UserIndex:      index,
