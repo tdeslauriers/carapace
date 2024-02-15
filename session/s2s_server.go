@@ -11,8 +11,6 @@ type AuthService interface {
 	ValidateCredentials(id, secret string) error
 	GetUserScopes(uuid string) ([]Scope, error)
 	MintAuthzToken(subject string) (*jwt.JwtToken, error) // assumes valid creds
-	GetRefreshToken(token string) (*Refresh, error)
-	PersistRefresh(refresh Refresh) error
 }
 
 type S2sLoginCmd struct {
