@@ -13,6 +13,11 @@ type AuthService interface {
 	MintAuthzToken(subject string) (*jwt.JwtToken, error) // assumes valid creds
 }
 
+type S2sAuthService interface {
+	AuthService
+	RefreshService[S2sRefresh]
+}
+
 type S2sLoginCmd struct {
 	ClientId     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
