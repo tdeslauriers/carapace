@@ -1,6 +1,7 @@
 package data
 
 import (
+	"encoding/base64"
 	"testing"
 )
 
@@ -38,4 +39,11 @@ func TestAesCipher(t *testing.T) {
 		t.Logf("Encrypted same value to the same cipher: oracle vuln")
 		t.Fail()
 	}
+}
+
+func TestGenEnvironmentKey(t *testing.T) {
+
+	k := GenerateAesGcmKey()
+	env := base64.StdEncoding.EncodeToString(k)
+	t.Log(env)
 }

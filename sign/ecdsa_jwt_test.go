@@ -16,6 +16,7 @@ func TestGenSigningKey(t *testing.T) {
 
 	// test run
 	priv, pub := GenerateEcdsaSigningKey()
+	t.Logf("priv: %s\n\npub: %s", priv, pub)
 	os.Setenv(TestPrivateKey, priv)
 	os.Setenv(TestPublicKey, pub)
 
