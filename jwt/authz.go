@@ -12,7 +12,7 @@ import (
 
 // Verifying Signatures
 type JwtVerifier interface {
-	VerifyJwtSignature(token string) error
+	VerifyJwtSignature(msg string, sig []byte) error
 	BuildJwtFromToken(token string) (*JwtToken, error)         // requires valid signature
 	HasValidScopes(allowedScopes []string, jwt *JwtToken) bool // assumes token has been verified
 	IsAuthorized(allowedScopes []string, token string) (bool, error)
