@@ -33,3 +33,4 @@ type UserRefresh struct {
 type RefreshCmd struct {
 	RefreshToken string `json:"refresh_token"`
 }
+
