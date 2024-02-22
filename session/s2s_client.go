@@ -1,12 +1,8 @@
 package session
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/tdeslauriers/carapace/connect"
@@ -29,18 +25,16 @@ type S2STokenProvider interface {
 }
 
 type S2sTokenProvider struct {
-	S2sServiceUrl string
-	Credentials   S2sLoginCmd
-	S2sClient     connect.TLSClient
-	Dao           data.SqlRepository
+	S2sCaller   connect.S2SCaller
+	Credentials S2sLoginCmd
+	Dao         data.SqlRepository
 }
 
-func NewS2sTokenProvider(url string, creds S2sLoginCmd, client connect.TLSClient, dao data.SqlRepository) *S2sTokenProvider {
+func NewS2sTokenProvider(caller connect.S2SCaller, creds S2sLoginCmd, dao data.SqlRepository) *S2sTokenProvider {
 	return &S2sTokenProvider{
-		S2sServiceUrl: url,
-		Credentials:   creds,
-		S2sClient:     client,
-		Dao:           dao,
+		S2sCaller:   caller,
+		Credentials: creds,
+		Dao:         dao,
 	}
 }
 
@@ -114,25 +108,9 @@ func (p *S2sTokenProvider) GetServiceToken() (jwt string, e error) {
 // login client call
 func (p *S2sTokenProvider) S2sLogin() (*S2sAuthorization, error) {
 
-	jsonData, err := json.Marshal(p.Credentials)
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshall login cmd to json: %v", err)
-	}
-	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/login", p.S2sServiceUrl), bytes.NewBuffer(jsonData))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, _ := p.S2sClient.Do(req)
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read response body: %v", err)
-	}
-
-	// unmarshal json
 	var s2sAuthz S2sAuthorization
-	if err = json.Unmarshal(body, &s2sAuthz); err != nil {
-		return nil, fmt.Errorf("unable to unmarshall s2s response body to json: %v", err)
+	if err := p.S2sCaller.PostToService("/login", "", "", p.Credentials, &s2sAuthz); err != nil {
+		return nil, fmt.Errorf("unable to login to s2s /login endpoint: %v", err)
 	}
 
 	return &s2sAuthz, nil
@@ -171,33 +149,14 @@ func (p *S2sTokenProvider) RetrieveServiceToken() ([]S2sAuthorization, error) {
 
 // refresh client call
 func (p *S2sTokenProvider) RefreshServiceToken(refreshToken string) (*S2sAuthorization, error) {
+
 	// create cmd
-	data, err := json.Marshal(RefreshCmd{RefreshToken: refreshToken})
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshall refresh cmd to json: %v", err)
+	cmd := RefreshCmd{RefreshToken: refreshToken}
+	var s2sAuthz S2sAuthorization
+	if err := p.S2sCaller.PostToService("/refresh", "", "", cmd, &s2sAuthz); err != nil {
+		return nil, fmt.Errorf("unable to refresh service token: %v", err)
 	}
 
-	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/refresh", p.S2sServiceUrl), bytes.NewBuffer(data))
-	req.Header.Set("Content-Type", "application/json")
+	return &s2sAuthz, nil
 
-	resp, _ := p.S2sClient.Do(req)
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read response body: %v", err)
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		// unmarshal json
-		var s2sAuthz S2sAuthorization
-		if err = json.Unmarshal(body, &s2sAuthz); err != nil {
-			return nil, fmt.Errorf("unable to unmarshall s2s response body to json: %v", err)
-		}
-
-		return &s2sAuthz, nil
-	}
-
-	// handle err
-	return nil, fmt.Errorf("%d: %s", resp.StatusCode, string(body))
 }

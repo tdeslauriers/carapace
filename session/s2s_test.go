@@ -142,10 +142,10 @@ func TestS2sLogin(t *testing.T) {
 	}
 
 	s2sJwtProvider := S2sTokenProvider{
-		S2sServiceUrl: "https://localhost:8443",
-		Credentials:   cmd,
-		S2sClient:     s2sClient,
-		Dao:           &repository,
+		S2sAuthUrl:  "https://localhost:8443",
+		Credentials: cmd,
+		S2sClient:   s2sClient,
+		Dao:         &repository,
 	}
 
 	auth, err := s2sJwtProvider.GetServiceToken()
