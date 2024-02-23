@@ -123,6 +123,13 @@ type Scope struct {
 	Active      bool   `db:"active" json:"active"`
 }
 
+type AccountScopeXref struct {
+	Id          int    `db:"id" json:"id"`
+	AccountUuid string `db:"account_uuid" json:"account_uuid"`
+	ScopeUuid   string `db:"scope_uuid" json:"scope_uuid"`
+	CreatedAt   string `db:"created_at" json:"created_at"`
+}
+
 // helper func to build audience []string from scopes
 func BuildAudiences(scopes []Scope) (unique []string) {
 

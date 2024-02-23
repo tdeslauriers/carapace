@@ -118,7 +118,11 @@ func (v *JwtVerifierService) HasValidScopes(allowedScopes []string, jwt *JwtToke
 	return false
 }
 
+// check for "Bearer " and snips if present
 func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) (bool, error) {
+
+	// snip prefix
+	token = strings.TrimPrefix(token, "Bearer ")
 
 	// includes signature validation
 	jwt, err := v.BuildJwtFromToken(token)
