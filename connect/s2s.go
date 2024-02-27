@@ -31,7 +31,7 @@ func NewS2sCaller(url, name string, client TLSClient) *S2sCaller {
 
 func (c *S2sCaller) GetServiceData(endpoint, s2sToken, authToken string, data interface{}) error {
 
-	url := fmt.Sprintf("%s/%s", endpoint, c.ServiceUrl)
+	url := fmt.Sprintf("%s%s", c.ServiceUrl, endpoint)
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -75,7 +75,7 @@ func (c *S2sCaller) GetServiceData(endpoint, s2sToken, authToken string, data in
 
 func (c *S2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd interface{}, data interface{}) error {
 
-	url := fmt.Sprintf("%s/%s", c.ServiceUrl, endpoint)
+	url := fmt.Sprintf("%s%s", c.ServiceUrl, endpoint)
 
 	// marshal data
 	jsonData, err := json.Marshal(cmd)
