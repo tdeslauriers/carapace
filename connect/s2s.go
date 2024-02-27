@@ -41,7 +41,7 @@ func (c *S2sCaller) GetServiceData(endpoint, s2sToken, authToken string, data in
 
 	// service token
 	if s2sToken != "" {
-		request.Header.Set("Service-Token", fmt.Sprintf("Bearer %s", s2sToken))
+		request.Header.Set("Service-Authorization", fmt.Sprintf("Bearer %s", s2sToken))
 	}
 
 	// user access token
@@ -92,7 +92,7 @@ func (c *S2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd inte
 
 	// service token
 	if s2sToken != "" {
-		request.Header.Set("Service-Token", fmt.Sprintf("Bearer %s", s2sToken))
+		request.Header.Set("Service-Authorization", fmt.Sprintf("Bearer %s", s2sToken))
 	}
 
 	// user access token
