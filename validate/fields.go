@@ -41,7 +41,7 @@ func IsValidEmail(email string) error {
 	// technically, min length of email is 3, but must be 6 to pass regex
 	// max length of email can be 254 chars
 	if TooShort(email, EmailMin) || TooLong(email, EmailMax) {
-		return fmt.Errorf("email must be between 6 and 254 characters in length")
+		return fmt.Errorf("email must be between %d and %d characters in length", EmailMin, EmailMax)
 	}
 
 	if !MatchesRegex(email, EmailRegex) {
@@ -54,7 +54,7 @@ func IsValidEmail(email string) error {
 func IsValidName(name string) error {
 
 	if TooShort(name, NameMin) || TooLong(name, NameMax) {
-		return fmt.Errorf("name should be between 16 and 64 characters in length")
+		return fmt.Errorf("name should be between %d and %d characters in length", NameMin, NameMax)
 	}
 
 	if !MatchesRegex(name, NameRegex) {
@@ -95,7 +95,7 @@ func IsValidBirthday(dob string) error {
 func IsValidPassword(password string) error {
 
 	if TooShort(password, PasswordMin) || TooLong(password, PasswordMax) {
-		return fmt.Errorf("password should be between 16 and 64 characters in length")
+		return fmt.Errorf("password should be between %d and %d characters in length", PasswordMin, PasswordMax)
 	}
 
 	if !MatchesRegex(password, UpperCase) {

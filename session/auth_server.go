@@ -55,7 +55,7 @@ type UserRegisterCmd struct {
 	Confirm   string `json:"confirm_password"`
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
-	Birthdate string `json:"bithdate,omitempty"`
+	Birthdate string `json:"birthdate,omitempty"`
 }
 
 // input validation
