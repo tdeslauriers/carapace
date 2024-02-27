@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"reflect"
 )
@@ -109,6 +110,7 @@ func (c *S2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd inte
 
 	// error handling: will be built out over time
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		log.Printf("%v", response.Status)
 		return fmt.Errorf("received non-2xx status code: %d, from endpoint: %s", response.StatusCode, url)
 	}
 
