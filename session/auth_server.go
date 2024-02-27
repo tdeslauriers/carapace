@@ -34,11 +34,11 @@ type S2sLoginCmd struct {
 func (cmd S2sLoginCmd) ValidateCmd() error {
 	// field input restrictions
 	if !validate.IsValidUuid(cmd.ClientId) {
-		return fmt.Errorf("invalid client credentials")
+		return fmt.Errorf("invalid client id")
 	}
 
 	if err := validate.IsValidPassword(cmd.ClientSecret); err != nil {
-		return fmt.Errorf("invalid client credentials")
+		return fmt.Errorf("invalid client secret")
 	}
 
 	return nil

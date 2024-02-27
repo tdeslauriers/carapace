@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 )
@@ -37,6 +38,7 @@ func (v *JwtVerifierService) VerifyJwtSignature(msg string, sig []byte) error {
 
 	// verify signature
 	if verified := ecdsa.Verify(v.PublicKey, hashedMsg, r, s); verified {
+		log.Printf("jwt sign verified: %t", verified)
 		return nil
 	}
 
