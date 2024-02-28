@@ -1,4 +1,4 @@
-package errors
+package connect
 
 import (
 	"encoding/json"
