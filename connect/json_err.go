@@ -19,7 +19,7 @@ func (e ErrorHttp) SendJsonErr(w http.ResponseWriter) {
 	if err != nil {
 		log.Printf("error marshalling http error response to json: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"code": 500, "message": "Internal Server Error"}`))
+		w.Write([]byte(`{"code": 500,"message":"Internal Server Error"}`))
 		return
 	}
 

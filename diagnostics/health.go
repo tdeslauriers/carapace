@@ -2,6 +2,7 @@ package diagnostics
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -14,9 +15,10 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	h := HealthCheck{"UP"}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	err := json.NewEncoder(w).Encode(h)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := json.NewEncoder(w).Encode(h); err != nil {
+		log.Printf("unable to send status: UP response body: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"code": 500,"message":"Internal Server Error"}`))
+		return
 	}
 }

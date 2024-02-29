@@ -55,19 +55,25 @@ func (c *S2sCaller) GetServiceData(endpoint, s2sToken, authToken string, data in
 	}
 	defer response.Body.Close()
 
-	// error response handling
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("received non-2xx status code: %d, from endpoint: %s", response.StatusCode, url)
-	}
-
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return fmt.Errorf("unable to read response body from '%s': %v", url, err)
+		return fmt.Errorf("unable to read response body from endpoint '%s': %v", url, err)
 	}
 
-	err = json.Unmarshal(body, data)
-	if err != nil {
-		return fmt.Errorf("unable to unmarshal response body json to %v from '%s': %v", reflect.TypeOf(data), url, err)
+	// response handling
+	if response.StatusCode >= 200 || response.StatusCode < 300 {
+
+		if err := json.Unmarshal(body, data); err != nil {
+			return fmt.Errorf("unable to unmarshal response body json to %v from endpoint '%s': %v", reflect.TypeOf(data), url, err)
+		}
+	} else {
+
+		var e ErrorHttp
+		if err := json.Unmarshal(body, &e); err != nil {
+			return fmt.Errorf("unable to unmarshal response body json to %v from endpoint '%s': %v", reflect.TypeOf(&e), url, err)
+		}
+
+		return fmt.Errorf("received '%d: %s' from get-service-data call to endpoint %s", e.StatusCode, e.Message, url)
 	}
 
 	return nil
@@ -107,19 +113,25 @@ func (c *S2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd inte
 	}
 	defer response.Body.Close()
 
-	// error handling: will be built out over time
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("received non-2xx status code: %d: %s, from endpoint: %s", response.StatusCode, response.Status, url)
-	}
-
-	// marshal response from json to struct
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return fmt.Errorf("unable to read response body for endpoint %s: %v", url, err)
 	}
 
-	if err = json.Unmarshal(body, data); err != nil {
-		return fmt.Errorf("unable to unmarshal s2s response body json to struct %v for endpoint %s: %v", reflect.TypeOf(data), url, err)
+	// response handling
+	if response.StatusCode >= 200 || response.StatusCode < 300 {
+
+		if err := json.Unmarshal(body, data); err != nil {
+			return fmt.Errorf("unable to unmarshal response body json to %v from endpoint '%s': %v", reflect.TypeOf(data), url, err)
+		}
+	} else {
+
+		var e ErrorHttp
+		if err := json.Unmarshal(body, &e); err != nil {
+			return fmt.Errorf("unable to unmarshal response body json to %v from endpoint '%s': %v", reflect.TypeOf(&e), url, err)
+		}
+
+		return fmt.Errorf("received '%d: %s' from post-to-service call to endpoint %s", e.StatusCode, e.Message, url)
 	}
 
 	return nil
