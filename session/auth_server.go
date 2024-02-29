@@ -49,6 +49,20 @@ type UserLoginCmd struct {
 	Password string `json:"password"`
 }
 
+func (cmd UserLoginCmd) ValidateCmd() error {
+
+	// field input restrictions
+	if err := validate.IsValidEmail(cmd.Username); err != nil {
+		return fmt.Errorf("invalid username: %v", err)
+	}
+
+	if err := validate.IsValidPassword(cmd.Password); err != nil {
+		return fmt.Errorf("invalid password: %v", err)
+	}
+
+	return nil
+}
+
 type UserRegisterCmd struct {
 	Username  string `json:"username"` // email address
 	Password  string `json:"password,omitempty"`
