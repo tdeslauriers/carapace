@@ -51,8 +51,8 @@ type UserLoginCmd struct {
 
 type UserRegisterCmd struct {
 	Username  string `json:"username"` // email address
-	Password  string `json:"password"`
-	Confirm   string `json:"confirm_password"`
+	Password  string `json:"password,omitempty"`
+	Confirm   string `json:"confirm_password,omitempty"`
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 	Birthdate string `json:"birthdate,omitempty"`
