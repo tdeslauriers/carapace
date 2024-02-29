@@ -26,4 +26,6 @@ Reusable, core functionality for building a microservice.
 1. Jwt Mint:
     * signs
     * verifies
-1. User Registration
+1. Service to Service http call templates
+    * Adds service and user tokens if exists
+    * deserializes json response or error
