@@ -1,7 +1,10 @@
 package session
 
 import (
+	"fmt"
+
 	"github.com/tdeslauriers/carapace/data"
+	"github.com/tdeslauriers/carapace/validate"
 )
 
 type Refresh interface {
@@ -34,3 +37,12 @@ type RefreshCmd struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+func (cmd RefreshCmd) ValidateCmd() error {
+
+	// field input restrictions
+	if !validate.IsValidUuid(cmd.RefreshToken) {
+		return fmt.Errorf("invalid refresh token")
+	}
+
+	return nil
+}
