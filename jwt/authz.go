@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 )
 
 // Verifying Signatures
@@ -131,22 +132,33 @@ func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) 
 	// snip prefix
 	token = strings.TrimPrefix(token, "Bearer ")
 
-	// includes signature validation
+	// includes signature validation:  will error if invalid
 	jwt, err := v.BuildJwtFromToken(token)
 	if err != nil {
 		return false, err
 	}
 
+	// check issued time.
+	// subtracting 2 seconds to account for system time mismatches
+	if jwt.Claims.IssuedAt < time.Now().Add(-2*time.Second).Unix() {
+		return false, fmt.Errorf("unauthorized: token active period not yet begun")
+	}
+
+	// check expiry
+	if jwt.Claims.Expires > time.Now().Unix() {
+		return false, fmt.Errorf("unauthorized: token expired")
+	}
+
 	// check audiences
 	if ok := v.HasValidAudences(jwt); !ok {
-		return false, fmt.Errorf("unauthorized")
+		return false, fmt.Errorf("unauthorized: not intended audience")
 	}
 
 	// check scopes
 	if v.HasValidScopes(allowedScopes, jwt) {
 		return true, nil
 	} else {
-		return false, fmt.Errorf("unauthorized")
+		return false, fmt.Errorf("unauthorized: incorrect or missing scopes")
 	}
 }
 
