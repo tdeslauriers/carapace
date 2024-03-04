@@ -14,7 +14,7 @@ import (
 // Verifying Signatures
 type JwtVerifier interface {
 	VerifyJwtSignature(msg string, sig []byte) error
-	BuildJwtFromToken(token string) (*JwtToken, error) // requires valid signature
+	BuildJwtFromToken(token string) (*JwtToken, error) // validates signature
 	IsAuthorized(allowedScopes []string, token string) (bool, error)
 }
 
@@ -48,7 +48,7 @@ func (v *JwtVerifierService) VerifyJwtSignature(msg string, sig []byte) error {
 		return nil
 	}
 
-	return fmt.Errorf("unable to verify jwt signature")
+	return fmt.Errorf("unauthorized: unable to verify jwt signature")
 }
 
 // includes signature validation
@@ -70,7 +70,7 @@ func (v *JwtVerifierService) BuildJwtFromToken(token string) (*JwtToken, error) 
 
 	// verify signature
 	if err := v.VerifyJwtSignature(msg, sig); err != nil {
-		return nil, fmt.Errorf("unable to build jwt from token: %v", err)
+		return nil, err
 	}
 
 	// parse header
@@ -98,34 +98,6 @@ func (v *JwtVerifierService) BuildJwtFromToken(token string) (*JwtToken, error) 
 	return &JwtToken{header, claims, sig, token}, nil
 }
 
-// assumes verified jwt
-func (v *JwtVerifierService) HasValidScopes(allowedScopes []string, jwt *JwtToken) bool {
-
-	// make sure token has scopes
-	if jwt.Claims.Scopes == "" {
-		return false
-	}
-
-	// parse scopes string to slice
-	scopes := strings.Split(jwt.Claims.Scopes, " ")
-
-	// set jwt scopes to map
-	jwtScopes := make(map[string]bool)
-	for _, v := range scopes {
-		jwtScopes[v] = true
-	}
-
-	// check if allowed scopes are in jwt scopes
-	for _, allowed := range allowedScopes {
-		if jwtScopes[allowed] {
-			return true
-		}
-	}
-
-	// default to false: unauthorized
-	return false
-}
-
 // check for "Bearer " and snips if present
 func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) (bool, error) {
 
@@ -141,7 +113,7 @@ func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) 
 	// check issued time.
 	// subtracting 2 seconds to account for system time mismatches
 	if jwt.Claims.IssuedAt < time.Now().Add(-2*time.Second).Unix() {
-		return false, fmt.Errorf("unauthorized: token active period not yet begun")
+		return false, fmt.Errorf("unauthorized: token valid period not yet begun")
 	}
 
 	// check expiry
@@ -172,5 +144,33 @@ func (v *JwtVerifierService) HasValidAudences(jwt *JwtToken) bool {
 		}
 	}
 
+	return false
+}
+
+// assumes verified jwt
+func (v *JwtVerifierService) HasValidScopes(allowedScopes []string, jwt *JwtToken) bool {
+
+	// make sure token has scopes
+	if jwt.Claims.Scopes == "" {
+		return false
+	}
+
+	// parse scopes string to slice
+	scopes := strings.Split(jwt.Claims.Scopes, " ")
+
+	// set jwt scopes to map
+	jwtScopes := make(map[string]bool)
+	for _, v := range scopes {
+		jwtScopes[v] = true
+	}
+
+	// check if allowed scopes are in jwt scopes
+	for _, allowed := range allowedScopes {
+		if jwtScopes[allowed] {
+			return true
+		}
+	}
+
+	// default to false: unauthorized
 	return false
 }
