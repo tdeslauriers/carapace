@@ -13,13 +13,20 @@ import (
 // Verifying Signatures
 type JwtVerifier interface {
 	VerifyJwtSignature(msg string, sig []byte) error
-	BuildJwtFromToken(token string) (*JwtToken, error)         // requires valid signature
-	HasValidScopes(allowedScopes []string, jwt *JwtToken) bool // assumes token has been verified
+	BuildJwtFromToken(token string) (*JwtToken, error) // requires valid signature
 	IsAuthorized(allowedScopes []string, token string) (bool, error)
 }
 
 type JwtVerifierService struct {
-	PublicKey *ecdsa.PublicKey
+	ServiceName string
+	PublicKey   *ecdsa.PublicKey
+}
+
+func NewJwtVerifierService(svcName string, pubKey *ecdsa.PublicKey) *JwtVerifierService {
+	return &JwtVerifierService{
+		ServiceName: svcName,
+		PublicKey:   pubKey,
+	}
 }
 
 func (v *JwtVerifierService) VerifyJwtSignature(msg string, sig []byte) error {
@@ -130,9 +137,28 @@ func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) 
 		return false, err
 	}
 
+	// check audiences
+	if ok := v.HasValidAudences(jwt); !ok {
+		return false, fmt.Errorf("unauthorized")
+	}
+
+	// check scopes
 	if v.HasValidScopes(allowedScopes, jwt) {
 		return true, nil
 	} else {
 		return false, fmt.Errorf("unauthorized")
 	}
+}
+
+func (v *JwtVerifierService) HasValidAudences(jwt *JwtToken) bool {
+
+	if len(jwt.Claims.Audience) > 0 {
+		for _, aud := range jwt.Claims.Audience {
+			if aud == v.ServiceName {
+				return true
+			}
+		}
+	}
+
+	return false
 }

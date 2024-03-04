@@ -40,7 +40,7 @@ func TestJwtSignatures(t *testing.T) {
 	jwt := JwtToken{Header: header, Claims: claims1}
 	signer.MintJwt(&jwt)
 
-	verifier := JwtVerifierService{&privateKey.PublicKey}
+	verifier := JwtVerifierService{"shaw", &privateKey.PublicKey}
 	segments := strings.Split(jwt.Token, ".")
 	msg := segments[0] + "." + segments[1]
 	sig, _ := base64.URLEncoding.DecodeString(segments[2])
@@ -119,7 +119,7 @@ func TestSig(t *testing.T) {
 	if err != nil {
 		log.Fatalf("unable to parse x509 EC Private Key: %v", err)
 	}
-	verifier := &JwtVerifierService{&privateKey.PublicKey}
+	verifier := &JwtVerifierService{"shaw", &privateKey.PublicKey}
 
 	var allowed []string = []string{"r:ran:*"}
 
