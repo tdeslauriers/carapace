@@ -26,9 +26,17 @@ type UserAuthService interface {
 	RefreshService[UserRefresh]
 }
 
+// for config/service setup
+type S2sCredentials struct {
+	ClientId     string
+	ClientSecret string
+}
+
+// for s2s login call -> needs service name
 type S2sLoginCmd struct {
 	ClientId     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
+	ServiceName  string `json:"service_name,omitempty"`
 }
 
 func (cmd S2sLoginCmd) ValidateCmd() error {
@@ -39,6 +47,10 @@ func (cmd S2sLoginCmd) ValidateCmd() error {
 
 	if err := validate.IsValidPassword(cmd.ClientSecret); err != nil {
 		return fmt.Errorf("invalid client secret")
+	}
+
+	if !validate.IsValidServiceName(cmd.ServiceName) {
+		return fmt.Errorf("invalid service name")
 	}
 
 	return nil

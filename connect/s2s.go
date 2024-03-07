@@ -18,14 +18,14 @@ type S2SCaller interface {
 type S2sCaller struct {
 	ServiceUrl  string
 	ServiceName string
-	S2sClient   TLSClient
+	TlsClient   TLSClient
 }
 
 func NewS2sCaller(url, name string, client TLSClient) *S2sCaller {
 	return &S2sCaller{
 		ServiceUrl:  url,
 		ServiceName: name,
-		S2sClient:   client,
+		TlsClient:   client,
 	}
 }
 

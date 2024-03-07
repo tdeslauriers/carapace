@@ -31,6 +31,10 @@ const (
 	RepeatCharMax       int    = 4 // allowing 4 for true randomness and ggGg scenarios
 
 	UuidPattern string = `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`
+
+	ServiceNameMin   int    = 2
+	ServiceNameMax   int    = 32
+	ServiceNameRegex string = `^[a-z0-9_-]+$`
 )
 
 // includes alphabet
@@ -275,4 +279,18 @@ func IsValidUuid(uuid string) bool {
 	}
 
 	return rgx.MatchString(uuid)
+}
+
+func IsValidServiceName(service string) bool {
+
+	if TooShort(service, ServiceNameMin) || TooLong(service, ServiceNameMax) {
+		return false
+	}
+
+	rgx, err := regexp.Compile(ServiceNameRegex)
+	if err != nil {
+		log.Panicf("unable to compile service name regex")
+	}
+
+	return rgx.MatchString(service)
 }

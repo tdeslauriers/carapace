@@ -19,6 +19,7 @@ type RefreshService[T Refresh] interface {
 // refresh table data
 type S2sRefresh struct {
 	Uuid         string          `db:"uuid"`
+	ServiceName  string          `db:"service_name"`
 	RefreshToken string          `db:"refresh_token"`
 	ClientId     string          `db:"client_uuid"`
 	CreatedAt    data.CustomTime `db:"created_at"`
@@ -35,6 +36,7 @@ type UserRefresh struct {
 
 type RefreshCmd struct {
 	RefreshToken string `json:"refresh_token"`
+	ServiceName  string `json:"service_name"`
 }
 
 func (cmd RefreshCmd) ValidateCmd() error {
@@ -42,6 +44,10 @@ func (cmd RefreshCmd) ValidateCmd() error {
 	// field input restrictions
 	if !validate.IsValidUuid(cmd.RefreshToken) {
 		return fmt.Errorf("invalid refresh token")
+	}
+
+	if !validate.IsValidServiceName(cmd.ServiceName) {
+		return fmt.Errorf("invalid service token")
 	}
 
 	return nil
