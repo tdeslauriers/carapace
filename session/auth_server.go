@@ -142,6 +142,7 @@ type UserAccountData struct {
 // maps db table data, not jwt string
 type Scope struct {
 	Uuid        string `db:"uuid" json:"scope_id"`
+	ServiceName string `db:"service_name" json:"service_name"`
 	Scope       string `db:"scope" json:"scope"`
 	Name        string `db:"name"  json:"name"`
 	Description string `db:"description" json:"description"`
