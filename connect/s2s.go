@@ -49,7 +49,7 @@ func (c *S2sCaller) GetServiceData(endpoint, s2sToken, authToken string, data in
 		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 	}
 
-	response, err := c.S2sClient.Do(request)
+	response, err := c.TlsClient.Do(request)
 	if err != nil {
 		return fmt.Errorf("unable to execute call against endpoint '%s': %v", url, err)
 	}
@@ -107,7 +107,7 @@ func (c *S2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd inte
 	}
 
 	// execute post request
-	response, err := c.S2sClient.Do(request)
+	response, err := c.TlsClient.Do(request)
 	if err != nil {
 		return fmt.Errorf("unable to execute call against endpoint '%s': %v", url, err)
 	}
