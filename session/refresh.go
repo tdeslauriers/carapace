@@ -29,6 +29,8 @@ type S2sRefresh struct {
 
 type UserRefresh struct {
 	Uuid         string          `db:"uuid"`
+	RefreshIndex string          `db:"refresh_index"`
+	ServiceName  string          `db:"service_name"`
 	RefreshToken string          `db:"refresh_token"`
 	AccountId    string          `db:"account_uuid"`
 	CreatedAt    data.CustomTime `db:"created_at"`
