@@ -22,7 +22,7 @@ func TestJwtSignatures(t *testing.T) {
 	if err != nil {
 		t.Log("Private key gen failed: ", err)
 	}
-	signer := JwtSignerService{privateKey}
+	signer := NewJwtSignerService(privateKey)
 
 	header := JwtHeader{ES512, TokenType}
 

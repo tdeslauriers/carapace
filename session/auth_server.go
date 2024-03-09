@@ -12,8 +12,8 @@ import (
 // s2s login service -> validates incoming login
 type AuthService interface {
 	ValidateCredentials(id, secret string) error
-	GetUserScopes(uuid string) ([]Scope, error)
-	MintAuthzToken(subject string) (*jwt.JwtToken, error) // assumes valid creds
+	GetUserScopes(uuid, service string) ([]Scope, error)
+	MintAuthzToken(subject, service string) (*jwt.JwtToken, error) // assumes valid creds
 }
 
 type S2sAuthService interface {

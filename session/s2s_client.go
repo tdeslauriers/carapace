@@ -44,7 +44,7 @@ func NewS2sTokenProvider(caller connect.S2SCaller, creds S2sCredentials, dao dat
 func (p *S2sTokenProvider) GetServiceToken(service string) (jwt string, e error) {
 
 	// pull tokens with un-expired refresh
-	tokens, err := p.RetrieveServiceToken(service)
+	tokens, err := p.RetrieveServiceTokens(service)
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve service tokens for %s: %v", service, err)
 	}
@@ -81,9 +81,9 @@ func (p *S2sTokenProvider) GetServiceToken(service string) (jwt string, e error)
 		log.Printf("no active service token present, refreshing %s service token", service)
 
 		// get new service token via refresh
-		authz, err := p.RefreshServiceToken(tokens[0].RefreshToken) // decrypts
+		authz, err := p.RefreshServiceToken(tokens[0].RefreshToken, tokens[0].ServiceName) // decrypts
 		if err != nil {
-			log.Printf("unable to refresh service token (jti %s) for %s: %v", tokens[0].Jti, service, err)
+			log.Printf("unable to refresh service token (jti %s) for %s: %v", tokens[0].Jti, tokens[0].ServiceName, err)
 		}
 
 		// only return and persist if successful
@@ -168,7 +168,7 @@ func (p *S2sTokenProvider) PersistServiceToken(authz *S2sAuthorization) error {
 }
 
 // gets active service tokens from local store
-func (p *S2sTokenProvider) RetrieveServiceToken(service string) ([]S2sAuthorization, error) {
+func (p *S2sTokenProvider) RetrieveServiceTokens(service string) ([]S2sAuthorization, error) {
 
 	var tokens []S2sAuthorization
 	qry := `
@@ -190,7 +190,7 @@ func (p *S2sTokenProvider) RetrieveServiceToken(service string) ([]S2sAuthorizat
 }
 
 // decrypts refresh token and makes refresh client call
-func (p *S2sTokenProvider) RefreshServiceToken(refreshToken string) (*S2sAuthorization, error) {
+func (p *S2sTokenProvider) RefreshServiceToken(refreshToken, service string) (*S2sAuthorization, error) {
 
 	// decrypt refresh token
 	decrypted, err := p.Cryptor.DecyptServiceData(refreshToken)
@@ -199,7 +199,10 @@ func (p *S2sTokenProvider) RefreshServiceToken(refreshToken string) (*S2sAuthori
 	}
 
 	// create cmd
-	cmd := RefreshCmd{RefreshToken: decrypted}
+	cmd := RefreshCmd{
+		RefreshToken: decrypted,
+		ServiceName:  service,
+	}
 	var s2sAuthz S2sAuthorization
 	if err := p.S2sCaller.PostToService("/refresh", "", "", cmd, &s2sAuthz); err != nil {
 		return nil, fmt.Errorf("call to s2s auth /refresh failed: %v", err)

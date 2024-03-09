@@ -68,6 +68,12 @@ type JwtSignerService struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
+func NewJwtSignerService(priv *ecdsa.PrivateKey) *JwtSignerService {
+	return &JwtSignerService{
+		PrivateKey: priv,
+	}
+}
+
 // adds signature to a jwt
 func (sign *JwtSignerService) CreateJwtSignature(jwt *JwtToken) error {
 
@@ -119,8 +125,3 @@ func (sign *JwtSignerService) MintJwt(jwt *JwtToken) error {
 
 	return nil
 }
-
-
-
-
-

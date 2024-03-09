@@ -18,7 +18,7 @@ func TestValidateEmail(t *testing.T) {
 	tests := []string{noDomain, noAtSymbol, badChar, short}
 	for _, v := range tests {
 		if err := IsValidEmail(v); err == nil {
-			t.Logf(err.Error())
+			t.Log(err)
 			t.Fail()
 		}
 	}
