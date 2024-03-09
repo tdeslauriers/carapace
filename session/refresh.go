@@ -19,6 +19,7 @@ type RefreshService[T Refresh] interface {
 // refresh table data
 type S2sRefresh struct {
 	Uuid         string          `db:"uuid"`
+	RefreshIndex string          `db:"refresh_index"`
 	ServiceName  string          `db:"service_name"`
 	RefreshToken string          `db:"refresh_token"`
 	ClientId     string          `db:"client_uuid"`
