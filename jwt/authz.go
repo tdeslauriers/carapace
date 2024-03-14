@@ -117,7 +117,7 @@ func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) 
 	}
 
 	// check expiry
-	if jwt.Claims.Expires > time.Now().Unix() {
+	if jwt.Claims.Expires < time.Now().Unix() {
 		return false, fmt.Errorf("unauthorized: token expired")
 	}
 

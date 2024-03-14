@@ -101,7 +101,7 @@ func (p *S2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 		}
 	}
 
-	log.Printf("no active service token/refresh token for %s: retrieving new service token via s2s login", serviceName)
+	log.Printf("no active service token/refresh token for %s service: retrieving new service token via s2s login", serviceName)
 	// login to s2s authn endpoint
 	authz, err := p.S2sLogin(serviceName)
 	if err != nil {

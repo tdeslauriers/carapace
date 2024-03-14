@@ -58,17 +58,17 @@ func (pki *MutualTlsConfig) Configure() (*tls.Config, error) {
 
 	certPem, err := base64.StdEncoding.DecodeString(pki.Config.CertFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not base64 decode cert file: %v", err)
 	}
 	keyPem, err := base64.StdEncoding.DecodeString(pki.Config.KeyFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not base64 decode key file: %v", err)
 	}
 
 	// public/private key pair
 	cert, err := tls.X509KeyPair(certPem, keyPem)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse x509 key pair: %v", err)
 	}
 
 	// ca(s) of clients
@@ -79,7 +79,7 @@ func (pki *MutualTlsConfig) Configure() (*tls.Config, error) {
 			return nil, err
 		}
 		if ok := clientCaPool.AppendCertsFromPEM(ca); !ok {
-			log.Fatalf("Failed to load client CA cert.")
+			log.Fatalf("failed to load client CA cert.")
 		}
 	}
 	return &tls.Config{
@@ -96,14 +96,14 @@ func NewTLSConfig(tlsType string, pki *Pki) (*tls.Config, error) {
 		standard := &StandardTlsConfig{Config: pki}
 		tls, err := standard.Configure()
 		if err != nil {
-			log.Fatal("Failed to set up standard tls config: ", err)
+			log.Fatal("failed to set up standard tls config: ", err)
 		}
 		return tls, nil
 	case "mutual":
 		mutual := &MutualTlsConfig{Config: pki}
 		mtls, err := mutual.Configure()
 		if err != nil {
-			log.Fatal("Failed to set up mutual tls config: ", err)
+			log.Fatal("failed to set up mutual tls config: ", err)
 		}
 		return mtls, nil
 	default:
