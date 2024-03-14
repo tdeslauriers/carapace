@@ -22,7 +22,7 @@ type S2sAuthorization struct {
 
 // s2s token provider -> calls s2s service for tokens, stores and retrieves tokens from local db
 type S2STokenProvider interface {
-	GetServiceToken(service string) (string, error)
+	GetServiceToken(serviceName string) (string, error)
 }
 
 type S2sTokenProvider struct {
@@ -41,12 +41,12 @@ func NewS2sTokenProvider(caller connect.S2SCaller, creds S2sCredentials, dao dat
 	}
 }
 
-func (p *S2sTokenProvider) GetServiceToken(service string) (jwt string, e error) {
+func (p *S2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e error) {
 
 	// pull tokens with un-expired refresh
-	tokens, err := p.RetrieveServiceTokens(service)
+	tokens, err := p.RetrieveServiceTokens(serviceName)
 	if err != nil {
-		return "", fmt.Errorf("unable to retrieve service tokens for %s: %v", service, err)
+		return "", fmt.Errorf("unable to retrieve service tokens for %s: %v", serviceName, err)
 	}
 	// if active refresh tokens exist
 	if len(tokens) > 0 {
@@ -55,12 +55,12 @@ func (p *S2sTokenProvider) GetServiceToken(service string) (jwt string, e error)
 		for _, token := range tokens {
 
 			if token.TokenExpires.Time.After(time.Now().UTC()) {
-				log.Printf("active s2s service token present for %s, jti: %s", service, token.Jti)
+				log.Printf("active s2s service token present for %s, jti: %s", serviceName, token.Jti)
 
 				// decrypt service token
 				decrypted, err := p.Cryptor.DecyptServiceData(token.ServiceToken)
 				if err != nil {
-					return "", fmt.Errorf("unable to decrypt %s service token (jti %s): %v", service, token.Jti, err)
+					return "", fmt.Errorf("unable to decrypt %s service token (jti %s): %v", serviceName, token.Jti, err)
 				}
 
 				return decrypted, err
@@ -69,19 +69,19 @@ func (p *S2sTokenProvider) GetServiceToken(service string) (jwt string, e error)
 				go func(id string) {
 					qry := "DELETE FROM servicetoken WHERE uuid = ?"
 					if err := p.Dao.DeleteRecord(qry, id); err != nil {
-						log.Printf("failed to delete expired service token for %s, jti %s: %v", service, id, err)
+						log.Printf("failed to delete expired service token for %s, jti %s: %v", serviceName, id, err)
 					} else {
-						log.Printf("deleted expired service token for %s, jti %s", service, id)
+						log.Printf("deleted expired service token for %s, jti %s", serviceName, id)
 					}
 				}(token.Jti)
 			}
 
 		}
 
-		log.Printf("no active service token present, refreshing %s service token", service)
+		log.Printf("no active service token present, refreshing %s service token", serviceName)
 
 		// get new service token via refresh
-		authz, err := p.RefreshServiceToken(tokens[0].RefreshToken, tokens[0].ServiceName) // decrypts
+		authz, err := p.RefreshServiceToken(tokens[0].RefreshToken, serviceName) // decrypts
 		if err != nil {
 			log.Printf("unable to refresh service token (jti %s) for %s: %v", tokens[0].Jti, tokens[0].ServiceName, err)
 		}
@@ -93,7 +93,7 @@ func (p *S2sTokenProvider) GetServiceToken(service string) (jwt string, e error)
 
 				// encrypts before db insertion
 				if err := p.PersistServiceToken(a); err != nil {
-					log.Printf("Error persisting refreshed service token for %s, jit %s: %v", service, a.Jti, err)
+					log.Printf("Error persisting refreshed service token for %s, jit %s: %v", serviceName, a.Jti, err)
 				}
 			}(authz)
 
@@ -101,9 +101,9 @@ func (p *S2sTokenProvider) GetServiceToken(service string) (jwt string, e error)
 		}
 	}
 
-	log.Printf("no active service token/refresh token for %s: retrieving new service token via s2s login", service)
+	log.Printf("no active service token/refresh token for %s: retrieving new service token via s2s login", serviceName)
 	// login to s2s authn endpoint
-	authz, err := p.S2sLogin(service)
+	authz, err := p.S2sLogin(serviceName)
 	if err != nil {
 		return "", fmt.Errorf("s2s login failed: %v", err)
 	}
@@ -190,7 +190,7 @@ func (p *S2sTokenProvider) RetrieveServiceTokens(service string) ([]S2sAuthoriza
 }
 
 // decrypts refresh token and makes refresh client call
-func (p *S2sTokenProvider) RefreshServiceToken(refreshToken, service string) (*S2sAuthorization, error) {
+func (p *S2sTokenProvider) RefreshServiceToken(refreshToken, serviceName string) (*S2sAuthorization, error) {
 
 	// decrypt refresh token
 	decrypted, err := p.Cryptor.DecyptServiceData(refreshToken)
@@ -201,7 +201,7 @@ func (p *S2sTokenProvider) RefreshServiceToken(refreshToken, service string) (*S
 	// create cmd
 	cmd := RefreshCmd{
 		RefreshToken: decrypted,
-		ServiceName:  service,
+		ServiceName:  serviceName,
 	}
 	var s2sAuthz S2sAuthorization
 	if err := p.S2sCaller.PostToService("/refresh", "", "", cmd, &s2sAuthz); err != nil {

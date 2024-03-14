@@ -39,6 +39,7 @@ type UserRefresh struct {
 
 type RefreshCmd struct {
 	RefreshToken string `json:"refresh_token"`
+	ServiceName  string `json:"service_name,omitempty"`
 }
 
 func (cmd RefreshCmd) ValidateCmd() error {
@@ -46,6 +47,10 @@ func (cmd RefreshCmd) ValidateCmd() error {
 	// field input restrictions
 	if !validate.IsValidUuid(cmd.RefreshToken) {
 		return fmt.Errorf("invalid refresh token")
+	}
+
+	if !validate.IsValidServiceName(cmd.ServiceName) {
+		return fmt.Errorf("invalid service name")
 	}
 
 	return nil
