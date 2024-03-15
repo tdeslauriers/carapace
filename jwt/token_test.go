@@ -11,10 +11,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 var issuer, subject string = "api.ran.com", "erebor_abf7c176-3f3b-4226-98de-a9a6f00e3a6c"
-var audience = []string{"api.shaw.com"}
+var audience = []string{"shaw"}
 
 func TestJwtSignatures(t *testing.T) {
 
@@ -26,14 +27,17 @@ func TestJwtSignatures(t *testing.T) {
 
 	header := JwtHeader{ES512, TokenType}
 
+	issuedAt := time.Now()
+	log.Printf("token: %d", issuedAt.Unix())
+
 	claims1 := JwtClaims{
 		"3bb72d75-dcfa-400a-a78e-5a4ecd0d3f09",
 		issuer,
 		subject,
 		audience,
-		1704992428,
-		1704992428,
-		1704996028,
+		issuedAt.Unix(),
+		issuedAt.Unix(),
+		issuedAt.Add(5 * time.Minute).Unix(),
 		"r:shaw:* r:otherservice:* w:otherservice:*",
 	}
 
@@ -84,9 +88,9 @@ func TestJwtSignatures(t *testing.T) {
 		issuer,
 		"liar-liar",
 		audience,
-		1704992428,
-		1704992428,
-		1704996028,
+		issuedAt.Unix(),
+		issuedAt.Unix(),
+		issuedAt.Add(5 * time.Minute).Unix(),
 		"",
 	}
 

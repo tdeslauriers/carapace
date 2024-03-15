@@ -111,7 +111,6 @@ func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) 
 	}
 
 	// check issued time.
-	// subtracting 2 seconds to account for system time mismatches
 	if jwt.Claims.IssuedAt < time.Now().Add(-2*time.Second).Unix() {
 		return false, fmt.Errorf("unauthorized: token valid period not yet begun")
 	}
