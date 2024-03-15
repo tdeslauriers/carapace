@@ -28,7 +28,6 @@ func TestJwtSignatures(t *testing.T) {
 	header := JwtHeader{ES512, TokenType}
 
 	issuedAt := time.Now()
-	log.Printf("token: %d", issuedAt.Unix())
 
 	claims1 := JwtClaims{
 		"3bb72d75-dcfa-400a-a78e-5a4ecd0d3f09",
