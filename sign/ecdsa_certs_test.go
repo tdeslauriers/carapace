@@ -13,15 +13,15 @@ func TestCertValidation(t *testing.T) {
 
 	// set up
 	ca := CertFields{
-		CertName:     "rootCA",
+		CertName:     "ca",
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "RebelAlliance ECDSA-SHA256",
 		Role:         CA,
 	}
-	ca.GenerateEcdsaCert()
+	
 
 	leaf := CertFields{
-		CertName:     "server",
+		CertName:     "db-server",
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "localhost",
 		San:          []string{"localhost"},

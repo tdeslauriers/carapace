@@ -27,7 +27,7 @@ func addJitter(attempt int, baseBackoff, maxBackoff time.Duration) time.Duration
 
 	jitter := backoff/2 + time.Duration(rand.Int63n(int64(backoff/2)))
 
-	// check back up not to big
+	// check back off not too big
 	if jitter > maxBackoff {
 		jitter = maxBackoff
 	}
@@ -141,7 +141,7 @@ func (caller *S2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 
 			if attempt < caller.RetryConfig.MaxRetries-1 {
 
-				// apply backout/jitter to timeout
+				// apply backout/jitter to 5xx
 				backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
 				log.Printf("attempt %d - received '%d: %s' from get request to %s service's endpoint %s: (retrying in %v...)", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint, backoff)
 				time.Sleep(backoff)
@@ -247,7 +247,7 @@ func (caller *S2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 
 			if attempt < caller.RetryConfig.MaxRetries-1 {
 
-				// apply backout/jitter to timeout
+				// apply backout/jitter to 5xx
 				backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
 				log.Printf("attempt %d - received '%d: %s' from post request to %s service's endpoint %s: (retrying in %v...)", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint, backoff)
 				time.Sleep(backoff)
