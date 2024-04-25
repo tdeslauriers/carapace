@@ -263,7 +263,7 @@ func (caller *S2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 				return fmt.Errorf("unable to unmarshal response body json to %v from  %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err)
 			}
 			// jump out of retry loop and return error
-			return fmt.Errorf("received '%d: %s' from get-service-data call to %s service's endpoint %s", e.StatusCode, e.Message, caller.ServiceName, endpoint)
+			return fmt.Errorf("received '%d: %s' from post-service-data call to %s service's endpoint %s", e.StatusCode, e.Message, caller.ServiceName, endpoint)
 		}
 	}
 	return nil

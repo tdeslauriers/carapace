@@ -13,12 +13,12 @@ func TestCertValidation(t *testing.T) {
 
 	// set up
 	ca := CertFields{
-		CertName:     "ca",
+		CertName:     "db-ca",
 		Organisation: []string{"Rebel Alliance"},
 		CommonName:   "RebelAlliance ECDSA-SHA256",
 		Role:         CA,
 	}
-	
+	ca.GenerateEcdsaCert()
 
 	leaf := CertFields{
 		CertName:     "db-server",
@@ -30,6 +30,17 @@ func TestCertValidation(t *testing.T) {
 		CaCertName:   ca.CertName,
 	}
 	leaf.GenerateEcdsaCert()
+
+	client := CertFields{
+		CertName:     "db-client",
+		Organisation: []string{"Rebel Alliance"},
+		CommonName:   "localhost",
+		San:          []string{"localhost"},
+		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
+		Role:         Client,
+		CaCertName:   ca.CertName,
+	}
+	client.GenerateEcdsaCert()
 
 	// read generated certs
 	caCertPem, _ := os.ReadFile(fmt.Sprintf("%s-cert.pem", ca.CertName))

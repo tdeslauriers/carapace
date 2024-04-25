@@ -68,7 +68,13 @@ func IsValidName(name string) error {
 	return nil
 }
 
+// does not handle empty string, aka a required field, only checks format
 func IsValidBirthday(dob string) error {
+
+	// handle empty string
+	if len(dob) == 0 {
+		return nil
+	}
 
 	// parse
 	birthday, err := time.Parse("2006-01-02", dob)
