@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	EmailRegex string = `^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,7}$`
+	EmailRegex string = `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z0-9]{2,7}$`
 	EmailMax   int    = 254
 	EmailMin   int    = 6 // min length is 3, tho domain rules make them longer: 6
 
@@ -49,7 +49,7 @@ func IsValidEmail(email string) error {
 	}
 
 	if !MatchesRegex(email, EmailRegex) {
-		return fmt.Errorf("email address not properly formatted")
+		return fmt.Errorf("email address must be valid format, eg., name@domain.com")
 	}
 
 	return nil
@@ -79,13 +79,13 @@ func IsValidBirthday(dob string) error {
 	// parse
 	birthday, err := time.Parse("2006-01-02", dob)
 	if err != nil {
-		return fmt.Errorf("birthday not properly formatted: %v", err)
+		return fmt.Errorf("birth date not properly formatted: %v", err)
 	}
 
 	now := time.Now()
 
 	if birthday.After(now) {
-		return fmt.Errorf("birthday cannot be in the future")
+		return fmt.Errorf("birth date cannot be in the future")
 	}
 
 	age := now.Year() - birthday.Year()
@@ -126,12 +126,12 @@ func IsValidPassword(password string) error {
 
 	// keyboard sequence
 	if err := ContainsKeyboardSequence(password); err != nil {
-		return err
+		return fmt.Errorf("password %s", err)
 	}
 
 	// repeat characters
 	if err := RepeatChar(password); err != nil {
-		return err
+		return fmt.Errorf("password %s", err)
 	}
 
 	return nil
@@ -156,7 +156,7 @@ func RepeatChar(password string) error {
 		if lowerPassword[i] == lowerPassword[i-1] {
 			count++
 			if count > RepeatCharMax {
-				return fmt.Errorf("not allowed to repeat characters more than %d times", RepeatCharMax)
+				return fmt.Errorf("contains repeated characters greater than %d characters long", RepeatCharMax)
 			}
 		} else {
 			count = 1
@@ -201,7 +201,7 @@ func ContainsKeyboardSequence(password string) error {
 
 	for result := range results {
 		if result {
-			return fmt.Errorf("password contains keyboard sequence")
+			return fmt.Errorf("conatains keyboard sequences longer than %d characters, eg., 'qwerty'", KeyboardSequenceMax)
 		}
 	}
 

@@ -100,7 +100,7 @@ func (cmd UserRegisterCmd) ValidateCmd() error {
 	}
 
 	if err := validate.IsValidBirthday(cmd.Birthdate); err != nil {
-		return fmt.Errorf("invalid birthday: %v", err)
+		return fmt.Errorf("invalid birthdate: %v", err)
 	}
 
 	if cmd.Password != cmd.Confirm {
