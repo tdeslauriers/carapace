@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tdeslauriers/carapace/connect"
-	"github.com/tdeslauriers/carapace/sign"
+	"carapace/pkg/connect"
+	"carapace/pkg/sign"
 )
 
 // env vars
@@ -57,12 +57,12 @@ func TestDBConnect(t *testing.T) {
 	}
 
 	// configure pki
-	dbPki := connect.Pki{
+	dbPki := &connect.Pki{
 		CertFile: os.Getenv(DbClientCert),
 		KeyFile:  os.Getenv(DbClientKey),
 		CaFiles:  []string{os.Getenv(DbServerCaCert)},
 	}
-	clientConfig := connect.ClientConfig{Config: &dbPki}
+	clientConfig := connect.NewTlsClientConfig(dbPki)
 
 	url := DbUrl{
 		Username: os.Getenv(MariaDbUsername),
@@ -71,10 +71,7 @@ func TestDBConnect(t *testing.T) {
 		Name:     os.Getenv(MariaDbName),
 	}
 
-	dbConnector := &MariaDbConnector{
-		TlsConfig:     clientConfig,
-		ConnectionUrl: url.Build(),
-	}
+	dbConnector := NewSqlDbConnector(url, clientConfig)
 
 	db, err := dbConnector.Connect()
 	if err != nil {

@@ -1,12 +1,11 @@
 package session
 
 import (
+	"carapace/pkg/connect"
+	"carapace/pkg/data"
 	"fmt"
 	"log"
 	"time"
-
-	"github.com/tdeslauriers/carapace/connect"
-	"github.com/tdeslauriers/carapace/data"
 )
 
 // client side
@@ -21,19 +20,12 @@ type S2sAuthorization struct {
 }
 
 // s2s token provider -> calls s2s service for tokens, stores and retrieves tokens from local db
-type S2STokenProvider interface {
+type S2sTokenProvider interface {
 	GetServiceToken(serviceName string) (string, error)
 }
 
-type S2sTokenProvider struct {
-	S2sCaller   connect.S2SCaller
-	Credentials S2sCredentials
-	Dao         data.SqlRepository
-	Cryptor     data.Cryptor
-}
-
-func NewS2sTokenProvider(caller connect.S2SCaller, creds S2sCredentials, dao data.SqlRepository, ciph data.Cryptor) *S2sTokenProvider {
-	return &S2sTokenProvider{
+func NewS2sTokenProvider(caller connect.S2sCaller, creds S2sCredentials, dao data.SqlRepository, ciph data.Cryptor) S2sTokenProvider {
+	return &s2sTokenProvider{
 		S2sCaller:   caller,
 		Credentials: creds,
 		Dao:         dao,
@@ -41,7 +33,16 @@ func NewS2sTokenProvider(caller connect.S2SCaller, creds S2sCredentials, dao dat
 	}
 }
 
-func (p *S2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e error) {
+var _ S2sTokenProvider = (*s2sTokenProvider)(nil)
+
+type s2sTokenProvider struct {
+	S2sCaller   connect.S2sCaller
+	Credentials S2sCredentials
+	Dao         data.SqlRepository
+	Cryptor     data.Cryptor
+}
+
+func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e error) {
 
 	// pull tokens with un-expired refresh
 	tokens, err := p.RetrieveServiceTokens(serviceName)
@@ -119,7 +120,7 @@ func (p *S2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 }
 
 // login client call
-func (p *S2sTokenProvider) S2sLogin(service string) (*S2sAuthorization, error) {
+func (p *s2sTokenProvider) S2sLogin(service string) (*S2sAuthorization, error) {
 
 	login := S2sLoginCmd{
 		ClientId:     p.Credentials.ClientId,
@@ -136,7 +137,7 @@ func (p *S2sTokenProvider) S2sLogin(service string) (*S2sAuthorization, error) {
 }
 
 // encrypt and save service tokens to local maria db
-func (p *S2sTokenProvider) PersistServiceToken(authz *S2sAuthorization) error {
+func (p *s2sTokenProvider) PersistServiceToken(authz *S2sAuthorization) error {
 
 	// encrypt service token and refresh token
 	encServiceToken, err := p.Cryptor.EncyptServiceData(authz.ServiceToken)
@@ -168,7 +169,7 @@ func (p *S2sTokenProvider) PersistServiceToken(authz *S2sAuthorization) error {
 }
 
 // gets active service tokens from local store
-func (p *S2sTokenProvider) RetrieveServiceTokens(service string) ([]S2sAuthorization, error) {
+func (p *s2sTokenProvider) RetrieveServiceTokens(service string) ([]S2sAuthorization, error) {
 
 	var tokens []S2sAuthorization
 	qry := `
@@ -190,7 +191,7 @@ func (p *S2sTokenProvider) RetrieveServiceTokens(service string) ([]S2sAuthoriza
 }
 
 // decrypts refresh token and makes refresh client call
-func (p *S2sTokenProvider) RefreshServiceToken(refreshToken, serviceName string) (*S2sAuthorization, error) {
+func (p *s2sTokenProvider) RefreshServiceToken(refreshToken, serviceName string) (*S2sAuthorization, error) {
 
 	// decrypt refresh token
 	decrypted, err := p.Cryptor.DecyptServiceData(refreshToken)
@@ -209,5 +210,4 @@ func (p *S2sTokenProvider) RefreshServiceToken(refreshToken, serviceName string)
 	}
 
 	return &s2sAuthz, nil
-
 }

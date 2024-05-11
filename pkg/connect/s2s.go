@@ -14,20 +14,23 @@ import (
 	"time"
 )
 
+var rng *rand.Rand
+
 // retries and jitter
 func init() {
 	// initialize global random num gen -> jitter
-	rand.Seed(time.Now().UnixNano())
+	seed := time.Now().UnixNano()
+	rng = rand.New(rand.NewSource(seed))
 }
 
 func addJitter(attempt int, baseBackoff, maxBackoff time.Duration) time.Duration {
-
-	// get next exponential backoff interval
+	// Get the next exponential backoff interval
 	backoff := baseBackoff * time.Duration(1<<attempt)
 
-	jitter := backoff/2 + time.Duration(rand.Int63n(int64(backoff/2)))
+	// Use the custom Rand instance for jitter calculation
+	jitter := backoff/2 + time.Duration(rng.Int63n(int64(backoff/2)))
 
-	// check back off not too big
+	// Check that the backoff is not too big
 	if jitter > maxBackoff {
 		jitter = maxBackoff
 	}
@@ -41,21 +44,23 @@ type RetryConfiguration struct {
 	MaxBackoff  time.Duration
 }
 
-type S2SCaller interface {
+type S2sCaller interface {
 	GetServiceData(endpoint, s2sToken, authToken string, data interface{}) error
 	PostToService(endpoint, s2sToken, authToken string, cmd interface{}, data interface{}) error
 }
 
+var _ S2sCaller = (*s2sCaller)(nil)
+
 // http getting json formatted data
-type S2sCaller struct {
+type s2sCaller struct {
 	ServiceUrl  string
 	ServiceName string
-	TlsClient   TLSClient
+	TlsClient   TlsClient
 	RetryConfig RetryConfiguration
 }
 
-func NewS2sCaller(url, name string, client TLSClient, retry RetryConfiguration) *S2sCaller {
-	return &S2sCaller{
+func NewS2sCaller(url, name string, client TlsClient, retry RetryConfiguration) S2sCaller {
+	return &s2sCaller{
 		ServiceUrl:  url,
 		ServiceName: name,
 		TlsClient:   client,
@@ -64,7 +69,7 @@ func NewS2sCaller(url, name string, client TLSClient, retry RetryConfiguration) 
 }
 
 // get data (includes retry logic)
-func (caller *S2sCaller) GetServiceData(endpoint, s2sToken, authToken string, data interface{}) error {
+func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, data interface{}) error {
 
 	url := fmt.Sprintf("%s%s", caller.ServiceUrl, endpoint)
 
@@ -164,7 +169,7 @@ func (caller *S2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 }
 
 // post to service (includes retry logic)
-func (caller *S2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd interface{}, data interface{}) error {
+func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd interface{}, data interface{}) error {
 
 	url := fmt.Sprintf("%s%s", caller.ServiceUrl, endpoint)
 

@@ -18,19 +18,21 @@ type JwtVerifier interface {
 	IsAuthorized(allowedScopes []string, token string) (bool, error)
 }
 
-type JwtVerifierService struct {
-	ServiceName string
-	PublicKey   *ecdsa.PublicKey
-}
-
-func NewJwtVerifierService(svcName string, pubKey *ecdsa.PublicKey) *JwtVerifierService {
-	return &JwtVerifierService{
+func NewJwtVerifier(svcName string, pubKey *ecdsa.PublicKey) JwtVerifier {
+	return &jwtVerifier{
 		ServiceName: svcName,
 		PublicKey:   pubKey,
 	}
 }
 
-func (v *JwtVerifierService) VerifyJwtSignature(msg string, sig []byte) error {
+var _ JwtVerifier = (*jwtVerifier)(nil)
+
+type jwtVerifier struct {
+	ServiceName string
+	PublicKey   *ecdsa.PublicKey
+}
+
+func (v *jwtVerifier) VerifyJwtSignature(msg string, sig []byte) error {
 
 	// hash base signature string
 	hasher := sha512.New()
@@ -52,7 +54,7 @@ func (v *JwtVerifierService) VerifyJwtSignature(msg string, sig []byte) error {
 }
 
 // includes signature validation
-func (v *JwtVerifierService) BuildJwtFromToken(token string) (*JwtToken, error) {
+func (v *jwtVerifier) BuildJwtFromToken(token string) (*JwtToken, error) {
 
 	segments := strings.Split(token, ".")
 	if len(segments) > 3 {
@@ -99,7 +101,7 @@ func (v *JwtVerifierService) BuildJwtFromToken(token string) (*JwtToken, error) 
 }
 
 // check for "Bearer " and snips if present
-func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) (bool, error) {
+func (v *jwtVerifier) IsAuthorized(allowedScopes []string, token string) (bool, error) {
 
 	// snip prefix
 	token = strings.TrimPrefix(token, "Bearer ")
@@ -122,19 +124,19 @@ func (v *JwtVerifierService) IsAuthorized(allowedScopes []string, token string) 
 	}
 
 	// check audiences
-	if ok := v.HasValidAudences(jwt); !ok {
+	if ok := v.hasValidAudences(jwt); !ok {
 		return false, fmt.Errorf("unauthorized: not intended audience")
 	}
 
 	// check scopes
-	if v.HasValidScopes(allowedScopes, jwt) {
+	if v.hasValidScopes(allowedScopes, jwt) {
 		return true, nil
 	} else {
 		return false, fmt.Errorf("unauthorized: incorrect or missing scopes")
 	}
 }
 
-func (v *JwtVerifierService) HasValidAudences(jwt *JwtToken) bool {
+func (v *jwtVerifier) hasValidAudences(jwt *JwtToken) bool {
 
 	if len(jwt.Claims.Audience) > 0 {
 		for _, aud := range jwt.Claims.Audience {
@@ -148,7 +150,7 @@ func (v *JwtVerifierService) HasValidAudences(jwt *JwtToken) bool {
 }
 
 // assumes verified jwt
-func (v *JwtVerifierService) HasValidScopes(allowedScopes []string, jwt *JwtToken) bool {
+func (v *jwtVerifier) hasValidScopes(allowedScopes []string, jwt *JwtToken) bool {
 
 	// make sure token has scopes
 	if jwt.Claims.Scopes == "" {
