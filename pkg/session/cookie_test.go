@@ -1,13 +1,12 @@
 package session
 
 import (
+	"carapace/pkg/connect"
+	"carapace/pkg/diagnostics"
 	"net/http"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/tdeslauriers/carapace/connect"
-	"github.com/tdeslauriers/carapace/diagnostics"
 )
 
 func TestCookies(t *testing.T) {
@@ -18,7 +17,7 @@ func TestCookies(t *testing.T) {
 		CaFiles:  []string{os.Getenv("CA_CERT")},
 	}
 
-	tls, _ := connect.NewTLSConfig("mutual", pki)
+	tls, _ := connect.NewTlsServerConfig("mutual", pki).Build()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)

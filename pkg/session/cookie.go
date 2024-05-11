@@ -1,11 +1,11 @@
 package session
 
 import (
+	"carapace/pkg/data"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tdeslauriers/carapace/data"
 )
 
 type Session struct {
@@ -40,16 +40,24 @@ func BuildSession() Session {
 }
 
 type SessionService interface {
-	CreateSession(s *Session)
+	CreateSession(s *Session) error
 }
 
-type SqlSessionService struct {
-	Db data.MariaDbRepository
+func NewSessionService(dao data.SqlRepository) SessionService {
+	return &sessionService{
+		Db: dao,
+	}
 }
 
-func (sql *SqlSessionService) CreateSession(s *Session) error {
+var _ SessionService = (*sessionService)(nil)
 
-	if err := sql.Db.InsertRecord("uxsession", s); err != nil {
+type sessionService struct {
+	Db data.SqlRepository
+}
+
+func (session *sessionService) CreateSession(s *Session) error {
+
+	if err := session.Db.InsertRecord("uxsession", s); err != nil {
 		return err
 	}
 

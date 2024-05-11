@@ -17,11 +17,19 @@ type SqlRepository interface {
 	DeleteRecord(query string, args ...interface{}) error
 }
 
-type MariaDbRepository struct {
+func NewSqlRepository(db SqlDbConnector) SqlRepository {
+	return &mariaDbRepository{
+		SqlDb: db,
+	}
+}
+
+var _ SqlRepository = (*mariaDbRepository)(nil)
+
+type mariaDbRepository struct {
 	SqlDb SqlDbConnector
 }
 
-func (dao *MariaDbRepository) SelectRecords(query string, records interface{}, args ...interface{}) error {
+func (dao *mariaDbRepository) SelectRecords(query string, records interface{}, args ...interface{}) error {
 
 	// connect to db
 	db, err := dao.SqlDb.Connect()
@@ -64,7 +72,7 @@ func (dao *MariaDbRepository) SelectRecords(query string, records interface{}, a
 	return rows.Err()
 }
 
-func (dao *MariaDbRepository) SelectRecord(query string, record interface{}, args ...interface{}) error {
+func (dao *mariaDbRepository) SelectRecord(query string, record interface{}, args ...interface{}) error {
 
 	// connect to db
 	db, err := dao.SqlDb.Connect()
@@ -89,7 +97,7 @@ func (dao *MariaDbRepository) SelectRecord(query string, record interface{}, arg
 	return row.Err()
 }
 
-func (dao *MariaDbRepository) SelectExists(query string, args ...interface{}) (bool, error) {
+func (dao *mariaDbRepository) SelectExists(query string, args ...interface{}) (bool, error) {
 
 	// connect to db
 	db, err := dao.SqlDb.Connect()
@@ -106,7 +114,7 @@ func (dao *MariaDbRepository) SelectExists(query string, args ...interface{}) (b
 	return exists, nil
 }
 
-func (dao *MariaDbRepository) InsertRecord(query string, record interface{}) error {
+func (dao *mariaDbRepository) InsertRecord(query string, record interface{}) error {
 
 	// connect to db
 	db, err := dao.SqlDb.Connect()
@@ -151,7 +159,7 @@ func (dao *MariaDbRepository) InsertRecord(query string, record interface{}) err
 	return nil
 }
 
-func (dao *MariaDbRepository) UpdateRecord(query string, args ...interface{}) error {
+func (dao *mariaDbRepository) UpdateRecord(query string, args ...interface{}) error {
 
 	// connect to db
 	db, err := dao.SqlDb.Connect()
@@ -176,7 +184,7 @@ func (dao *MariaDbRepository) UpdateRecord(query string, args ...interface{}) er
 	return nil
 }
 
-func (dao *MariaDbRepository) DeleteRecord(query string, args ...interface{}) error {
+func (dao *mariaDbRepository) DeleteRecord(query string, args ...interface{}) error {
 
 	// connect to db
 	db, err := dao.SqlDb.Connect()

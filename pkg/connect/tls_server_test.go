@@ -1,6 +1,8 @@
 package connect
 
 import (
+	"carapace/pkg/diagnostics"
+	"carapace/pkg/sign"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -9,9 +11,6 @@ import (
 	"net/http"
 	"os"
 	"testing"
-
-	"github.com/tdeslauriers/carapace/diagnostics"
-	"github.com/tdeslauriers/carapace/sign"
 )
 
 const (
@@ -97,13 +96,13 @@ func TestStandardTls(t *testing.T) {
 
 	setUpCerts()
 
-	pki := &Pki{
+	serverPki := &Pki{
 		CertFile: os.Getenv(SERVER_CERT_ENV),
 		KeyFile:  os.Getenv(SERVER_KEY_ENV),
 		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
 
-	tls, _ := NewTLSConfig("standard", pki)
+	serverConfig, _ := NewTlsServerConfig("standard", serverPki).Build()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
@@ -111,7 +110,7 @@ func TestStandardTls(t *testing.T) {
 	server := &TlsServer{
 		Addr:      ":8443",
 		Mux:       mux,
-		TlsConfig: tls,
+		TlsConfig: serverConfig,
 	}
 
 	go func() {
@@ -120,8 +119,14 @@ func TestStandardTls(t *testing.T) {
 		}
 	}()
 
-	clientConfig := &ClientConfig{Config: pki}
-	client, err := clientConfig.NewTlsClient()
+	clientPki := &Pki{
+		CertFile: os.Getenv(CLIENT_CERT_ENV),
+		KeyFile:  os.Getenv(CLIENT_KEY_ENV),
+		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
+	}
+
+	clientConfig := NewTlsClientConfig(clientPki)
+	client, err := NewTlsClient(clientConfig)
 	if err != nil {
 		t.Log("Failed to create tls client: ", err)
 	}
@@ -168,7 +173,7 @@ func TestMutualTls(t *testing.T) {
 		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
 
-	tls, _ := NewTLSConfig("mutual", pki)
+	tls, _ := NewTlsServerConfig("mutual", pki).Build()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", diagnostics.HealthCheckHandler)
@@ -191,8 +196,8 @@ func TestMutualTls(t *testing.T) {
 		CaFiles:  []string{os.Getenv(CA_CERT_ENV)},
 	}
 
-	clientConfig := &ClientConfig{Config: clientPki}
-	client, err := clientConfig.NewTlsClient()
+	clientConfig := NewTlsClientConfig(clientPki)
+	client, err := NewTlsClient(clientConfig)
 	if err != nil {
 		t.Log("Failed to create tls client: ", err)
 	}

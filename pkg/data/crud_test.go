@@ -1,6 +1,8 @@
 package data
 
 import (
+	"carapace/pkg/connect"
+	"carapace/pkg/sign"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -10,8 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tdeslauriers/carapace/connect"
-	"github.com/tdeslauriers/carapace/sign"
 )
 
 // env vars in db_connect_test.go
@@ -49,12 +49,12 @@ func TestCrud(t *testing.T) {
 		}
 	}
 
-	dbPki := connect.Pki{
+	dbPki := &connect.Pki{
 		CertFile: os.Getenv(DbClientCert),
 		KeyFile:  os.Getenv(DbClientKey),
 		CaFiles:  []string{os.Getenv(DbServerCaCert)},
 	}
-	clientConfig := connect.ClientConfig{Config: &dbPki}
+	clientConfig := connect.NewTlsClientConfig(dbPki)
 
 	url := DbUrl{
 		Username: os.Getenv(MariaDbUsername),
@@ -63,12 +63,8 @@ func TestCrud(t *testing.T) {
 		Name:     os.Getenv(MariaDbName),
 	}
 
-	dbConnector := &MariaDbConnector{
-		TlsConfig:     clientConfig,
-		ConnectionUrl: url.Build(),
-	}
-
-	dao := MariaDbRepository{dbConnector}
+	conn := NewSqlDbConnector(url, clientConfig)
+	dao := NewSqlRepository(conn)
 
 	// insert record
 	id, _ := uuid.NewRandom()

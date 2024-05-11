@@ -4,11 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
-	"log"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +19,7 @@ func TestJwtSignatures(t *testing.T) {
 	if err != nil {
 		t.Log("Private key gen failed: ", err)
 	}
-	signer := NewJwtSignerService(privateKey)
+	signer := NewJwtSigner(privateKey)
 
 	header := JwtHeader{ES512, TokenType}
 
@@ -43,7 +39,7 @@ func TestJwtSignatures(t *testing.T) {
 	jwt := JwtToken{Header: header, Claims: claims1}
 	signer.MintJwt(&jwt)
 
-	verifier := JwtVerifierService{"shaw", &privateKey.PublicKey}
+	verifier := jwtVerifier{"shaw", &privateKey.PublicKey}
 	segments := strings.Split(jwt.Token, ".")
 	msg := segments[0] + "." + segments[1]
 	sig, _ := base64.URLEncoding.DecodeString(segments[2])
@@ -66,7 +62,7 @@ func TestJwtSignatures(t *testing.T) {
 	}
 
 	allowed := []string{"r:shaw:*", "w:shaw:*"}
-	if !verifier.HasValidScopes(allowed, rebuild) {
+	if !verifier.hasValidScopes(allowed, rebuild) {
 		t.Log("Scopes failed")
 		t.Fail()
 	}
@@ -111,28 +107,4 @@ func TestJwtSignatures(t *testing.T) {
 
 }
 
-func TestSig(t *testing.T) {
 
-	privPem, err := base64.StdEncoding.DecodeString(os.Getenv("RAN_SIGNING_KEY"))
-	if err != nil {
-		log.Fatalf("Could not decode (base64) signing key Env var: %v", err)
-	}
-	privBlock, _ := pem.Decode(privPem)
-	privateKey, err := x509.ParseECPrivateKey(privBlock.Bytes)
-	if err != nil {
-		log.Fatalf("unable to parse x509 EC Private Key: %v", err)
-	}
-	verifier := &JwtVerifierService{"shaw", &privateKey.PublicKey}
-
-	var allowed []string = []string{"r:ran:*"}
-
-	if authorized, err := verifier.IsAuthorized(allowed, "eyJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4YTc4ZDAxMC0yY2NiLTQyZjUtOGZlYS00OGIxZDI3OTY5MTUiLCJpc3MiOiJyYW4iLCJzdWIiOiI4ODFmYWQ4NS0zYTFiLTQ0YTYtYmZkNC0yMGE3NWFlZWFkMDUiLCJhdWQiOlsicmFuIl0sImlhdCI6MTcwOTA1MDU2NywibmJmIjoxNzA5MDUwNTY3LCJleHAiOjE3MDkwNTExNjcsInNjcCI6InI6cmFuOioifQ==.ANaXdJticc-j9P88Ckq5RPEivXGBg7Z4sS00vywA6rKA_JEIIWLR5UeYh9ey66D2kys52lGXLMY9jmM1D39v-8ENAcLyxOwpS5K3AyaKKKebadHYgdI4xRFWpZYNe0WNhFyBKvtCBf8Hol5BM6TbwBVhUpQ9iqDlTNxOpqzQMtL_JsYQ"); !authorized {
-		if err.Error() == "unauthorized" {
-			log.Print(err.Error())
-			t.Fail()
-		} else {
-			log.Printf("This is a mess: %v", err)
-			t.Fail()
-		}
-	}
-}

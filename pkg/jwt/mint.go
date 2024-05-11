@@ -64,18 +64,20 @@ type JwtSigner interface {
 	MintJwt(*JwtToken) error
 }
 
-type JwtSignerService struct {
-	PrivateKey *ecdsa.PrivateKey
-}
-
-func NewJwtSignerService(priv *ecdsa.PrivateKey) *JwtSignerService {
-	return &JwtSignerService{
+func NewJwtSigner(priv *ecdsa.PrivateKey) JwtSigner {
+	return &jwtSigner{
 		PrivateKey: priv,
 	}
 }
 
+var _ JwtSigner = (*jwtSigner)(nil)
+
+type jwtSigner struct {
+	PrivateKey *ecdsa.PrivateKey
+}
+
 // adds signature to a jwt
-func (sign *JwtSignerService) CreateJwtSignature(jwt *JwtToken) error {
+func (sign *jwtSigner) CreateJwtSignature(jwt *JwtToken) error {
 
 	msg, err := jwt.SignatureBaseString()
 	if err != nil {
@@ -109,7 +111,7 @@ func (sign *JwtSignerService) CreateJwtSignature(jwt *JwtToken) error {
 	}
 }
 
-func (sign *JwtSignerService) MintJwt(jwt *JwtToken) error {
+func (sign *jwtSigner) MintJwt(jwt *JwtToken) error {
 
 	msg, err := jwt.SignatureBaseString()
 	if err != nil {

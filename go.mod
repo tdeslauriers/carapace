@@ -1,4 +1,4 @@
-module github.com/tdeslauriers/carapace
+module carapace
 
 go 1.22
 
