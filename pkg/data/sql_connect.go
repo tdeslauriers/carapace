@@ -4,10 +4,8 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/tdeslauriers/carapace/pkg/connect"
 )
 
 type DbUrl struct {
@@ -25,15 +23,9 @@ type SqlDbConnector interface {
 	Connect() (*sql.DB, error)
 }
 
-func NewSqlDbConnector(url DbUrl, tlsConfig connect.TlsClientConfig) SqlDbConnector {
-
-	config, err := tlsConfig.Build()
-	if err != nil {
-		log.Fatalf("unable to create TLS Config for Db Connection: %v", err)
-	}
-
+func NewSqlDbConnector(url DbUrl, tlsConfig *tls.Config) SqlDbConnector {
 	return &mariaDbConnector{
-		TlsConfig:     config,
+		TlsConfig:     tlsConfig,
 		ConnectionUrl: url.Build(),
 	}
 }
