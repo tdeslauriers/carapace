@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"carapace/pkg/connect"
-	"carapace/pkg/sign"
+	"github.com/tdeslauriers/carapace/pkg/connect"
+	"github.com/tdeslauriers/carapace/pkg/sign"
 )
 
 // env vars

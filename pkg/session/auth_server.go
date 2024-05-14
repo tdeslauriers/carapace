@@ -1,11 +1,12 @@
 package session
 
 import (
-	"carapace/pkg/jwt"
-	"carapace/pkg/validate"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/tdeslauriers/carapace/pkg/jwt"
+	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
 // s2s login service -> validates incoming login

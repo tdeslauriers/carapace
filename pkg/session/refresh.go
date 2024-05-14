@@ -1,9 +1,10 @@
 package session
 
 import (
-	"carapace/pkg/data"
-	"carapace/pkg/validate"
 	"fmt"
+
+	"github.com/tdeslauriers/carapace/pkg/data"
+	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
 type Refresh interface {

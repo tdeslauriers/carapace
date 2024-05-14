@@ -1,11 +1,12 @@
 package session
 
 import (
-	"carapace/pkg/connect"
-	"carapace/pkg/data"
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/tdeslauriers/carapace/pkg/connect"
+	"github.com/tdeslauriers/carapace/pkg/data"
 )
 
 // client side

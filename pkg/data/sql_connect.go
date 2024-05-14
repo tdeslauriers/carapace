@@ -1,13 +1,13 @@
 package data
 
 import (
-	"carapace/pkg/connect"
 	"crypto/tls"
 	"database/sql"
 	"fmt"
 	"log"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/tdeslauriers/carapace/pkg/connect"
 )
 
 type DbUrl struct {

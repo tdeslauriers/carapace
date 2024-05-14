@@ -1,12 +1,13 @@
 package session
 
 import (
-	"carapace/pkg/connect"
-	"carapace/pkg/diagnostics"
 	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/tdeslauriers/carapace/pkg/connect"
+	"github.com/tdeslauriers/carapace/pkg/diagnostics"
 )
 
 func TestCookies(t *testing.T) {

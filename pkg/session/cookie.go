@@ -1,11 +1,11 @@
 package session
 
 import (
-	"carapace/pkg/data"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/tdeslauriers/carapace/pkg/data"
 )
 
 type Session struct {

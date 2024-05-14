@@ -1,8 +1,6 @@
 package data
 
 import (
-	"carapace/pkg/connect"
-	"carapace/pkg/sign"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -12,6 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/tdeslauriers/carapace/pkg/connect"
+	"github.com/tdeslauriers/carapace/pkg/sign"
 )
 
 // env vars in db_connect_test.go

@@ -1,8 +1,6 @@
 package connect
 
 import (
-	"carapace/pkg/diagnostics"
-	"carapace/pkg/sign"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -11,6 +9,9 @@ import (
 	"net/http"
 	"os"
 	"testing"
+
+	"github.com/tdeslauriers/carapace/pkg/diagnostics"
+	"github.com/tdeslauriers/carapace/pkg/sign"
 )
 
 const (
