@@ -54,7 +54,7 @@ func TestCrud(t *testing.T) {
 		KeyFile:  os.Getenv(DbClientKey),
 		CaFiles:  []string{os.Getenv(DbServerCaCert)},
 	}
-	clientConfig := connect.NewTlsClientConfig(dbPki)
+	clientConfig, _ := connect.NewTlsClientConfig(dbPki).Build()
 
 	url := DbUrl{
 		Username: os.Getenv(MariaDbUsername),
