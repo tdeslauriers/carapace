@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -46,6 +47,14 @@ func (conn *mariaDbConnector) Connect() (*sql.DB, error) {
 
 	db, err := sql.Open("mysql", conn.ConnectionUrl+"?tls=custom")
 	if err != nil {
+		return nil, err
+	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	if err := db.Ping(); err != nil {
 		return nil, err
 	}
 

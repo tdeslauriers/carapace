@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"fmt"
@@ -17,29 +18,22 @@ type SqlRepository interface {
 	DeleteRecord(query string, args ...interface{}) error
 }
 
-func NewSqlRepository(db SqlDbConnector) SqlRepository {
+func NewSqlRepository(db *sql.DB) SqlRepository {
 	return &mariadbRepository{
-		SqlDb: db,
+		db: db,
 	}
 }
 
 var _ SqlRepository = (*mariadbRepository)(nil)
 
 type mariadbRepository struct {
-	SqlDb SqlDbConnector
+	db *sql.DB
 }
 
-func (dao *mariadbRepository) SelectRecords(query string, records interface{}, args ...interface{}) error {
-
-	// connect to db
-	db, err := dao.SqlDb.Connect()
-	if err != nil {
-		return fmt.Errorf("failed to connect to sql database: %v", err)
-	}
-	defer db.Close()
+func (r *mariadbRepository) SelectRecords(query string, records interface{}, args ...interface{}) error {
 
 	// execute query
-	rows, err := db.Query(query, args...)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return fmt.Errorf("unable to execute select records query: %v", err)
 	}
@@ -72,16 +66,10 @@ func (dao *mariadbRepository) SelectRecords(query string, records interface{}, a
 	return rows.Err()
 }
 
-func (dao *mariadbRepository) SelectRecord(query string, record interface{}, args ...interface{}) error {
-
-	// connect to db
-	db, err := dao.SqlDb.Connect()
-	if err != nil {
-		return fmt.Errorf("unable to connect to sql database")
-	}
+func (r *mariadbRepository) SelectRecord(query string, record interface{}, args ...interface{}) error {
 
 	// execute query
-	row := db.QueryRow(query, args...)
+	row := r.db.QueryRow(query, args...)
 
 	// map row to record types, fields
 	rec := reflect.ValueOf(record).Elem() // get concrete type
@@ -97,16 +85,10 @@ func (dao *mariadbRepository) SelectRecord(query string, record interface{}, arg
 	return row.Err()
 }
 
-func (dao *mariadbRepository) SelectExists(query string, args ...interface{}) (bool, error) {
-
-	// connect to db
-	db, err := dao.SqlDb.Connect()
-	if err != nil {
-		return false, fmt.Errorf("unable to connect to sql database")
-	}
+func (r *mariadbRepository) SelectExists(query string, args ...interface{}) (bool, error) {
 
 	var exists bool
-	err = db.QueryRow(query, args...).Scan(&exists)
+	err := r.db.QueryRow(query, args...).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -114,14 +96,7 @@ func (dao *mariadbRepository) SelectExists(query string, args ...interface{}) (b
 	return exists, nil
 }
 
-func (dao *mariadbRepository) InsertRecord(query string, record interface{}) error {
-
-	// connect to db
-	db, err := dao.SqlDb.Connect()
-	if err != nil {
-		return fmt.Errorf("failed to connect to sql database: %v", err)
-	}
-	defer db.Close()
+func (r *mariadbRepository) InsertRecord(query string, record interface{}) error {
 
 	// map record interface to prepared statement args
 	insert := reflect.ValueOf(record)
@@ -144,7 +119,7 @@ func (dao *mariadbRepository) InsertRecord(query string, record interface{}) err
 	}
 
 	// create prepared statement
-	stmt, err := db.Prepare(query)
+	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return err
 	}
@@ -159,17 +134,10 @@ func (dao *mariadbRepository) InsertRecord(query string, record interface{}) err
 	return nil
 }
 
-func (dao *mariadbRepository) UpdateRecord(query string, args ...interface{}) error {
-
-	// connect to db
-	db, err := dao.SqlDb.Connect()
-	if err != nil {
-		return fmt.Errorf("failed to connect to sql database: %v", err)
-	}
-	defer db.Close()
+func (r *mariadbRepository) UpdateRecord(query string, args ...interface{}) error {
 
 	// prepared statement
-	stmt, err := db.Prepare(query)
+	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare update statement: %v", err)
 	}
@@ -184,17 +152,10 @@ func (dao *mariadbRepository) UpdateRecord(query string, args ...interface{}) er
 	return nil
 }
 
-func (dao *mariadbRepository) DeleteRecord(query string, args ...interface{}) error {
-
-	// connect to db
-	db, err := dao.SqlDb.Connect()
-	if err != nil {
-		return fmt.Errorf("failed to connect to sql database: %v", err)
-	}
-	defer db.Close()
+func (r *mariadbRepository) DeleteRecord(query string, args ...interface{}) error {
 
 	// prepared statement
-	stmt, err := db.Prepare(query)
+	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare delete statement: %v", err)
 	}
