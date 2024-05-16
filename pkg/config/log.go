@@ -14,5 +14,5 @@ const (
 
 	ServiceKey = "service"
 
-	ServiceName = "carapace"
+	ServiceCarapace = "carapace"
 )

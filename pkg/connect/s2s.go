@@ -70,7 +70,7 @@ func NewS2sCaller(url, name string, client TlsClient, retry RetryConfiguration) 
 		TlsClient:   client,
 		RetryConfig: retry,
 
-		logger: slog.Default().With(slog.String(config.PackageKey, config.PackageConnect), slog.String(config.ServiceKey, config.ServiceName)),
+		logger: slog.Default().With(slog.String(config.PackageKey, config.PackageConnect), slog.String(config.ServiceKey, config.ServiceCarapace)),
 	}
 }
 

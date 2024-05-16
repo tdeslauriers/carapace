@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tdeslauriers/carapace/pkg/config"
 )
 
 const (
@@ -139,9 +141,11 @@ func IsValidPassword(password string) error {
 
 func MatchesRegex(s, pattern string) bool {
 
+	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+
 	rgx, err := regexp.Compile(pattern)
 	if err != nil {
-		log.Panicf("unable to compile regex pattern: %s: %v", pattern, err)
+		logger.Error("unable to compile regex pattern: %s: %v", pattern, err)
 	}
 
 	return rgx.MatchString(s)
@@ -249,31 +253,37 @@ func contains(password, sequence string) bool {
 
 func TooShort(field interface{}, min int) bool {
 
+	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+
 	switch f := field.(type) {
 	case string:
 		return len(f) < min
 	case []byte:
 		return len(f) < min
 	default:
-		log.Panicf("Min length check only takes string or byte slice: %v", reflect.TypeOf(field))
+		logger.Error(fmt.Sprintf("Min length check only takes string or byte slice: %v", reflect.TypeOf(field)))
 		return false
 	}
 }
 
 func TooLong(field interface{}, max int) bool {
 
+	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+
 	switch f := field.(type) {
 	case string:
 		return len(f) > max
 	case []byte:
 		return len(f) > max
 	default:
-		log.Panicf("Max length check only takes string or byte slice: %v", reflect.TypeOf(field))
+		logger.Error(fmt.Sprintf("Max length check only takes string or byte slice: %v", reflect.TypeOf(field)))
 		return false
 	}
 }
 
 func IsValidUuid(uuid string) bool {
+
+	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
 
 	if TooShort(uuid, 36) || TooLong(uuid, 36) {
 		return false
@@ -281,7 +291,7 @@ func IsValidUuid(uuid string) bool {
 
 	rgx, err := regexp.Compile(UuidPattern)
 	if err != nil {
-		log.Panicf("unable to compile uuid regex")
+		logger.Error("unable to compile uuid regex")
 	}
 
 	return rgx.MatchString(uuid)
@@ -289,13 +299,15 @@ func IsValidUuid(uuid string) bool {
 
 func IsValidServiceName(service string) bool {
 
+	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+
 	if TooShort(service, ServiceNameMin) || TooLong(service, ServiceNameMax) {
 		return false
 	}
 
 	rgx, err := regexp.Compile(ServiceNameRegex)
 	if err != nil {
-		log.Panicf("unable to compile service name regex")
+		logger.Error("unable to compile service name regex")
 	}
 
 	return rgx.MatchString(service)
