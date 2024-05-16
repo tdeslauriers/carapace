@@ -7,12 +7,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 )
 
-const ES512 string = "ES512" // alg
-const TokenType string = "JWT"
-const Keysize int = 66 // ecdsa 512 spec
+const (
+	ES512     string = "ES512" // alg
+	TokenType string = "JWT"
+	Keysize   int    = 66 // ecdsa 512 spec
+)
 
 type JwtHeader struct {
 	Alg string `json:"alg"`
@@ -42,14 +43,14 @@ func (jwt *JwtToken) SignatureBaseString() (string, error) {
 	// header to json -> base64
 	jsonHeader, err := json.Marshal(jwt.Header)
 	if err != nil {
-		log.Panic("failed to marshal jwt header to json.")
+		return "", fmt.Errorf("failed to marshal jwt header to json")
 	}
 	encodedHeader := base64.URLEncoding.EncodeToString(jsonHeader)
 
 	// claims to json -> base64
 	jsonClaims, err := json.Marshal(jwt.Claims)
 	if err != nil {
-		log.Panic("failed to marshal jwt claims to json.")
+		return "", fmt.Errorf("failed to marshal jwt claims to json")
 	}
 	encodedClaims := base64.URLEncoding.EncodeToString(jsonClaims)
 

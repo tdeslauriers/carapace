@@ -4,21 +4,19 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"log"
+	"fmt"
 	"net/http"
 )
-
 
 type TlsClientConfig interface {
 	Build() (*tls.Config, error)
 }
 
-
 func NewTlsClientConfig(pki *Pki) TlsClientConfig {
 	return &tlsClientConfig{
 		Pki: pki,
 	}
-	
+
 }
 
 type tlsClientConfig struct {
@@ -46,7 +44,7 @@ func (config *tlsClientConfig) Build() (*tls.Config, error) {
 	// Load host's CA certificates
 	systemCertPool, err := x509.SystemCertPool()
 	if err != nil {
-		log.Fatalf("Could not get system cert pool: %v", err)
+		return nil, fmt.Errorf("failed to get system cert pool: %v", err)
 	}
 
 	// ca(s) of internal servers
@@ -56,7 +54,7 @@ func (config *tlsClientConfig) Build() (*tls.Config, error) {
 			return nil, err
 		}
 		if ok := systemCertPool.AppendCertsFromPEM(ca); !ok {
-			log.Fatalf("Could not append additional ca.")
+			return nil, fmt.Errorf("failed to append additional ca cert to system cert pool")
 		}
 	}
 

@@ -7,38 +7,38 @@ import (
 )
 
 type Config struct {
-	Name string
-	Certs Certs
-	Database Database
+	Name        string
+	Certs       Certs
+	Database    Database
 	ServiceAuth ServiceAuth
-	UserAuth UserAuth
+	UserAuth    UserAuth
 }
 
 type Certs struct {
 	ServerCert *string
-	ServerKey *string
-	ServerCa *string
+	ServerKey  *string
+	ServerCa   *string
 
 	ClientCert *string
-	ClientKey *string
-	ClientCa *string
-	
+	ClientKey  *string
+	ClientCa   *string
+
 	DbClientCert *string
-	DbClientKey *string
-	DbCaCert *string
+	DbClientKey  *string
+	DbCaCert     *string
 }
 
 type Database struct {
-	Url string
-	Name string
+	Url      string
+	Name     string
 	Username string
 	Password string
 	FieldKey string
 }
 
 type ServiceAuth struct {
-	Url string
-	ClientId string
+	Url          string
+	ClientId     string
 	ClientSecret string
 }
 
@@ -52,7 +52,7 @@ func Load(name string) (*Config, error) {
 	// read in and set certs for all services
 	err := config.readCerts()
 	if err != nil {
-		return nil, err	
+		return nil, err
 	}
 
 	// read in and set env vars for database
@@ -82,25 +82,25 @@ func (config *Config) readCerts() error {
 	if config.Name != "" {
 		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
 	}
-	
+
 	// read in certificates from environment variables
 	// server cert
 	envServerCert, ok := os.LookupEnv(fmt.Sprintf("%sSERVER_CERT", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sSERVER_CERT not set", serviceName))
 	}
-	
+
 	envServerKey, ok := os.LookupEnv(fmt.Sprintf("%sSERVER_KEY", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sSERVER_KEY not set", serviceName))
 	}
-	
+
 	// client cert
 	envClientCert, ok := os.LookupEnv(fmt.Sprintf("%sCLIENT_CERT", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sCLIENT_CERT not set", serviceName))
 	}
-	
+
 	envClientKey, ok := os.LookupEnv(fmt.Sprintf("%sCLIENT_KEY", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sCLIENT_KEY not set", serviceName))
@@ -111,12 +111,12 @@ func (config *Config) readCerts() error {
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDB_CLIENT_CERT not set", serviceName))
 	}
-	
+
 	envDbClientKey, ok := os.LookupEnv(fmt.Sprintf("%sDB_CLIENT_KEY", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDB_CLIENT_KEY not set", serviceName))
 	}
-	
+
 	// ca cert
 	envCaCert, ok := os.LookupEnv(fmt.Sprintf("%sCA_CERT", serviceName))
 	if !ok {
@@ -134,7 +134,7 @@ func (config *Config) readCerts() error {
 	config.Certs.DbClientCert = &envDbClientCert
 	config.Certs.DbClientKey = &envDbClientKey
 	config.Certs.DbCaCert = &envCaCert
-	
+
 	return nil
 }
 
@@ -144,28 +144,28 @@ func (config *Config) databaseEnvVars() error {
 	if config.Name != "" {
 		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
 	}
-	
+
 	// db env vars
 	envDbUrl, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_URL", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDATABASE_URL not set", serviceName))
 	}
-	
+
 	envDbName, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_NAME", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDATABASE_NAME not set", serviceName))
 	}
-	
+
 	envDbUsername, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_USERNAME", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDATABASE_USERNAME not set", serviceName))
 	}
-	
+
 	envDbPassword, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_PASSWORD", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDATABASE_PASSWORD not set", serviceName))
 	}
-	
+
 	envFieldsKey, ok := os.LookupEnv(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_KEY", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_KEY not set", serviceName))
@@ -176,7 +176,7 @@ func (config *Config) databaseEnvVars() error {
 	config.Database.Password = envDbPassword
 	config.Database.Name = envDbName
 	config.Database.Username = envDbUsername
-	
+
 	return nil
 }
 
@@ -186,12 +186,12 @@ func (config *Config) serviceAuthEnvVars() error {
 	if config.Name != "" {
 		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
 	}
-	
+
 	envRanUrl, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_URL", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sS2S_AUTH_URL not set", serviceName))
 	}
-	
+
 	envRanClientId, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_CLIENT_ID", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sS2S_AUTH_CLIENT_ID not set", serviceName))
@@ -205,7 +205,7 @@ func (config *Config) serviceAuthEnvVars() error {
 	config.ServiceAuth.Url = envRanUrl
 	config.ServiceAuth.ClientId = envRanClientId
 	config.ServiceAuth.ClientSecret = envRanClientSecret
-	
+
 	return nil
 }
 
@@ -214,7 +214,7 @@ func (config *Config) userAuthEnvVars() error {
 	var serviceName string
 	if config.Name != "" {
 		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
-		
+
 	}
 
 	envUserAuthUrl, ok := os.LookupEnv(fmt.Sprintf("%sUSER_AUTH_URL", serviceName))
@@ -223,6 +223,6 @@ func (config *Config) userAuthEnvVars() error {
 	}
 
 	config.UserAuth.Url = envUserAuthUrl
-	
+
 	return nil
 }

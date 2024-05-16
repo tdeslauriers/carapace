@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"math/rand"
 	"net"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/tdeslauriers/carapace/pkg/config"
 )
 
 var rng *rand.Rand
@@ -57,6 +59,8 @@ type s2sCaller struct {
 	ServiceName string
 	TlsClient   TlsClient
 	RetryConfig RetryConfiguration
+
+	logger *slog.Logger
 }
 
 func NewS2sCaller(url, name string, client TlsClient, retry RetryConfiguration) S2sCaller {
@@ -65,6 +69,8 @@ func NewS2sCaller(url, name string, client TlsClient, retry RetryConfiguration) 
 		ServiceName: name,
 		TlsClient:   client,
 		RetryConfig: retry,
+
+		logger: slog.Default().With(slog.String(config.PackageKey, config.PackageConnect), slog.String(config.ServiceKey, config.ServiceName)),
 	}
 }
 
@@ -100,7 +106,7 @@ func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 
 					// apply backout/jitter to timeout
 					backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-					log.Printf("attempt %d - %s service get-request to %s timed out (retrying in %v...): %v", attempt+1, caller.ServiceName, endpoint, backoff, err)
+					caller.logger.Error(fmt.Sprintf("attempt %d - %s service get-request to %s timed out (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff), err)
 					time.Sleep(backoff)
 					continue // jump to next loop iteration
 				} else {
@@ -148,7 +154,7 @@ func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 
 				// apply backout/jitter to 5xx
 				backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-				log.Printf("attempt %d - received '%d: %s' from get request to %s service's endpoint %s: (retrying in %v...)", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint, backoff)
+				caller.logger.Error(fmt.Sprintf("attempt %d - received '%d: %s' from GET request to %s service's endpoint %s: (retrying in %v...)", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint, backoff))
 				time.Sleep(backoff)
 				continue // jump out of the loop to next iteration
 			} else {
@@ -206,7 +212,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 
 					// apply backout/jitter to timeout
 					backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-					log.Printf("attempt %d - %s service post-request to %s timed out (retrying in %v...): %v", attempt+1, caller.ServiceName, endpoint, backoff, err)
+					caller.logger.Error(fmt.Sprintf("attempt %d - %s service POST request to %s timed out (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff), err)
 					time.Sleep(backoff)
 					continue // jump to next loop iteration
 				} else {
@@ -254,7 +260,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 
 				// apply backout/jitter to 5xx
 				backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-				log.Printf("attempt %d - received '%d: %s' from post request to %s service's endpoint %s: (retrying in %v...)", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint, backoff)
+				caller.logger.Error(fmt.Sprintf("attempt %d - received '%d: %s' from post request to %s service's endpoint %s: (retrying in %v...)", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint, backoff))
 				time.Sleep(backoff)
 				continue // jump out of the loop to next iteration
 			} else {

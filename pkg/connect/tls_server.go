@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -16,13 +15,13 @@ type TlsServerConfig interface {
 func NewTlsServerConfig(tlsType string, pki *Pki) TlsServerConfig {
 	return &tlsServerConfig{
 		Type: tlsType,
-		Pki: pki,
+		Pki:  pki,
 	}
 }
 
 type tlsServerConfig struct {
 	Type string // standard or mutual
-	Pki *Pki
+	Pki  *Pki
 }
 
 var _ TlsServerConfig = (*tlsServerConfig)(nil)
@@ -58,7 +57,7 @@ func (config *tlsServerConfig) Build() (*tls.Config, error) {
 				return nil, err
 			}
 			if ok := clientCaPool.AppendCertsFromPEM(ca); !ok {
-				log.Fatalf("failed to load client CA cert.")
+				return nil, fmt.Errorf("failed to load client CA cert")
 			}
 		}
 		return &tls.Config{
@@ -89,7 +88,6 @@ func (s *TlsServer) Initialize() error {
 		TLSConfig: s.TlsConfig,
 	}
 
-	log.Printf("Starting HTTP server on %s\n", s.Addr)
 	if err := server.ListenAndServeTLS("", ""); err != nil {
 		return err
 	}
