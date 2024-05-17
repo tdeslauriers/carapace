@@ -16,6 +16,7 @@ type SqlRepository interface {
 	InsertRecord(query string, record interface{}) error
 	UpdateRecord(query string, args ...interface{}) error
 	DeleteRecord(query string, args ...interface{}) error
+	Close() error
 }
 
 func NewSqlRepository(db *sql.DB) SqlRepository {
@@ -28,6 +29,13 @@ var _ SqlRepository = (*mariadbRepository)(nil)
 
 type mariadbRepository struct {
 	db *sql.DB
+}
+
+func (r *mariadbRepository) Close() error {
+	if err := r.db.Close(); err != nil {
+		return fmt.Errorf("failed to close db connection: %v", err)
+	}
+	return nil
 }
 
 func (r *mariadbRepository) SelectRecords(query string, records interface{}, args ...interface{}) error {

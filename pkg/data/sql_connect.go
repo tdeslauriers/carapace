@@ -38,14 +38,14 @@ type mariaDbConnector struct {
 	ConnectionUrl string
 }
 
-func (conn *mariaDbConnector) Connect() (*sql.DB, error) {
+func (c *mariaDbConnector) Connect() (*sql.DB, error) {
 
 	// register tls => "custom" key comes from mysql lib
-	if err := mysql.RegisterTLSConfig("custom", conn.TlsConfig); err != nil {
+	if err := mysql.RegisterTLSConfig("custom", c.TlsConfig); err != nil {
 		return nil, err
 	}
 
-	db, err := sql.Open("mysql", conn.ConnectionUrl+"?tls=custom")
+	db, err := sql.Open("mysql", c.ConnectionUrl+"?tls=custom")
 	if err != nil {
 		return nil, err
 	}
