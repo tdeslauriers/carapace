@@ -50,7 +50,10 @@ type s2sTokenProvider struct {
 }
 
 func (p *s2sTokenProvider) CloseDb() error {
-	return p.db.Close()
+	if err := p.db.Close(); err != nil {
+		return fmt.Errorf("unable to close db connection: %v", err)
+	}
+	return nil
 }
 
 func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e error) {
