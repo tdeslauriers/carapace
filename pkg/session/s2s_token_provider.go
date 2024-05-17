@@ -51,7 +51,7 @@ type s2sTokenProvider struct {
 
 func (p *s2sTokenProvider) CloseDb() error {
 	if err := p.db.Close(); err != nil {
-		return fmt.Errorf("unable to close db connection: %v", err)
+		return err
 	}
 	return nil
 }
@@ -70,7 +70,7 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 
 			// check for active s2s token
 			if token.TokenExpires.Time.After(time.Now().UTC()) {
-				p.logger.Info("active %s s2s token present, jti: %s", serviceName, token.Jti)
+				p.logger.Info(fmt.Sprintf("active %s s2s token present, jti: %s", serviceName, token.Jti))
 
 				// decrypt service token
 				decrypted, err := p.cryptor.DecyptServiceData(token.ServiceToken)
@@ -143,7 +143,7 @@ func (p *s2sTokenProvider) s2sLogin(service string) (*S2sAuthorization, error) {
 
 	var s2sAuthz S2sAuthorization
 	if err := p.s2s.PostToService("/login", "", "", login, &s2sAuthz); err != nil {
-		return nil, fmt.Errorf("unable to login to s2s /login endpoint for %s: %v", service, err)
+		return nil, fmt.Errorf(fmt.Sprintf("failed to login to s2s /login endpoint for %s", service), "err", err.Error())
 	}
 
 	return &s2sAuthz, nil
@@ -155,13 +155,13 @@ func (p *s2sTokenProvider) persistS2sToken(authz *S2sAuthorization) error {
 	// encrypt service token and refresh token
 	encServiceToken, err := p.cryptor.EncyptServiceData(authz.ServiceToken)
 	if err != nil {
-		return fmt.Errorf("unable to encrypt service token: %v", err)
+		return fmt.Errorf("failed to encrypt s2s token: %v", err)
 	}
 	authz.ServiceToken = encServiceToken
 
 	encRefreshToken, err := p.cryptor.EncyptServiceData(authz.RefreshToken)
 	if err != nil {
-		return fmt.Errorf("unable to encrypt refresh token: %v", err)
+		return fmt.Errorf("failed to encrypt refresh token: %v", err)
 	}
 	authz.RefreshToken = encRefreshToken
 
@@ -175,7 +175,7 @@ func (p *s2sTokenProvider) persistS2sToken(authz *S2sAuthorization) error {
 				refresh_expires) 
 			VALUES (?, ?, ?, ?, ?, ?)`
 	if err := p.db.InsertRecord(qry, *authz); err != nil {
-		return fmt.Errorf("unable to persist service token (jti %s) for %s: %v", authz.Jti, authz.ServiceName, err)
+		return fmt.Errorf("failed to persist service token (jti %s) for %s: %v", authz.Jti, authz.ServiceName, err)
 	}
 
 	return nil
@@ -197,7 +197,7 @@ func (p *s2sTokenProvider) retrieveS2sTokens(service string) ([]S2sAuthorization
 			WHERE refresh_expires > NOW()
 				AND service_name = ?`
 	if err := p.db.SelectRecords(qry, &tokens, service); err != nil {
-		return tokens, fmt.Errorf("unable to select service token records for %s: %v", service, err)
+		return tokens, fmt.Errorf("failed to select service token records for %s: %v", service, err)
 	}
 
 	return tokens, nil
@@ -209,7 +209,7 @@ func (p *s2sTokenProvider) refreshS2sToken(refreshToken, serviceName string) (*S
 	// decrypt refresh token
 	decrypted, err := p.cryptor.DecyptServiceData(refreshToken)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decrypt refresh token: %v", err)
+		return nil, fmt.Errorf("failed to decrypt refresh token: %v", err)
 	}
 
 	// create cmd
