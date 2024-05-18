@@ -9,11 +9,6 @@ import (
 	"io"
 )
 
-type Cryptor interface {
-	EncyptServiceData(string) (string, error)
-	DecyptServiceData(string) (string, error)
-}
-
 func GenerateAesGcmKey() []byte {
 
 	// AES-256
@@ -24,23 +19,30 @@ func GenerateAesGcmKey() []byte {
 	return key
 }
 
-type ServiceAesGcmKey struct {
-	Secret []byte // Env Var
+type Cryptor interface {
+	EncyptServiceData(string) (string, error)
+	DecyptServiceData(string) (string, error)
 }
 
-func NewServiceAesGcmKey(secret []byte) *ServiceAesGcmKey {
-	return &ServiceAesGcmKey{
-		Secret: secret,
+func NewServiceAesGcmKey(secret []byte) Cryptor {
+	return &serviceAesGcmKey{
+		secret: secret,
 	}
 }
 
-func (key *ServiceAesGcmKey) EncyptServiceData(plaintext string) (string, error) {
+var _ Cryptor = (*serviceAesGcmKey)(nil)
 
-	if len(key.Secret) != 32 {
+type serviceAesGcmKey struct {
+	secret []byte // Env Var
+}
+
+func (key *serviceAesGcmKey) EncyptServiceData(plaintext string) (string, error) {
+
+	if len(key.secret) != 32 {
 		panic("AES key must be exactly 32 bytes long")
 	}
 
-	c, err := aes.NewCipher(key.Secret)
+	c, err := aes.NewCipher(key.secret)
 	if err != nil {
 		return "", err
 	}
@@ -59,13 +61,13 @@ func (key *ServiceAesGcmKey) EncyptServiceData(plaintext string) (string, error)
 	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 
-func (key *ServiceAesGcmKey) DecyptServiceData(ciphertext string) (string, error) {
+func (key *serviceAesGcmKey) DecyptServiceData(ciphertext string) (string, error) {
 
-	if len(key.Secret) != 32 {
+	if len(key.secret) != 32 {
 		panic("AES key must be exactly 32 bytes long")
 	}
 
-	c, err := aes.NewCipher(key.Secret)
+	c, err := aes.NewCipher(key.secret)
 	if err != nil {
 		return "", err
 	}
