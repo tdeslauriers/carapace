@@ -29,11 +29,12 @@ type Certs struct {
 }
 
 type Database struct {
-	Url      string
-	Name     string
-	Username string
-	Password string
-	FieldKey string
+	Url         string
+	Name        string
+	Username    string
+	Password    string
+	FieldKey    string
+	IndexSecret string
 }
 
 type ServiceAuth struct {
@@ -171,11 +172,18 @@ func (config *Config) databaseEnvVars() error {
 		return fmt.Errorf(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_KEY not set", serviceName))
 	}
 
+	envIndexSecret, ok := os.LookupEnv(fmt.Sprintf("%sINDEX_SECRET", serviceName))
+
 	config.Database.FieldKey = envFieldsKey
 	config.Database.Url = envDbUrl
 	config.Database.Password = envDbPassword
 	config.Database.Name = envDbName
 	config.Database.Username = envDbUsername
+
+	// not all services use an index secret
+	if ok {
+		config.Database.IndexSecret = envIndexSecret
+	}
 
 	return nil
 }
