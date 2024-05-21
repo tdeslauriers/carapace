@@ -6,13 +6,15 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+
+	"github.com/tdeslauriers/carapace/pkg/config"
 )
 
 type TlsServerConfig interface {
 	Build() (*tls.Config, error)
 }
 
-func NewTlsServerConfig(tlsType string, pki *Pki) TlsServerConfig {
+func NewTlsServerConfig(tlsType config.ServerTls, pki *Pki) TlsServerConfig {
 	return &tlsServerConfig{
 		Type: tlsType,
 		Pki:  pki,
@@ -20,19 +22,19 @@ func NewTlsServerConfig(tlsType string, pki *Pki) TlsServerConfig {
 }
 
 type tlsServerConfig struct {
-	Type string // standard or mutual
+	Type config.ServerTls // standard or mutual
 	Pki  *Pki
 }
 
 var _ TlsServerConfig = (*tlsServerConfig)(nil)
 
-func (config *tlsServerConfig) Build() (*tls.Config, error) {
+func (tslConfig *tlsServerConfig) Build() (*tls.Config, error) {
 
-	certPem, err := base64.StdEncoding.DecodeString(config.Pki.CertFile)
+	certPem, err := base64.StdEncoding.DecodeString(tslConfig.Pki.CertFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not base64 decode cert file: %v", err)
 	}
-	keyPem, err := base64.StdEncoding.DecodeString(config.Pki.KeyFile)
+	keyPem, err := base64.StdEncoding.DecodeString(tslConfig.Pki.KeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not base64 decode key file: %v", err)
 	}
@@ -43,15 +45,15 @@ func (config *tlsServerConfig) Build() (*tls.Config, error) {
 		return nil, fmt.Errorf("could not parse x509 key pair: %v", err)
 	}
 
-	switch config.Type {
-	case "standard":
+	switch tslConfig.Type {
+	case config.StandardTls:
 		return &tls.Config{
 			Certificates: []tls.Certificate{cert},
 		}, nil
-	case "mutual":
+	case config.MutualTls:
 		// ca(s) of clients
 		clientCaPool := x509.NewCertPool()
-		for _, v := range config.Pki.CaFiles {
+		for _, v := range tslConfig.Pki.CaFiles {
 			ca, err := base64.StdEncoding.DecodeString(v)
 			if err != nil {
 				return nil, err

@@ -58,7 +58,10 @@ type Jwt struct {
 }
 
 func Load(def SvcDefinition) (*Config, error) {
-	config := &Config{Name: def.Name}
+	config := &Config{
+		Name: def.Name,
+		Tls:  def.Tls,
+	}
 
 	// read in for all services
 	err := config.readCerts(def)
