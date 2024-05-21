@@ -8,19 +8,19 @@ const (
 )
 
 type SvcDefinition struct {
-	name     string
-	tlsType  ServerTls
-	requires Requires
+	Name     string
+	Tls      ServerTls
+	Requires Requires
 }
 
 type Requires struct {
-	client           bool
-	db               bool
-	indexKey         bool
-	aesKey           bool
-	userAuthUrl      bool
-	s2sSigningKey    bool
-	s2sVerifyingKey  bool
-	userSigningKey   bool
-	userVerifyingKey bool
+	Client           bool
+	Db               bool
+	IndexKey         bool
+	AesKey           bool
+	UserAuthUrl      bool
+	S2sSigningKey    bool
+	S2sVerifyingKey  bool
+	UserSigningKey   bool
+	UserVerifyingKey bool
 }
