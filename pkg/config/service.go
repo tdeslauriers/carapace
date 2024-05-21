@@ -251,22 +251,22 @@ func (config *Config) JwtEnvVars() error {
 		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
 	}
 
-	envS2sSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_SIGNING_KEY", serviceName))
+	envS2sSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_S2S_JWT_SIGNING_KEY", serviceName))
 	if ok {
 		config.Jwt.S2sSigningKey = envS2sSigningKey
 	}
 
-	envS2sVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_VERIFYING_KEY", serviceName))
+	envS2sVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_JWT_VERIFYING_KEY", serviceName))
 	if ok {
 		config.Jwt.S2sVerifyingKey = envS2sVerifyingKey
 	}
 
-	envUserSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_SIGNING_KEY", serviceName))
+	envUserSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_JWT_SIGNING_KEY", serviceName))
 	if ok {
 		config.Jwt.UserSigningKey = envUserSigningKey
 	}
 
-	envUserVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_VERIFYING_KEY", serviceName))
+	envUserVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_JWT_VERIFYING_KEY", serviceName))
 	if ok {
 		config.Jwt.UserVerifyingKey = envUserVerifyingKey
 	}
