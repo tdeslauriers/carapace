@@ -304,9 +304,9 @@ func (config *Config) JwtEnvVars(def SvcDefinition) error {
 	// signing key
 	if def.Requires.S2sSigningKey {
 
-		envS2sSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_S2S_JWT_SIGNING_KEY", serviceName))
+		envS2sSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_JWT_SIGNING_KEY", serviceName))
 		if !ok {
-			return fmt.Errorf(fmt.Sprintf("%sS2S_S2S_JWT_SIGNING_KEY not set", serviceName))
+			return fmt.Errorf(fmt.Sprintf("%sS2S_JWT_SIGNING_KEY not set", serviceName))
 		}
 		config.Jwt.S2sSigningKey = envS2sSigningKey
 	}

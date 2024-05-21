@@ -24,7 +24,6 @@ type S2sAuthorization struct {
 // s2s token provider -> calls s2s service for tokens, stores and retrieves tokens from local db
 type S2sTokenProvider interface {
 	GetServiceToken(serviceName string) (string, error)
-	CloseDb() error
 }
 
 func NewS2sTokenProvider(caller connect.S2sCaller, creds S2sCredentials, db data.SqlRepository, ciph data.Cryptor) S2sTokenProvider {
@@ -47,13 +46,6 @@ type s2sTokenProvider struct {
 	cryptor data.Cryptor
 
 	logger *slog.Logger
-}
-
-func (p *s2sTokenProvider) CloseDb() error {
-	if err := p.db.Close(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e error) {
