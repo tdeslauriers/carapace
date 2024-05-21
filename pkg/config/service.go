@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Name        string
+	Tls         ServerTls
 	Certs       Certs
 	Database    Database
 	ServiceAuth ServiceAuth
