@@ -12,6 +12,7 @@ type Config struct {
 	Database    Database
 	ServiceAuth ServiceAuth
 	UserAuth    UserAuth
+	Jwt         Jwt
 }
 
 type Certs struct {
@@ -45,6 +46,14 @@ type ServiceAuth struct {
 
 type UserAuth struct {
 	Url string
+}
+
+type Jwt struct {
+	S2sSigningKey   string
+	S2sVerifyingKey string
+
+	UserSigningKey   string
+	UserVerifyingKey string
 }
 
 func Load(name string) (*Config, error) {
@@ -231,6 +240,36 @@ func (config *Config) userAuthEnvVars() error {
 	}
 
 	config.UserAuth.Url = envUserAuthUrl
+
+	return nil
+}
+
+func (config *Config) JwtEnvVars() error {
+
+	var serviceName string
+	if config.Name != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
+	}
+
+	envS2sSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_SIGNING_KEY", serviceName))
+	if ok {
+		config.Jwt.S2sSigningKey = envS2sSigningKey
+	}
+
+	envS2sVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_VERIFYING_KEY", serviceName))
+	if ok {
+		config.Jwt.S2sVerifyingKey = envS2sVerifyingKey
+	}
+
+	envUserSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_SIGNING_KEY", serviceName))
+	if ok {
+		config.Jwt.UserSigningKey = envUserSigningKey
+	}
+
+	envUserVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_VERIFYING_KEY", serviceName))
+	if ok {
+		config.Jwt.UserVerifyingKey = envUserVerifyingKey
+	}
 
 	return nil
 }
