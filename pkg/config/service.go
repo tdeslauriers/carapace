@@ -56,152 +56,198 @@ type Jwt struct {
 	UserVerifyingKey string
 }
 
-func Load(name string) (*Config, error) {
-	config := &Config{Name: name}
+func Load(def SvcDefinition) (*Config, error) {
+	config := &Config{Name: def.name}
 
-	// read in and set certs for all services
-	err := config.readCerts()
+	// read in for all services
+	err := config.readCerts(def)
 	if err != nil {
 		return nil, err
 	}
 
-	// read in and set env vars for database
-	err = config.databaseEnvVars()
-	if err != nil {
-		return nil, err
+	// read in env vars for database
+	if def.requires.db {
+		err = config.databaseEnvVars(def)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// read in and set service auth env vars
-	err = config.serviceAuthEnvVars()
-	if err != nil {
-		return nil, err
+	// read in service auth env vars
+	if def.requires.client {
+		err = config.serviceAuthEnvVars(def)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// read in and set service auth env vars
-	err = config.userAuthEnvVars()
-	if err != nil {
-		return nil, err
+	// read in user auth url env var
+	if def.requires.userAuthUrl {
+		err = config.userAuthUrlEnvVars(def)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// read in jwt env vars
+	if def.requires.s2sSigningKey || def.requires.s2sVerifyingKey || def.requires.userSigningKey || def.requires.userVerifyingKey {
+		err = config.JwtEnvVars(def)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return config, nil
 }
 
-func (config *Config) readCerts() error {
+func (config *Config) readCerts(def SvcDefinition) error {
 
 	var serviceName string
-	if config.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
+	if def.name != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.name))
 	}
 
 	// read in certificates from environment variables
+	// server
 	// server cert
 	envServerCert, ok := os.LookupEnv(fmt.Sprintf("%sSERVER_CERT", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sSERVER_CERT not set", serviceName))
 	}
 
+	config.Certs.ServerCert = &envServerCert
+
+	// server key
 	envServerKey, ok := os.LookupEnv(fmt.Sprintf("%sSERVER_KEY", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sSERVER_KEY not set", serviceName))
 	}
 
-	// client cert
-	envClientCert, ok := os.LookupEnv(fmt.Sprintf("%sCLIENT_CERT", serviceName))
-	if !ok {
-		return fmt.Errorf(fmt.Sprintf("%sCLIENT_CERT not set", serviceName))
+	config.Certs.ServerKey = &envServerKey
+
+	// client
+	if def.requires.client {
+
+		// client cert
+		envClientCert, ok := os.LookupEnv(fmt.Sprintf("%sCLIENT_CERT", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sCLIENT_CERT not set", serviceName))
+		}
+
+		config.Certs.ClientCert = &envClientCert
+
+		// client key
+		envClientKey, ok := os.LookupEnv(fmt.Sprintf("%sCLIENT_KEY", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sCLIENT_KEY not set", serviceName))
+		}
+
+		config.Certs.ClientKey = &envClientKey
 	}
 
-	envClientKey, ok := os.LookupEnv(fmt.Sprintf("%sCLIENT_KEY", serviceName))
-	if !ok {
-		return fmt.Errorf(fmt.Sprintf("%sCLIENT_KEY not set", serviceName))
-	}
+	// db client
+	if def.requires.db {
 
-	// db client cert
-	envDbClientCert, ok := os.LookupEnv(fmt.Sprintf("%sDB_CLIENT_CERT", serviceName))
-	if !ok {
-		return fmt.Errorf(fmt.Sprintf("%sDB_CLIENT_CERT not set", serviceName))
-	}
+		// db client cert
+		envDbClientCert, ok := os.LookupEnv(fmt.Sprintf("%sDB_CLIENT_CERT", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sDB_CLIENT_CERT not set", serviceName))
+		}
 
-	envDbClientKey, ok := os.LookupEnv(fmt.Sprintf("%sDB_CLIENT_KEY", serviceName))
-	if !ok {
-		return fmt.Errorf(fmt.Sprintf("%sDB_CLIENT_KEY not set", serviceName))
+		config.Certs.DbClientCert = &envDbClientCert
+
+		// db client key
+		envDbClientKey, ok := os.LookupEnv(fmt.Sprintf("%sDB_CLIENT_KEY", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sDB_CLIENT_KEY not set", serviceName))
+		}
+		config.Certs.DbClientKey = &envDbClientKey
 	}
 
 	// ca cert
-	envCaCert, ok := os.LookupEnv(fmt.Sprintf("%sCA_CERT", serviceName))
-	if !ok {
-		return fmt.Errorf(fmt.Sprintf("%sCA_CERT not set", serviceName))
+	if def.tlsType == MutualTls || def.requires.client || def.requires.db {
+		envCaCert, ok := os.LookupEnv(fmt.Sprintf("%sCA_CERT", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sCA_CERT not set", serviceName))
+		}
+
+		if def.tlsType == MutualTls {
+			config.Certs.ServerCa = &envCaCert
+		}
+
+		if def.requires.client {
+			config.Certs.ClientCa = &envCaCert
+		}
+
+		if def.requires.db {
+			config.Certs.DbCaCert = &envCaCert
+		}
 	}
-
-	config.Certs.ServerCert = &envServerCert
-	config.Certs.ServerKey = &envServerKey
-	config.Certs.ServerCa = &envCaCert
-
-	config.Certs.ClientCert = &envClientCert
-	config.Certs.ClientKey = &envClientKey
-	config.Certs.ClientCa = &envCaCert
-
-	config.Certs.DbClientCert = &envDbClientCert
-	config.Certs.DbClientKey = &envDbClientKey
-	config.Certs.DbCaCert = &envCaCert
 
 	return nil
 }
 
-func (config *Config) databaseEnvVars() error {
+func (config *Config) databaseEnvVars(def SvcDefinition) error {
 
 	var serviceName string
-	if config.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
+	if def.name != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.name))
 	}
 
 	// db env vars
+	// url
 	envDbUrl, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_URL", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDATABASE_URL not set", serviceName))
 	}
+	config.Database.Url = envDbUrl
 
+	// database name
 	envDbName, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_NAME", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDATABASE_NAME not set", serviceName))
 	}
+	config.Database.Name = envDbName
 
+	// database username
 	envDbUsername, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_USERNAME", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDATABASE_USERNAME not set", serviceName))
 	}
+	config.Database.Username = envDbUsername
 
+	// database password
 	envDbPassword, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_PASSWORD", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sDATABASE_PASSWORD not set", serviceName))
 	}
+	config.Database.Password = envDbPassword
 
-	envFieldsKey, ok := os.LookupEnv(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_KEY", serviceName))
-	if !ok {
-		return fmt.Errorf(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_KEY not set", serviceName))
+	// field level encryption key
+	if def.requires.aesKey {
+		envFieldsKey, ok := os.LookupEnv(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_KEY", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_KEY not set", serviceName))
+		}
+		config.Database.FieldKey = envFieldsKey
 	}
 
-	envIndexSecret, ok := os.LookupEnv(fmt.Sprintf("%sINDEX_SECRET", serviceName))
-
-	config.Database.FieldKey = envFieldsKey
-	config.Database.Url = envDbUrl
-	config.Database.Password = envDbPassword
-	config.Database.Name = envDbName
-	config.Database.Username = envDbUsername
-
-	// not all services use an index secret
-	if ok {
-		config.Database.IndexSecret = envIndexSecret
+	// index key
+	if def.requires.indexKey {
+		envIndexSecret, ok := os.LookupEnv(fmt.Sprintf("%sINDEX_SECRET", serviceName))
+		if ok {
+			config.Database.IndexSecret = envIndexSecret
+		}
 	}
 
 	return nil
 }
 
-func (config *Config) serviceAuthEnvVars() error {
+func (config *Config) serviceAuthEnvVars(def SvcDefinition) error {
 
 	var serviceName string
-	if config.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
+	if def.name != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.name))
 	}
 
 	envRanUrl, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_URL", serviceName))
@@ -226,11 +272,11 @@ func (config *Config) serviceAuthEnvVars() error {
 	return nil
 }
 
-func (config *Config) userAuthEnvVars() error {
+func (config *Config) userAuthUrlEnvVars(def SvcDefinition) error {
 
 	var serviceName string
-	if config.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
+	if def.name != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.name))
 
 	}
 
@@ -244,30 +290,50 @@ func (config *Config) userAuthEnvVars() error {
 	return nil
 }
 
-func (config *Config) JwtEnvVars() error {
+func (config *Config) JwtEnvVars(def SvcDefinition) error {
 
 	var serviceName string
-	if config.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(config.Name))
+	if def.name != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.name))
 	}
 
-	envS2sSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_S2S_JWT_SIGNING_KEY", serviceName))
-	if ok {
+	// signing key
+	if def.requires.s2sSigningKey {
+
+		envS2sSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_S2S_JWT_SIGNING_KEY", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sS2S_S2S_JWT_SIGNING_KEY not set", serviceName))
+		}
 		config.Jwt.S2sSigningKey = envS2sSigningKey
 	}
 
-	envS2sVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_JWT_VERIFYING_KEY", serviceName))
-	if ok {
+	// verifying key
+	if def.requires.s2sVerifyingKey {
+
+		envS2sVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sS2S_JWT_VERIFYING_KEY", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sS2S_JWT_VERIFYING_KEY not set", serviceName))
+		}
 		config.Jwt.S2sVerifyingKey = envS2sVerifyingKey
 	}
 
-	envUserSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_JWT_SIGNING_KEY", serviceName))
-	if ok {
+	// user signing key
+	if def.requires.userSigningKey {
+
+		envUserSigningKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_JWT_SIGNING_KEY", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sUSER_JWT_SIGNING_KEY not set", serviceName))
+		}
 		config.Jwt.UserSigningKey = envUserSigningKey
 	}
 
-	envUserVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_JWT_VERIFYING_KEY", serviceName))
-	if ok {
+	// user verifying key
+	if def.requires.userVerifyingKey {
+
+		envUserVerifyingKey, ok := os.LookupEnv(fmt.Sprintf("%sUSER_JWT_VERIFYING_KEY", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sUSER_JWT_VERIFYING_KEY not set", serviceName))
+		}
 		config.Jwt.UserVerifyingKey = envUserVerifyingKey
 	}
 
