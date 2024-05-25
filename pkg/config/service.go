@@ -64,6 +64,13 @@ func Load(def SvcDefinition) (*Config, error) {
 		Tls:  def.Tls,
 	}
 
+	url, ok := os.LookupEnv("SITE_URL")
+	if !ok {
+		return nil, fmt.Errorf("SITE_URL not set")
+	}
+
+	config.SiteUrl = url
+
 	// read in for all services
 	err := config.readCerts(def)
 	if err != nil {
