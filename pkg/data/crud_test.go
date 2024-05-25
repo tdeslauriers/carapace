@@ -63,7 +63,7 @@ func TestCrud(t *testing.T) {
 		Name:     os.Getenv(MariaDbName),
 	}
 
-	conn := NewSqlDbConnector(url, clientConfig)
+	conn, _ := NewSqlDbConnector(url, clientConfig).Connect()
 	dao := NewSqlRepository(conn)
 
 	// insert record

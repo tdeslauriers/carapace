@@ -103,7 +103,6 @@ func (v *jwtVerifier) BuildJwtFromToken(token string) (*JwtToken, error) {
 // check for "Bearer " and snips if present
 func (v *jwtVerifier) IsAuthorized(allowedScopes []string, token string) (bool, error) {
 
-	// snip prefix
 	token = strings.TrimPrefix(token, "Bearer ")
 
 	// includes signature validation:  will error if invalid

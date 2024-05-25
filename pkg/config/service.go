@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Name        string
+	SiteUrl     string
 	Tls         ServerTls
 	Certs       Certs
 	Database    Database
@@ -87,7 +88,7 @@ func Load(def SvcDefinition) (*Config, error) {
 
 	// read in user auth url env var
 	if def.Requires.UserAuthUrl {
-		err = config.userAuthUrlEnvVars(def)
+		err = config.userAuthEnvVars(def)
 		if err != nil {
 			return nil, err
 		}
@@ -276,7 +277,7 @@ func (config *Config) serviceAuthEnvVars(def SvcDefinition) error {
 	return nil
 }
 
-func (config *Config) userAuthUrlEnvVars(def SvcDefinition) error {
+func (config *Config) userAuthEnvVars(def SvcDefinition) error {
 
 	var serviceName string
 	if def.Name != "" {

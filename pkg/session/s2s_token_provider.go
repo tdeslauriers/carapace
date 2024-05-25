@@ -85,8 +85,8 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 		}
 
 		// if no active s2s tokens exist
-		p.logger.Info(fmt.Sprintf("refreshing %s s2s token", serviceName))
 		// get new service token via refresh
+		p.logger.Info(fmt.Sprintf("refreshing %s s2s token", serviceName))
 		authz, err := p.refreshS2sToken(tokens[0].RefreshToken, serviceName) // decrypts
 		if err != nil {
 			p.logger.Error(fmt.Sprintf("failed to refresh %s s2s token, jti: %s", tokens[0].Jti, tokens[0].ServiceName), "err", err.Error())
@@ -108,6 +108,8 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 	}
 
 	p.logger.Info(fmt.Sprintf("no active %s s2s token found, authenticating", serviceName))
+
+	// no active s2s tokens, no active refresh tokens, get new service token
 	// login to s2s authn endpoint
 	authz, err := p.s2sLogin(serviceName)
 	if err != nil {
