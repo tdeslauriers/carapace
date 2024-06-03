@@ -257,7 +257,7 @@ func TooShort(field interface{}, min int) bool {
 
 	switch f := field.(type) {
 	case string:
-		return len(f) < min
+		return len(strings.TrimSpace(f)) < min
 	case []byte:
 		return len(f) < min
 	default:
@@ -272,7 +272,7 @@ func TooLong(field interface{}, max int) bool {
 
 	switch f := field.(type) {
 	case string:
-		return len(f) > max
+		return len(strings.TrimSpace(f)) > max
 	case []byte:
 		return len(f) > max
 	default:

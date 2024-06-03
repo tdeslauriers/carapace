@@ -45,12 +45,12 @@ func (cmd S2sLoginCmd) ValidateCmd() error {
 		return fmt.Errorf("invalid client id")
 	}
 
-	if err := validate.IsValidPassword(cmd.ClientSecret); err != nil {
-		return fmt.Errorf("invalid client secret")
-	}
-
 	if !validate.IsValidServiceName(cmd.ServiceName) {
 		return fmt.Errorf("invalid service name")
+	}
+
+	if validate.TooShort(cmd.ClientSecret, validate.PasswordMin) || validate.TooLong(cmd.ClientSecret, validate.EmailMax) {
+		return fmt.Errorf("invalid client secret: must be between %d and %d characters", validate.PasswordMin, validate.EmailMax)
 	}
 
 	return nil
@@ -59,17 +59,33 @@ func (cmd S2sLoginCmd) ValidateCmd() error {
 type UserLoginCmd struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	State    string `json:"state,omitempty"`
+	Nonce    string `json:"nonce,omitempty"`
+	Redirect string `json:"redirect,omitempty"`
 }
 
 func (cmd UserLoginCmd) ValidateCmd() error {
 
 	// field input restrictions
-	if err := validate.IsValidEmail(cmd.Username); err != nil {
-		return fmt.Errorf("invalid username: %v", err)
+	if !validate.TooShort(cmd.Username, validate.EmailMin) || !validate.TooLong(cmd.Username, validate.EmailMax) {
+		return fmt.Errorf("invalid username: must be between %d and %d characters", validate.EmailMin, validate.EmailMax)
 	}
 
-	if err := validate.IsValidPassword(cmd.Password); err != nil {
-		return fmt.Errorf("invalid password: %v", err)
+	if !validate.TooShort(cmd.Password, validate.PasswordMin) || !validate.TooLong(cmd.Password, validate.PasswordMax) {
+		return fmt.Errorf("invalid password: must be between %d and %d characters", validate.PasswordMin, validate.PasswordMax)
+	}
+
+	if validate.TooShort(cmd.State, 16) || validate.TooLong(cmd.State, 64) {
+		return fmt.Errorf("invalid state: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.Nonce, 16) || validate.TooLong(cmd.Nonce, 64) {
+		return fmt.Errorf("invalid nonce: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.Redirect, 6) || validate.TooLong(cmd.Redirect, 2048) {
+		return fmt.Errorf("invalid redirect: must be between %d and %d characters", 16, 64)
+
 	}
 
 	return nil
