@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/tdeslauriers/carapace/pkg/data"
 	"github.com/tdeslauriers/carapace/pkg/jwt"
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
@@ -89,6 +90,22 @@ func (cmd UserLoginCmd) ValidateCmd() error {
 	}
 
 	return nil
+}
+
+type AuthCodeResponse struct {
+	AuthCode string `json:"auth_code"`
+	State    string `json:"state"`
+	Nonce    string `json:"nonce"`
+	Redirect string `json:"redirect"`
+}
+
+type AccessTokenResponse struct {
+	AccessToken    string          `json:"access_token" db:"access_token"`
+	AccessExpires  data.CustomTime `json:"access_expires" db:"access_expires"`
+	IdConnect      string          `json:"id_token" db:"id_token"`
+	IdExpires      data.CustomTime `json:"id_expires" db:"id_expires"`
+	RefreshToken   string          `json:"refresh_token" db:"refresh_token"`
+	RefreshExpires data.CustomTime `json:"refresh_expires" db:"refresh_expires"`
 }
 
 type UserRegisterCmd struct {
