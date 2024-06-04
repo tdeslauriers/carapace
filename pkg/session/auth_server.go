@@ -68,11 +68,11 @@ type UserLoginCmd struct {
 func (cmd UserLoginCmd) ValidateCmd() error {
 
 	// field input restrictions
-	if !validate.TooShort(cmd.Username, validate.EmailMin) || !validate.TooLong(cmd.Username, validate.EmailMax) {
+	if validate.TooShort(cmd.Username, validate.EmailMin) || validate.TooLong(cmd.Username, validate.EmailMax) {
 		return fmt.Errorf("invalid username: must be between %d and %d characters", validate.EmailMin, validate.EmailMax)
 	}
 
-	if !validate.TooShort(cmd.Password, validate.PasswordMin) || !validate.TooLong(cmd.Password, validate.PasswordMax) {
+	if validate.TooShort(cmd.Password, validate.PasswordMin) || validate.TooLong(cmd.Password, validate.PasswordMax) {
 		return fmt.Errorf("invalid password: must be between %d and %d characters", validate.PasswordMin, validate.PasswordMax)
 	}
 
