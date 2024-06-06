@@ -62,6 +62,7 @@ type UserLoginCmd struct {
 	Password string `json:"password"`
 	State    string `json:"state,omitempty"`
 	Nonce    string `json:"nonce,omitempty"`
+	ClientId string `json:"client_id,omitempty"`
 	Redirect string `json:"redirect,omitempty"`
 }
 
@@ -82,6 +83,10 @@ func (cmd UserLoginCmd) ValidateCmd() error {
 
 	if validate.TooShort(cmd.Nonce, 16) || validate.TooLong(cmd.Nonce, 64) {
 		return fmt.Errorf("invalid nonce: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.ClientId, 16) || validate.TooLong(cmd.ClientId, 66) {
+		return fmt.Errorf("invalid client id: must be between %d and %d characters", 16, 64)
 	}
 
 	if validate.TooShort(cmd.Redirect, 6) || validate.TooLong(cmd.Redirect, 2048) {
