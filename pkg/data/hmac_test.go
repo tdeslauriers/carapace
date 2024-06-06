@@ -6,7 +6,7 @@ import (
 
 func TestHmac(t *testing.T) {
 
-	hmac := NewHmacIndexer([]byte("DeathStarPlans"))
+	hmac := NewIndexer([]byte("DeathStarPlans"))
 
 	index, err := hmac.ObtainBlindIndex("darth.vader@empire.com")
 	if err != nil {

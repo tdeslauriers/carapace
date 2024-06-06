@@ -11,7 +11,7 @@ type Indexer interface {
 	ObtainBlindIndex(string) (string, error)
 }
 
-func NewHmacIndexer(secret []byte) Indexer {
+func NewIndexer(secret []byte) Indexer {
 	return &hmacIndexer{
 		Secret: secret,
 	}
