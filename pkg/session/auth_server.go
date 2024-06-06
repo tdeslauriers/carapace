@@ -40,6 +40,7 @@ type S2sLoginCmd struct {
 	ServiceName  string `json:"service_name,omitempty"`
 }
 
+// ValidateCmd performs regex checks on s2s login cmd fields.
 func (cmd S2sLoginCmd) ValidateCmd() error {
 	// field input restrictions
 	if !validate.IsValidUuid(cmd.ClientId) {
@@ -66,6 +67,7 @@ type UserLoginCmd struct {
 	Redirect string `json:"redirect,omitempty"`
 }
 
+// ValidateCmd performs very limited checks login cmd fields.
 func (cmd UserLoginCmd) ValidateCmd() error {
 
 	// field input restrictions
@@ -122,7 +124,7 @@ type UserRegisterCmd struct {
 	Birthdate string `json:"birthdate,omitempty"`
 }
 
-// input validation
+// ValidateCmd performs regex checks on user register cmd fields.
 func (cmd UserRegisterCmd) ValidateCmd() error {
 
 	if err := validate.IsValidEmail(cmd.Username); err != nil {
@@ -195,7 +197,7 @@ type AccountScopeXref struct {
 	CreatedAt   string `db:"created_at" json:"created_at"`
 }
 
-// helper func to build audience []string from scopes
+// BuildAudiences is a helper func to build audience []string from scopes for jwt struct.
 func BuildAudiences(scopes []Scope) (unique []string) {
 
 	var services []string
