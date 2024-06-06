@@ -11,17 +11,19 @@ type Indexer interface {
 	ObtainBlindIndex(string) (string, error)
 }
 
-type HmacIndexer struct {
-	Secret []byte
-}
-
-func NewHmacIndexer(secret []byte) *HmacIndexer {
-	return &HmacIndexer{
+func NewHmacIndexer(secret []byte) Indexer {
+	return &hmacIndexer{
 		Secret: secret,
 	}
 }
 
-func (i *HmacIndexer) ObtainBlindIndex(s string) (string, error) {
+var _ Indexer = (*hmacIndexer)(nil)
+
+type hmacIndexer struct {
+	Secret []byte
+}
+
+func (i *hmacIndexer) ObtainBlindIndex(s string) (string, error) {
 
 	h := hmac.New(sha256.New, i.Secret)
 	if _, err := h.Write([]byte(s)); err != nil {
