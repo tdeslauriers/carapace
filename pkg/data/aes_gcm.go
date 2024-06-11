@@ -21,7 +21,7 @@ func GenerateAesGcmKey() []byte {
 
 type Cryptor interface {
 	EncryptServiceData(string) (string, error)
-	DecyptServiceData(string) (string, error)
+	DecryptServiceData(string) (string, error)
 }
 
 func NewServiceAesGcmKey(secret []byte) Cryptor {
@@ -61,7 +61,7 @@ func (key *serviceAesGcmKey) EncryptServiceData(plaintext string) (string, error
 	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 
-func (key *serviceAesGcmKey) DecyptServiceData(ciphertext string) (string, error) {
+func (key *serviceAesGcmKey) DecryptServiceData(ciphertext string) (string, error) {
 
 	if len(key.secret) != 32 {
 		panic("AES key must be exactly 32 bytes long")
