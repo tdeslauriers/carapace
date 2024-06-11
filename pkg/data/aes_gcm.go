@@ -20,7 +20,7 @@ func GenerateAesGcmKey() []byte {
 }
 
 type Cryptor interface {
-	EncyptServiceData(string) (string, error)
+	EncryptServiceData(string) (string, error)
 	DecyptServiceData(string) (string, error)
 }
 
@@ -36,7 +36,7 @@ type serviceAesGcmKey struct {
 	secret []byte // Env Var
 }
 
-func (key *serviceAesGcmKey) EncyptServiceData(plaintext string) (string, error) {
+func (key *serviceAesGcmKey) EncryptServiceData(plaintext string) (string, error) {
 
 	if len(key.secret) != 32 {
 		panic("AES key must be exactly 32 bytes long")

@@ -103,6 +103,7 @@ type AuthCodeResponse struct {
 	AuthCode string `json:"auth_code"`
 	State    string `json:"state"`
 	Nonce    string `json:"nonce"`
+	ClientId string `json:"client_id"`
 	Redirect string `json:"redirect"`
 }
 
@@ -215,4 +216,12 @@ func BuildAudiences(scopes []Scope) (unique []string) {
 	}
 
 	return unique
+}
+
+type AuthcodeResponse struct {
+	AuthCode string `json:"auth_code"`
+	State    string `json:"state"`
+	Nonce    string `json:"nonce"`
+	ClientId string `json:"client_id"`
+	Redirect string `json:"redirect"`
 }
