@@ -166,6 +166,13 @@ type S2sClientData struct {
 	AccountLocked  bool   `db:"account_locked" json:"account_locked"`
 }
 
+type UserAccountClientXref struct {
+	Id        int    `db:"id" json:"id"`
+	AccountId string `db:"account_uuid" json:"account_uuid"`
+	ClientId  string `db:"client_uuid" json:"client_uuid"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+}
+
 type UserAccountData struct {
 	Uuid           string `db:"uuid" json:"uuid,omitempty"`
 	Username       string `db:"username" json:"username"`
