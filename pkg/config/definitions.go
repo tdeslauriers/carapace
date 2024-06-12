@@ -23,4 +23,5 @@ type Requires struct {
 	S2sVerifyingKey  bool
 	UserSigningKey   bool
 	UserVerifyingKey bool
+	OauthRedirect    bool
 }

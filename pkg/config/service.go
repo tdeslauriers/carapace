@@ -10,14 +10,13 @@ type Config struct {
 	ServiceName     string
 	ServiceClientId string
 	ServicePort     string // must have :8443 format with leading colon
-	SiteUrl         string
-	SiteClientId    string
 	Tls             ServerTls
 	Certs           Certs
 	Database        Database
 	ServiceAuth     ServiceAuth
 	UserAuth        UserAuth
 	Jwt             Jwt
+	OauthRedirect   OauthRedirect
 }
 
 type Certs struct {
@@ -61,18 +60,16 @@ type Jwt struct {
 	UserVerifyingKey string
 }
 
+type OauthRedirect struct {
+	CallbackUrl      string
+	CallbackClientId string
+}
+
 func Load(def SvcDefinition) (*Config, error) {
 	config := &Config{
-		ServiceName: def.Name,
-		Tls:  def.Tls,
+		ServiceName: def.ServiceName,
+		Tls:         def.Tls,
 	}
-
-	url, ok := os.LookupEnv("SITE_URL")
-	if !ok {
-		return nil, fmt.Errorf("SITE_URL not set")
-	}
-
-	config.SiteUrl = url
 
 	// read in for all services
 	err := config.readCerts(def)
@@ -112,14 +109,29 @@ func Load(def SvcDefinition) (*Config, error) {
 		}
 	}
 
+	// read in oauth redirect env vars
+	if def.Requires.OauthRedirect {
+		envOauthCallbackUrl, ok := os.LookupEnv("OAUTH_CALLBACK_URL")
+		if !ok {
+			return nil, fmt.Errorf("OAUTH_CALLBACK_URL not set")
+		}
+		config.OauthRedirect.CallbackUrl = envOauthCallbackUrl
+
+		envOauthCallbackClientId, ok := os.LookupEnv("OAUTH_CALLBACK_CLIENT_ID")
+		if !ok {
+			return nil, fmt.Errorf("OAUTH_CALLBACK_CLIENT_ID not set")
+		}
+		config.OauthRedirect.CallbackClientId = envOauthCallbackClientId
+	}
+
 	return config, nil
 }
 
 func (config *Config) readCerts(def SvcDefinition) error {
 
 	var serviceName string
-	if def.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.Name))
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
 	}
 
 	// read in certificates from environment variables
@@ -205,8 +217,8 @@ func (config *Config) readCerts(def SvcDefinition) error {
 func (config *Config) databaseEnvVars(def SvcDefinition) error {
 
 	var serviceName string
-	if def.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.Name))
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
 	}
 
 	// db env vars
@@ -261,8 +273,8 @@ func (config *Config) databaseEnvVars(def SvcDefinition) error {
 func (config *Config) serviceAuthEnvVars(def SvcDefinition) error {
 
 	var serviceName string
-	if def.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.Name))
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
 	}
 
 	envRanUrl, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_URL", serviceName))
@@ -290,8 +302,8 @@ func (config *Config) serviceAuthEnvVars(def SvcDefinition) error {
 func (config *Config) userAuthEnvVars(def SvcDefinition) error {
 
 	var serviceName string
-	if def.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.Name))
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
 
 	}
 
@@ -308,8 +320,8 @@ func (config *Config) userAuthEnvVars(def SvcDefinition) error {
 func (config *Config) JwtEnvVars(def SvcDefinition) error {
 
 	var serviceName string
-	if def.Name != "" {
-		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.Name))
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
 	}
 
 	// signing key
