@@ -7,14 +7,17 @@ import (
 )
 
 type Config struct {
-	Name        string
-	SiteUrl     string
-	Tls         ServerTls
-	Certs       Certs
-	Database    Database
-	ServiceAuth ServiceAuth
-	UserAuth    UserAuth
-	Jwt         Jwt
+	ServiceName     string
+	ServiceClientId string
+	ServicePort     string // must have :8443 format with leading colon
+	SiteUrl         string
+	SiteClientId    string
+	Tls             ServerTls
+	Certs           Certs
+	Database        Database
+	ServiceAuth     ServiceAuth
+	UserAuth        UserAuth
+	Jwt             Jwt
 }
 
 type Certs struct {
@@ -60,7 +63,7 @@ type Jwt struct {
 
 func Load(def SvcDefinition) (*Config, error) {
 	config := &Config{
-		Name: def.Name,
+		ServiceName: def.Name,
 		Tls:  def.Tls,
 	}
 

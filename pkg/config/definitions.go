@@ -8,9 +8,9 @@ const (
 )
 
 type SvcDefinition struct {
-	Name     string
-	Tls      ServerTls
-	Requires Requires
+	ServiceName string
+	Tls         ServerTls
+	Requires    Requires
 }
 
 type Requires struct {
