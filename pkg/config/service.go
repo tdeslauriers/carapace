@@ -66,10 +66,29 @@ type OauthRedirect struct {
 }
 
 func Load(def SvcDefinition) (*Config, error) {
+
+	if def.ServiceName == "" {
+		return nil, fmt.Errorf("service name must be provided to definitions, cannot be empty")
+	}
+
 	config := &Config{
 		ServiceName: def.ServiceName,
 		Tls:         def.Tls,
 	}
+
+	// read in service client id
+	envClientId, ok := os.LookupEnv(fmt.Sprintf("%s_SERVICE_CLIENT_ID", strings.ToUpper(def.ServiceName)))
+	if !ok {
+		return nil, fmt.Errorf("%s_SERVICE_CLIENT_ID not set", strings.ToUpper(def.ServiceName))
+	}
+	config.ServiceClientId = envClientId
+
+	// read in service port
+	envPort, ok := os.LookupEnv(fmt.Sprintf("%s_SERVICE_PORT", strings.ToUpper(def.ServiceName)))
+	if !ok {
+		return nil, fmt.Errorf(fmt.Sprintf("%s_SERVICE_PORT not set", strings.ToUpper(def.ServiceName)))
+	}
+	config.ServicePort = envPort
 
 	// read in for all services
 	err := config.readCerts(def)
@@ -111,15 +130,15 @@ func Load(def SvcDefinition) (*Config, error) {
 
 	// read in oauth redirect env vars
 	if def.Requires.OauthRedirect {
-		envOauthCallbackUrl, ok := os.LookupEnv("OAUTH_CALLBACK_URL")
+		envOauthCallbackUrl, ok := os.LookupEnv(fmt.Sprintf("%s_OAUTH_CALLBACK_URL", strings.ToUpper(def.ServiceName)))
 		if !ok {
-			return nil, fmt.Errorf("OAUTH_CALLBACK_URL not set")
+			return nil, fmt.Errorf(fmt.Sprintf("%s_OAUTH_CALLBACK_URL not set", strings.ToUpper(def.ServiceName)))
 		}
 		config.OauthRedirect.CallbackUrl = envOauthCallbackUrl
 
-		envOauthCallbackClientId, ok := os.LookupEnv("OAUTH_CALLBACK_CLIENT_ID")
+		envOauthCallbackClientId, ok := os.LookupEnv(fmt.Sprintf("%s_OAUTH_CALLBACK_CLIENT_ID", strings.ToUpper(def.ServiceName)))
 		if !ok {
-			return nil, fmt.Errorf("OAUTH_CALLBACK_CLIENT_ID not set")
+			return nil, fmt.Errorf(fmt.Sprintf("%s_OAUTH_CALLBACK_CLIENT_ID not set", strings.ToUpper(def.ServiceName)))
 		}
 		config.OauthRedirect.CallbackClientId = envOauthCallbackClientId
 	}
