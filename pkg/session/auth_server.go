@@ -62,12 +62,13 @@ func (cmd S2sLoginCmd) ValidateCmd() error {
 }
 
 type UserLoginCmd struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	State    string `json:"state,omitempty"`
-	Nonce    string `json:"nonce,omitempty"`
-	ClientId string `json:"client_id,omitempty"`
-	Redirect string `json:"redirect,omitempty"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	ResponseType string `json:"response_type"`
+	State        string `json:"state,omitempty"`
+	Nonce        string `json:"nonce,omitempty"`
+	ClientId     string `json:"client_id,omitempty"`
+	Redirect     string `json:"redirect,omitempty"`
 }
 
 // ValidateCmd performs very limited checks login cmd fields.
@@ -80,6 +81,10 @@ func (cmd UserLoginCmd) ValidateCmd() error {
 
 	if validate.TooShort(cmd.Password, validate.PasswordMin) || validate.TooLong(cmd.Password, validate.PasswordMax) {
 		return fmt.Errorf("invalid password: must be between %d and %d characters", validate.PasswordMin, validate.PasswordMax)
+	}
+
+	if validate.TooShort(cmd.ResponseType, 4) || validate.TooLong(cmd.ResponseType, 8) {
+		return fmt.Errorf("invalid response type: must be between %d and %d characters", 4, 8)
 	}
 
 	if validate.TooShort(cmd.State, 16) || validate.TooLong(cmd.State, 64) {
