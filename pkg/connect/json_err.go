@@ -2,6 +2,7 @@ package connect
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -11,7 +12,11 @@ type ErrorHttp struct {
 	Message    string `json:"message"`
 }
 
-func (e ErrorHttp) SendJsonErr(w http.ResponseWriter) {
+func (e *ErrorHttp) Error() string {
+	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Message)
+}
+
+func (e *ErrorHttp) SendJsonErr(w http.ResponseWriter) {
 
 	w.Header().Set("Content-Type", "application/json")
 

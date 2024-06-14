@@ -65,6 +65,7 @@ func (config *tlsClientConfig) Build() (*tls.Config, error) {
 }
 
 type TlsClient interface {
+	// executes an http request and returns the response
 	Do(req *http.Request) (*http.Response, error)
 }
 

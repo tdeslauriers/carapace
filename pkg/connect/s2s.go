@@ -47,7 +47,12 @@ type RetryConfiguration struct {
 }
 
 type S2sCaller interface {
+	// Make a GET request to a service endpoint, providing the service-to-service token and user access token (if available).
+	// The response body is unmarshaled into the provided data interface.
 	GetServiceData(endpoint, s2sToken, authToken string, data interface{}) error
+
+	// Make a POST request to a service endpoint, providing the service-to-service token and user access token (if available).
+	// The request body is marshaled from the provided cmd interface, and the response body is unmarshaled into the provided data interface.
 	PostToService(endpoint, s2sToken, authToken string, cmd interface{}, data interface{}) error
 }
 
@@ -85,7 +90,10 @@ func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 		// set up request
 		request, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			return fmt.Errorf("unable to create get request for %s service's endpoint '%s': %v", caller.ServiceName, endpoint, err)
+			return &ErrorHttp{
+				StatusCode: http.StatusInternalServerError,
+				Message:    fmt.Sprintf("unable to create get request for %s service's endpoint '%s': %v", caller.ServiceName, endpoint, err),
+			}
 		}
 		request.Header.Set("Content-Type", "application/json")
 
@@ -99,30 +107,39 @@ func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 			request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 		}
 
+		// TlsClient makes http request
 		response, err := caller.TlsClient.Do(request)
 		if err != nil {
+			// check if network error such as timeout, etc.
 			if nErr, ok := err.(net.Error); ok {
 				if nErr.Timeout() {
-
 					// apply backout/jitter to timeout
 					backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-					caller.logger.Error(fmt.Sprintf("attempt %d - %s service get-request to %s timed out (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff), err)
+					caller.logger.Error(fmt.Sprintf("attempt %d - %s service get-request to %s timed out (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff), "err", err.Error())
 					time.Sleep(backoff)
 					continue // jump to next loop iteration
 				} else {
-
-					// jump out of retry loop and return error
-					return fmt.Errorf("attempt %d - %s service get-request to %s yielded a non-timeout network error: %v", attempt+1, caller.ServiceName, endpoint, err)
+					// jump out of retry loop and return 503: Service Unavailable error
+					return &ErrorHttp{
+						StatusCode: http.StatusServiceUnavailable,
+						Message:    fmt.Sprintf("service unavailable: attempt %d - %s service get-request to %s yielded a non-timeout network error: %v", attempt+1, caller.ServiceName, endpoint, err),
+					}
 				}
 			}
-			// jump out of retry loop for error that is not net.Error
-			return fmt.Errorf("attempt %d - %s service get-request to %s yielded a non-network error: %v", attempt+1, caller.ServiceName, endpoint, err)
+			// jump out of retry loop for error that is not net.Error: return 503: Service Unavailable error
+			return &ErrorHttp{
+				StatusCode: http.StatusServiceUnavailable,
+				Message:    fmt.Sprintf("service unavailable: attempt %d - %s service get-request to %s yielded a non-network error: %v", attempt+1, caller.ServiceName, endpoint, err),
+			}
 		}
 
-		// validate Content-Type is application/json
+		// validate response Content-Type is application/json
 		contentType := response.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "application/json") {
-			return fmt.Errorf("unexpected content type: got %v want application/json", contentType)
+			return &ErrorHttp{
+				StatusCode: http.StatusUnsupportedMediaType,
+				Message:    fmt.Sprintf("unexpected content type returned from %s service get-request to %s: got %v want application/json", caller.ServiceName, endpoint, contentType),
+			}
 		}
 
 		// read response body
@@ -130,45 +147,67 @@ func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 		response.Body.Close()
 		if err != nil {
 			// jump out of retry loop and return error
-			return fmt.Errorf("unable to read response body from %s service's endpoint '%s': %v", caller.ServiceName, endpoint, err)
+			return &ErrorHttp{
+				StatusCode: http.StatusInternalServerError,
+				Message:    fmt.Sprintf("unable to read response body from %s service's endpoint '%s': %v", caller.ServiceName, endpoint, err),
+			}
 		}
 
+		// handle response status codes 2xx, 4xx, 5xx
+		// 2xx -> success
 		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 
 			if err := json.Unmarshal(body, data); err != nil {
-				return fmt.Errorf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(data), caller.ServiceName, endpoint, err)
+				return &ErrorHttp{
+					StatusCode: http.StatusInternalServerError,
+					Message:    fmt.Sprintf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(data), caller.ServiceName, endpoint, err),
+				}
 			}
 			return nil // success -> jump out of retry and return
 
+			// 5xx -> retry w/ backoff
 		} else if response.StatusCode == http.StatusTooManyRequests ||
 			(response.StatusCode >= 500 && response.StatusCode <= 599) {
 
-			// handle retry: 5xx Errors w/ backoff
+			// 5xx ErrorsHttps generated upstream by local services:  handle retry: w/ backoff
 			var e ErrorHttp
 			if err := json.Unmarshal(body, &e); err != nil {
 				// jump out of retry loop and return error
-				return fmt.Errorf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err)
+				return &ErrorHttp{
+					StatusCode: http.StatusInternalServerError,
+					Message:    fmt.Sprintf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err),
+				}
 			}
 
 			if attempt < caller.RetryConfig.MaxRetries-1 {
 
 				// apply backout/jitter to 5xx
 				backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-				caller.logger.Error(fmt.Sprintf("attempt %d - received '%d: %s' from GET request to %s service's endpoint %s: (retrying in %v...)", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint, backoff))
+				caller.logger.Error(fmt.Sprintf("attempt %d - GET request to %s service's endpoint %s failed: (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff), "err", fmt.Sprintf("%d: %s", e.StatusCode, e.Message))
 				time.Sleep(backoff)
 				continue // jump out of the loop to next iteration
 			} else {
-				return fmt.Errorf("attempt %d - received '%d: %s' from get request to %s service's endpoint %s: retries exhausted", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint)
+				return &ErrorHttp{
+					StatusCode: response.StatusCode,
+					Message:    fmt.Sprintf("attempt %d - received '%d: %s' from get request to %s service's endpoint %s: retries exhausted", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint),
+				}
 			}
-		} else {
 
 			// 4xx Errors
+		} else {
+
 			var e ErrorHttp
 			if err := json.Unmarshal(body, &e); err != nil {
-				return fmt.Errorf("unable to unmarshal response body json to %v from  %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err)
+				return &ErrorHttp{
+					StatusCode: http.StatusInternalServerError,
+					Message:    fmt.Sprintf("unable to unmarshal response body json to %v from  %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err),
+				}
 			}
 			// jump out of retry loop and return error
-			return fmt.Errorf("received '%d: %s' from get-service-data call to %s service's endpoint %s", e.StatusCode, e.Message, caller.ServiceName, endpoint)
+			return &ErrorHttp{
+				StatusCode: e.StatusCode,
+				Message:    fmt.Sprintf("received '%d: %s' from get-service-data call to %s service's endpoint %s", e.StatusCode, e.Message, caller.ServiceName, endpoint),
+			}
 		}
 	}
 	return nil
@@ -182,16 +221,22 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 	// retry loop
 	for attempt := 0; attempt < caller.RetryConfig.MaxRetries; attempt++ {
 
-		// set up request
 		// marshal data
 		jsonData, err := json.Marshal(cmd)
 		if err != nil {
-			return fmt.Errorf("unable to marshall cmd %v to json: %v", reflect.TypeOf(cmd), err)
+			return &ErrorHttp{
+				StatusCode: http.StatusInternalServerError,
+				Message:    fmt.Sprintf("failed to marshal data to json for %s service's endpoint '%s': %v", caller.ServiceName, endpoint, err),
+			}
 		}
 
+		// set up request
 		request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
-			return fmt.Errorf("unable to create post request for endpoint '%s': %v", url, err)
+			return &ErrorHttp{
+				StatusCode: http.StatusInternalServerError,
+				Message:    fmt.Sprintf("failed to create POST request for %s service's endpoint '%s': %v", caller.ServiceName, endpoint, err),
+			}
 		}
 		request.Header.Set("Content-Type", "application/json")
 
@@ -212,23 +257,32 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 
 					// apply backout/jitter to timeout
 					backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-					caller.logger.Error(fmt.Sprintf("attempt %d - %s service POST request to %s timed out (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff), err)
+					caller.logger.Error(fmt.Sprintf("attempt %d - POST request to %s service's endpoint %s timed out (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff), "err", err.Error())
 					time.Sleep(backoff)
 					continue // jump to next loop iteration
 				} else {
 
 					// jump out of retry loop and return error
-					return fmt.Errorf("attempt %d - %s service post-request to %s yielded a non-timeout network error: %v", attempt+1, caller.ServiceName, endpoint, err)
+					return &ErrorHttp{
+						StatusCode: http.StatusServiceUnavailable,
+						Message:    fmt.Sprintf("attempt %d - POST request to %s service's %s endpoint yielded a non-timeout network error: %v", attempt+1, caller.ServiceName, endpoint, err),
+					}
 				}
 			}
 			// jump out of retry loop for error that is not net.Error
-			return fmt.Errorf("attempt %d - %s service post-request to %s yielded a non-network error: %v", attempt+1, caller.ServiceName, endpoint, err)
+			return &ErrorHttp{
+				StatusCode: http.StatusServiceUnavailable,
+				Message:    fmt.Sprintf("attempt %d - POST request to %s service's %s endpoint yielded a non-network error: %v", attempt+1, caller.ServiceName, endpoint, err),
+			}
 		}
 
 		// validate Content-Type is application/json
 		contentType := response.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "application/json") {
-			return fmt.Errorf("unexpected content type: got %v want application/json", contentType)
+			return &ErrorHttp{
+				StatusCode: http.StatusUnsupportedMediaType,
+				Message:    fmt.Sprintf("POST request to %s service's %s endpoint returned unexpected content type: got %v want application/json", caller.ServiceName, endpoint, contentType),
+			}
 		}
 
 		// read response body
@@ -236,16 +290,25 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 		response.Body.Close()
 		if err != nil {
 			// jump out of retry loop and return error
-			return fmt.Errorf("unable to read response body from %s service's endpoint '%s': %v", caller.ServiceName, endpoint, err)
+			return &ErrorHttp{
+				StatusCode: http.StatusInternalServerError,
+				Message:    fmt.Sprintf("failed to read response body from %s service's endpoint '%s': %v", caller.ServiceName, endpoint, err),
+			}
 		}
 
+		// handle response status codes 2xx, 4xx, 5xx
+		// 2xx -> success
 		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 
 			if err := json.Unmarshal(body, data); err != nil {
-				return fmt.Errorf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(data), caller.ServiceName, endpoint, err)
+				return &ErrorHttp{
+					StatusCode: http.StatusInternalServerError,
+					Message:    fmt.Sprintf("failed to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(data), caller.ServiceName, endpoint, err),
+				}
 			}
 			return nil // success -> jump out of retry and return
 
+			// 5xx -> retry w/ backoff
 		} else if response.StatusCode == http.StatusTooManyRequests ||
 			(response.StatusCode >= 500 && response.StatusCode <= 599) {
 
@@ -253,28 +316,42 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 			var e ErrorHttp
 			if err := json.Unmarshal(body, &e); err != nil {
 				// jump out of retry loop and return error
-				return fmt.Errorf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err)
+				return &ErrorHttp{
+					StatusCode: http.StatusInternalServerError,
+					Message:    fmt.Sprintf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err),
+				}
 			}
 
 			if attempt < caller.RetryConfig.MaxRetries-1 {
 
 				// apply backout/jitter to 5xx
 				backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-				caller.logger.Error(fmt.Sprintf("attempt %d - received '%d: %s' from post request to %s service's endpoint %s: (retrying in %v...)", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint, backoff))
+				caller.logger.Error(fmt.Sprintf("attempt %d - POST request to %s service's endpoint %s failed: (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff), "err", fmt.Sprintf("%d: %s", e.StatusCode, e.Message))
 				time.Sleep(backoff)
 				continue // jump out of the loop to next iteration
 			} else {
-				return fmt.Errorf("attempt %d - received '%d: %s' from post request to %s service's endpoint %s: retries exhausted", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint)
+				return &ErrorHttp{
+					StatusCode: response.StatusCode,
+					Message:    fmt.Sprintf("attempt %d - received '%d: %s' from POST request to %s service's endpoint %s: retries exhausted", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint),
+				}
 			}
+
+			// 4xx Errors
 		} else {
 
 			// 4xx Errors
 			var e ErrorHttp
 			if err := json.Unmarshal(body, &e); err != nil {
-				return fmt.Errorf("unable to unmarshal response body json to %v from  %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err)
+				return &ErrorHttp{
+					StatusCode: http.StatusInternalServerError,
+					Message:    fmt.Sprintf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err),
+				}
 			}
 			// jump out of retry loop and return error
-			return fmt.Errorf("received '%d: %s' from post-service-data call to %s service's endpoint %s", e.StatusCode, e.Message, caller.ServiceName, endpoint)
+			return &ErrorHttp{
+				StatusCode: e.StatusCode,
+				Message:    fmt.Sprintf("received '%d: %s' from POST call to %s service's endpoint %s", e.StatusCode, e.Message, caller.ServiceName, endpoint),
+			}
 		}
 	}
 	return nil
