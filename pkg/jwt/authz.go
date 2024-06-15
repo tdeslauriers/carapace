@@ -11,6 +11,18 @@ import (
 	"time"
 )
 
+const (
+	// S2sUnauthorizedErrMsg is a generalized error message retruned when a service-to-service token is unauthorized.
+	// This could be for many reasons, which will be included in logs.  This exists so that it can be returned to clients
+	// and and logic/decisioning can be based upon it.
+	S2sUnauthorizedErrMsg = "failed to validate s2s token"
+
+	// UserUnauthorizedErrMsg is a generalized error message retruned when a service-to-service token is unauthorized.
+	// This could be for many reasons, which will be included in logs.  This exists so that it can be returned to clients
+	// and and logic/decisioning can be based upon it.
+	UserUnauthorizedErrMsg = "failed to validate user token"
+)
+
 // Verifying Signatures
 type JwtVerifier interface {
 	VerifyJwtSignature(msg string, sig []byte) error
