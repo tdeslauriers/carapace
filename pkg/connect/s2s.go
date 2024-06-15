@@ -58,9 +58,8 @@ type S2sCaller interface {
 	PostToService(endpoint, s2sToken, authToken string, cmd interface{}, data interface{}) error
 
 	// HandleUpstreamError is a function to handle errors from upstream services.
-	// It takes in an source funciton/method/process name, error and http.ResponseWriter in ordoer to
-	// handle logging and writing the error to the http.ResponseWriter.
-	HandleUpstreamError(src string, err error, w http.ResponseWriter)
+	// It takes in an error and http.ResponseWriter in order to handle writing the error to the http.ResponseWriter.
+	HandleUpstreamError(err error, w http.ResponseWriter)
 }
 
 var _ S2sCaller = (*s2sCaller)(nil)
@@ -366,12 +365,11 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 
 // handle upstream errors returned by the other two above funtions.
 // Adds in meta data to the logging from the caller struct.
-func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.ResponseWriter) {
+func (caller *s2sCaller) HandleUpstreamError(err error, w http.ResponseWriter) {
 
 	// checks for expected ErrorHttp type and handles logging and writing to response if different type
 	errMsg, ok := err.(*ErrorHttp)
 	if !ok {
-		caller.logger.Error(fmt.Sprintf("%s call to %s service failed", source, caller.ServiceName), "err", err.Error())
 		e := ErrorHttp{
 			StatusCode: http.StatusInternalServerError,
 			Message:    "internal server error",
@@ -383,7 +381,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 	// handle ErrorHttp type errors
 	switch errMsg.StatusCode {
 	case http.StatusBadRequest:
-		caller.logger.Error(fmt.Sprintf("%s fail call to %s failed: bad request", source, caller.ServiceName), "err", errMsg.Message)
 		e := ErrorHttp{
 			StatusCode: http.StatusBadRequest,
 			Message:    errMsg.Message,
@@ -393,10 +390,9 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 	case http.StatusUnauthorized:
 		// s2s token unauthorized
 		if errMsg.Message == jwt.S2sUnauthorizedErrMsg {
-			caller.logger.Error(fmt.Sprintf("%s call to %s failed: s2s unauthorized", source, caller.ServiceName), "err", errMsg.Message)
 			e := ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
-				Message:    fmt.Sprintf("%s failed: internal server error", source),
+				Message:    fmt.Sprintf("internal server error"),
 			}
 			e.SendJsonErr(w)
 			break
@@ -404,7 +400,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 
 		// user token unauthorized
 		if errMsg.Message == jwt.UserUnauthorizedErrMsg {
-			caller.logger.Error(fmt.Sprintf("%s call to %s failed: user unauthorized", source, caller.ServiceName), "err", errMsg.Message)
 			e := ErrorHttp{
 				StatusCode: http.StatusUnauthorized,
 				Message:    "unauthorized",
@@ -415,7 +410,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 	case http.StatusForbidden:
 		// call returned forbidden for s2s token
 		if errMsg.Message == jwt.S2sForbdiddenErrMsg {
-			caller.logger.Error(fmt.Sprintf("%s call to %s failed: s2s forbidden", source, caller.ServiceName), "err", errMsg.Message)
 			e := ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
 				Message:    "internal server error", // this should never happen --> means I didnt provision the service correctly
@@ -426,7 +420,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 
 		// call returned forbidden for user token
 		if errMsg.Message == jwt.UserForbdiddenErrMsg {
-			caller.logger.Error(fmt.Sprintf("%s call to %s failed: user forbidden", source, caller.ServiceName), "err", errMsg.Message)
 			e := ErrorHttp{
 				StatusCode: http.StatusForbidden,
 				Message:    "forbidden",
@@ -436,7 +429,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 		}
 
 	case http.StatusMethodNotAllowed:
-		caller.logger.Error(fmt.Sprintf("%s call to %s failed: method not allowed", source, caller.ServiceName), "err", errMsg.Message)
 		e := ErrorHttp{
 			StatusCode: http.StatusInternalServerError,
 			Message:    "internal server error", // this should never happen -> means calling service was written using wrong method
@@ -445,7 +437,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 
 		// returns conflict error from the upstream service, eg. "username unavailable"
 	case http.StatusConflict:
-		caller.logger.Error(fmt.Sprintf("%s call to %s failed: status conflict", source, caller.ServiceName), "err", errMsg.Message)
 		e := ErrorHttp{
 			StatusCode: http.StatusConflict,
 			Message:    errMsg.Message,
@@ -454,7 +445,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 
 		// this returns validation errors from the upstream service
 	case http.StatusUnprocessableEntity:
-		caller.logger.Error(fmt.Sprintf("%s call to %s failed: unprocessable entity", source, caller.ServiceName), "err", errMsg.Message)
 		e := ErrorHttp{
 			StatusCode: http.StatusUnprocessableEntity,
 			Message:    errMsg.Message,
@@ -463,7 +453,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 
 		// this returns data processing errors from the upstream service like "unexpected content type"
 	case http.StatusUnsupportedMediaType:
-		caller.logger.Error(fmt.Sprintf("%s call to %s failed: unsupported media type", source, caller.ServiceName), "err", errMsg.Message)
 		e := ErrorHttp{
 			StatusCode: http.StatusUnsupportedMediaType,
 			Message:    errMsg.Message,
@@ -471,7 +460,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 		e.SendJsonErr(w)
 
 	case http.StatusServiceUnavailable:
-		caller.logger.Error(fmt.Sprintf("%s call to %s failed: service unavailable", source, caller.ServiceName), "err", errMsg.Message)
 		e := ErrorHttp{
 			StatusCode: http.StatusServiceUnavailable,
 			Message:    "required service unavailable",
@@ -479,7 +467,6 @@ func (caller *s2sCaller) HandleUpstreamError(source string, err error, w http.Re
 		e.SendJsonErr(w)
 
 	default:
-		caller.logger.Error(fmt.Sprintf("%s call to %s failed: internal server error", source, caller.ServiceName), "err", err.Error())
 		e := ErrorHttp{
 			StatusCode: http.StatusInternalServerError,
 			Message:    "internal server error",
