@@ -138,6 +138,7 @@ type UserRegisterCmd struct {
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 	Birthdate string `json:"birthdate,omitempty"`
+	ClientId  string `json:"client_id,omitempty"`
 }
 
 // ValidateCmd performs regex checks on user register cmd fields.
@@ -157,6 +158,10 @@ func (cmd UserRegisterCmd) ValidateCmd() error {
 
 	if err := validate.IsValidBirthday(cmd.Birthdate); err != nil {
 		return fmt.Errorf("invalid birthdate: %v", err)
+	}
+
+	if !validate.IsValidUuid(cmd.ClientId) {
+		return errors.New("invalid client id")
 	}
 
 	if cmd.Password != cmd.Confirm {
