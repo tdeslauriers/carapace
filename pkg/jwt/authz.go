@@ -17,10 +17,10 @@ const (
 	// and and logic/decisioning can be based upon it.
 	S2sUnauthorizedErrMsg = "failed to validate s2s token"
 
-	// S2sForbdiddenErrMsg is a generalized error message returned when a service-to-service token is unauthorized.
+	// S2sForbiddenErrMsg is a generalized error message returned when a service-to-service token is unauthorized.
 	// This could be for many reasons, which will be included in logs.  This exists so that it can be returned to clients
 	// and and logic/decisioning can be based upon it.
-	S2sForbdiddenErrMsg = "forbidden: incorrect audience, or incorrect or missing scopes"
+	S2sForbiddenErrMsg = "forbidden: incorrect audience, or incorrect or missing scopes"
 
 	// UserUnauthorizedErrMsg is a generalized error message retruned when a service-to-service token is unauthorized.
 	// This could be for many reasons, which will be included in logs.  This exists so that it can be returned to clients
@@ -146,7 +146,7 @@ func (v *jwtVerifier) IsAuthorized(allowedScopes []string, token string) (bool, 
 
 	// check audiences
 	if ok := v.hasValidAudences(jwt); !ok {
-		return false, fmt.Errorf("forbidden: not intended audience")
+		return false, fmt.Errorf("forbidden: incorrect audience")
 	}
 
 	// check scopes

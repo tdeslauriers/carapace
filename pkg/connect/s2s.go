@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/tdeslauriers/carapace/pkg/config"
-
 	"github.com/tdeslauriers/carapace/pkg/jwt"
 )
 
@@ -57,9 +56,9 @@ type S2sCaller interface {
 	// The request body is marshaled from the provided cmd interface, and the response body is unmarshaled into the provided data interface.
 	PostToService(endpoint, s2sToken, authToken string, cmd interface{}, data interface{}) error
 
-	// HandleUpstreamError is a function to handle errors from upstream services.
+	// RespondUpstreamError is a function to handle errors from upstream services.
 	// It takes in an error and http.ResponseWriter in order to handle writing the error to the http.ResponseWriter.
-	HandleUpstreamError(err error, w http.ResponseWriter)
+	RespondUpstreamError(err error, w http.ResponseWriter)
 }
 
 var _ S2sCaller = (*s2sCaller)(nil)
@@ -365,7 +364,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 
 // handle upstream errors returned by the other two above funtions.
 // Adds in meta data to the logging from the caller struct.
-func (caller *s2sCaller) HandleUpstreamError(err error, w http.ResponseWriter) {
+func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) {
 
 	// checks for expected ErrorHttp type and handles logging and writing to response if different type
 	errMsg, ok := err.(*ErrorHttp)
@@ -392,7 +391,7 @@ func (caller *s2sCaller) HandleUpstreamError(err error, w http.ResponseWriter) {
 		if errMsg.Message == jwt.S2sUnauthorizedErrMsg {
 			e := ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
-				Message:    fmt.Sprintf("internal server error"),
+				Message:    "internal server error",
 			}
 			e.SendJsonErr(w)
 			break
@@ -409,7 +408,7 @@ func (caller *s2sCaller) HandleUpstreamError(err error, w http.ResponseWriter) {
 		}
 	case http.StatusForbidden:
 		// call returned forbidden for s2s token
-		if errMsg.Message == jwt.S2sForbdiddenErrMsg {
+		if errMsg.Message == jwt.S2sForbiddenErrMsg {
 			e := ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
 				Message:    "internal server error", // this should never happen --> means I didnt provision the service correctly
