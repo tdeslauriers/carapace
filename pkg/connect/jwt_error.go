@@ -34,7 +34,6 @@ func RespondAuthFailure(auth AuthProvider, err error, w http.ResponseWriter) {
 			StatusCode: http.StatusUnauthorized,
 			Message:    unauthorized,
 		}
-		w.WriteHeader(http.StatusUnauthorized)
 		e.SendJsonErr(w)
 		return
 	} else if strings.Contains(err.Error(), "forbidden") {
@@ -43,7 +42,6 @@ func RespondAuthFailure(auth AuthProvider, err error, w http.ResponseWriter) {
 			StatusCode: http.StatusForbidden,
 			Message:    forbidden,
 		}
-		w.WriteHeader(http.StatusForbidden)
 		e.SendJsonErr(w)
 		return
 	} else {
@@ -52,7 +50,6 @@ func RespondAuthFailure(auth AuthProvider, err error, w http.ResponseWriter) {
 			StatusCode: http.StatusInternalServerError,
 			Message:    fmt.Sprintf("internal server error - failed to validate %s token:", auth),
 		}
-		w.WriteHeader(http.StatusInternalServerError)
 		e.SendJsonErr(w)
 		return
 	}
