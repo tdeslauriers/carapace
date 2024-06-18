@@ -44,7 +44,7 @@ type S2sLoginCmd struct {
 }
 
 // ValidateCmd performs regex checks on s2s login cmd fields.
-func (cmd S2sLoginCmd) ValidateCmd() error {
+func (cmd *S2sLoginCmd) ValidateCmd() error {
 	// field input restrictions
 	if !validate.IsValidUuid(cmd.ClientId) {
 		return fmt.Errorf("invalid client id")
@@ -72,7 +72,7 @@ type UserLoginCmd struct {
 }
 
 // ValidateCmd performs very limited checks login cmd fields.
-func (cmd UserLoginCmd) ValidateCmd() error {
+func (cmd *UserLoginCmd) ValidateCmd() error {
 
 	// field input restrictions
 	if validate.TooShort(cmd.Username, validate.EmailMin) || validate.TooLong(cmd.Username, validate.EmailMax) {
@@ -100,8 +100,7 @@ func (cmd UserLoginCmd) ValidateCmd() error {
 	}
 
 	if validate.TooShort(cmd.Redirect, 6) || validate.TooLong(cmd.Redirect, 2048) {
-		return fmt.Errorf("invalid redirect: must be between %d and %d characters", 16, 64)
-
+		return fmt.Errorf("invalid redirect: must be between %d and %d characters", 16, 2048)
 	}
 
 	return nil
@@ -123,10 +122,9 @@ type AuthCodeResponse struct {
 }
 
 type AccessTokenResponse struct {
+	Jti            string          `json:"jti"`
 	AccessToken    string          `json:"access_token" db:"access_token"`
 	AccessExpires  data.CustomTime `json:"access_expires" db:"access_expires"`
-	IdConnect      string          `json:"id_token" db:"id_token"`
-	IdExpires      data.CustomTime `json:"id_expires" db:"id_expires"`
 	RefreshToken   string          `json:"refresh_token" db:"refresh_token"`
 	RefreshExpires data.CustomTime `json:"refresh_expires" db:"refresh_expires"`
 }
@@ -142,7 +140,7 @@ type UserRegisterCmd struct {
 }
 
 // ValidateCmd performs regex checks on user register cmd fields.
-func (cmd UserRegisterCmd) ValidateCmd() error {
+func (cmd *UserRegisterCmd) ValidateCmd() error {
 
 	if err := validate.IsValidEmail(cmd.Username); err != nil {
 		return fmt.Errorf("invalid username: %v", err)
@@ -245,10 +243,67 @@ func BuildAudiences(scopes []Scope) (unique []string) {
 	return unique
 }
 
-type AuthcodeResponse struct {
-	AuthCode string `json:"auth_code"`
-	State    string `json:"state"`
-	Nonce    string `json:"nonce"`
-	ClientId string `json:"client_id"`
-	Redirect string `json:"redirect"`
+type AuthCodeCmd struct {
+	AuthCode     string `json:"auth_code"`
+	ResponseType string `json:"response_type"`
+	State        string `json:"state"`
+	Nonce        string `json:"nonce"`
+	ClientId     string `json:"client_id"`
+	Redirect     string `json:"redirect"`
+}
+
+func (cmd *AuthCodeCmd) ValidateCmd() error {
+	if validate.TooShort(cmd.AuthCode, 16) || validate.TooLong(cmd.AuthCode, 64) {
+		return fmt.Errorf("invalid auth code: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.ResponseType, 4) || validate.TooLong(cmd.ResponseType, 8) {
+		return fmt.Errorf("invalid response type: must be between %d and %d characters", 4, 8)
+	}
+
+	if validate.TooShort(cmd.State, 16) || validate.TooLong(cmd.State, 64) {
+		return fmt.Errorf("invalid state: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.Nonce, 16) || validate.TooLong(cmd.Nonce, 64) {
+		return fmt.Errorf("invalid nonce: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.ClientId, 16) || validate.TooLong(cmd.ClientId, 64) {
+		return fmt.Errorf("invalid client id: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.Redirect, 6) || validate.TooLong(cmd.Redirect, 2048) {
+		return fmt.Errorf("invalid redirect: must be between %d and %d characters", 16, 2048)
+	}
+
+	return nil
+
+}
+
+type AccessTokenCmd struct {
+	GrantType   string `json:"grant_type"`
+	AuthCode    string `json:"auth_code"`
+	ClientId    string `json:"client_id"`
+	RedirectUrl string `json:"redirect_url"`
+}
+
+func (cmd *AccessTokenCmd) ValidateCmd() error {
+	if validate.TooShort(cmd.GrantType, 4) || validate.TooLong(cmd.GrantType, 8) {
+		return fmt.Errorf("invalid grant type: must be between %d and %d characters", 4, 8)
+	}
+
+	if validate.TooShort(cmd.AuthCode, 16) || validate.TooLong(cmd.AuthCode, 64) {
+		return fmt.Errorf("invalid auth code: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.ClientId, 16) || validate.TooLong(cmd.ClientId, 64) {
+		return fmt.Errorf("invalid client id: must be between %d and %d characters", 16, 64)
+	}
+
+	if validate.TooShort(cmd.RedirectUrl, 6) || validate.TooLong(cmd.RedirectUrl, 2048) {
+		return fmt.Errorf("invalid redirect url: must be between %d and %d characters", 16, 2048)
+	}
+
+	return nil
 }
