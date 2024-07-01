@@ -137,6 +137,8 @@ type UserRegisterCmd struct {
 	Lastname  string `json:"lastname"`
 	Birthdate string `json:"birthdate,omitempty"`
 	ClientId  string `json:"client_id,omitempty"`
+	Session   string `json:"session_token,omitempty"`
+	Csrf      string `json:"csrf_token,omitempty"`
 }
 
 // ValidateCmd performs regex checks on user register cmd fields.
@@ -160,6 +162,14 @@ func (cmd *UserRegisterCmd) ValidateCmd() error {
 
 	if !validate.IsValidUuid(cmd.ClientId) {
 		return errors.New("invalid client id")
+	}
+
+	if !validate.IsValidUuid(cmd.Session) {
+		return errors.New("invalid session token")
+	}
+
+	if !validate.IsValidUuid(cmd.Csrf) {
+		return errors.New("invalid csrf token")
 	}
 
 	if cmd.Password != cmd.Confirm {
