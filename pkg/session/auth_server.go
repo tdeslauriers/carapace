@@ -137,8 +137,8 @@ type UserRegisterCmd struct {
 	Lastname  string `json:"lastname"`
 	Birthdate string `json:"birthdate,omitempty"`
 	ClientId  string `json:"client_id,omitempty"`
-	Session   string `json:"session",omitempty"`
-	Csrf      string `json:"csrf",omitempty"`
+	Session   string `json:"session,omitempty"`
+	Csrf      string `json:"csrf,omitempty"`
 }
 
 // ValidateCmd performs regex checks on user register cmd fields.
