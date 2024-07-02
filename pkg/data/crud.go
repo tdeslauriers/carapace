@@ -203,7 +203,7 @@ func (ct *CustomTime) Scan(value interface{}) error {
 	default:
 		return errors.New("unsupported data type")
 	}
-	ct.Time = t
+	ct.Time = t.UTC()
 	return nil
 }
 
