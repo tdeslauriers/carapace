@@ -12,11 +12,13 @@ import (
 
 // s2s login service -> validates incoming login
 type AuthService interface {
-	// Validates credentials provided by client, whether s2s or user
+	// ValidateCredentials validates credentials provided by client, whether s2s or user
 	ValidateCredentials(id, secret string) error
-	// Gets scopes specific to a service for a given identifier
+
+	// GetUserScopes gets scopes specific to a service for a given identifier
 	GetUserScopes(uuid, service string) ([]Scope, error)
-	// Builds and signs a jwt token for a given subject and service
+
+	// MintAuthzToken builds and signs a jwt token for a given subject and service
 	MintAuthzToken(subject, service string) (*jwt.JwtToken, error) // assumes valid creds
 }
 
@@ -193,10 +195,6 @@ func (cmd *UserRegisterCmd) ValidateCmd() error {
 
 	if err := validate.IsValidBirthday(cmd.Birthdate); err != nil {
 		return fmt.Errorf("invalid birthdate: %v", err)
-	}
-
-	if !validate.IsValidUuid(cmd.ClientId) {
-		return errors.New("invalid client id")
 	}
 
 	if cmd.Password != cmd.Confirm {
