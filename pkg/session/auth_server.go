@@ -62,13 +62,17 @@ func (cmd *S2sLoginCmd) ValidateCmd() error {
 }
 
 type UserLoginCmd struct {
-	Username     string `json:"username"`
-	Password     string `json:"password"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+
 	ResponseType string `json:"response_type"`
 	State        string `json:"state,omitempty"`
 	Nonce        string `json:"nonce,omitempty"`
 	ClientId     string `json:"client_id,omitempty"`
 	Redirect     string `json:"redirect,omitempty"`
+
+	Session string `json:"session,omitempty"`
+	Csrf    string `json:"csrf,omitempty"`
 }
 
 // ValidateCmd performs very limited checks login cmd fields.
@@ -136,9 +140,11 @@ type UserRegisterCmd struct {
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 	Birthdate string `json:"birthdate,omitempty"`
-	ClientId  string `json:"client_id,omitempty"`
-	Session   string `json:"session,omitempty"`
-	Csrf      string `json:"csrf,omitempty"`
+
+	ClientId string `json:"client_id,omitempty"`
+
+	Session string `json:"session,omitempty"`
+	Csrf    string `json:"csrf,omitempty"`
 }
 
 // ValidateCmd performs regex checks on user register cmd fields.
@@ -162,14 +168,6 @@ func (cmd *UserRegisterCmd) ValidateCmd() error {
 
 	if !validate.IsValidUuid(cmd.ClientId) {
 		return errors.New("invalid client id")
-	}
-
-	if !validate.IsValidUuid(cmd.Session) {
-		return errors.New("invalid session token")
-	}
-
-	if !validate.IsValidUuid(cmd.Csrf) {
-		return errors.New("invalid csrf token")
 	}
 
 	if cmd.Password != cmd.Confirm {
