@@ -1,4 +1,4 @@
-package session
+package types
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ type RefreshService[T Refresh] interface {
 	PersistRefresh(refresh T) error
 }
 
-// refresh table data
+// S2sRefresh is a model for the service-to-service refresh table data.
 type S2sRefresh struct {
 	Uuid         string          `db:"uuid"`
 	RefreshIndex string          `db:"refresh_index"`
@@ -27,6 +27,7 @@ type S2sRefresh struct {
 	Revoked      bool            `db:"revoked"`
 }
 
+// UserRefresh is a model for the suer refresh table data.
 type UserRefresh struct {
 	Uuid         string          `db:"uuid"`
 	RefreshIndex string          `db:"refresh_index"`
@@ -37,11 +38,13 @@ type UserRefresh struct {
 	Revoked      bool            `db:"revoked"`
 }
 
+// RefreshCmd is a struct for a refresh token request endpoint to consume.
 type RefreshCmd struct {
 	RefreshToken string `json:"refresh_token"`
 	ServiceName  string `json:"service_name,omitempty"`
 }
 
+// ValidateCmd performs regex checks on refresh cmd fields.
 func (cmd RefreshCmd) ValidateCmd() error {
 
 	// field input restrictions

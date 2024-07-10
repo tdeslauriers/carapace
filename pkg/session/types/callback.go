@@ -3,18 +3,34 @@ package types
 import (
 	"fmt"
 
+	"github.com/tdeslauriers/carapace/pkg/data"
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
-type AuthCodeCmd struct {
-	Session string `json:"session"`
+// GrantType is a string type that represents the type of grant being requested from the authroization server,
+// eg., authorization_code, refresh_token, client_credentials, or password
+type GrantType string
 
-	AuthCode     string `json:"auth_code"`
-	ResponseType string `json:"response_type"`
-	State        string `json:"state"`
-	Nonce        string `json:"nonce"`
-	ClientId     string `json:"client_id"`
-	Redirect     string `json:"redirect"`
+const (
+	AuthorizationCode GrantType = "authorization_code"
+	RefreshToken      GrantType = "refresh_token"
+	ClientCredentials GrantType = "client_credentials"
+	Password          GrantType = "password"
+)
+
+// AuthCodeCmd is a struct to hold incoming authcode and session values
+// that are forwaded to the callback endpoint gateway as part of
+// the oauth2 authorization code flow.
+// Note: is is possibe session value will be empty if session token is sent as a cookie header.
+type AuthCodeCmd struct {
+	Session string `json:"session,omitempty"`
+
+	AuthCode     string       `json:"auth_code"`
+	ResponseType ResponseType `json:"response_type"`
+	State        string       `json:"state"`
+	Nonce        string       `json:"nonce"`
+	ClientId     string       `json:"client_id"`
+	Redirect     string       `json:"redirect"`
 }
 
 func (cmd *AuthCodeCmd) ValidateCmd() error {
@@ -22,7 +38,7 @@ func (cmd *AuthCodeCmd) ValidateCmd() error {
 		return fmt.Errorf("invalid auth code: must be between %d and %d characters", 16, 64)
 	}
 
-	if validate.TooShort(cmd.ResponseType, 4) || validate.TooLong(cmd.ResponseType, 8) {
+	if validate.TooShort(string(cmd.ResponseType), 4) || validate.TooLong(string(cmd.ResponseType), 8) {
 		return fmt.Errorf("invalid response type: must be between %d and %d characters", 4, 8)
 	}
 
@@ -46,15 +62,18 @@ func (cmd *AuthCodeCmd) ValidateCmd() error {
 
 }
 
+// AccessTokenCmd is a struct to hold incoming access token values
+// that are forwaded to the callback endpoint gateway to the authroization server
+// as part of the oauth2 authorization code flow.
 type AccessTokenCmd struct {
-	GrantType   string `json:"grant_type"`
-	AuthCode    string `json:"auth_code"`
-	ClientId    string `json:"client_id"`
-	RedirectUrl string `json:"redirect_url"`
+	Grant       GrantType `json:"grant_type"`
+	AuthCode    string    `json:"auth_code"`
+	ClientId    string    `json:"client_id"`
+	RedirectUrl string    `json:"redirect_url"`
 }
 
 func (cmd *AccessTokenCmd) ValidateCmd() error {
-	if validate.TooShort(cmd.GrantType, 4) || validate.TooLong(cmd.GrantType, 8) {
+	if validate.TooShort(string(cmd.Grant), 4) || validate.TooLong(string(cmd.Grant), 8) {
 		return fmt.Errorf("invalid grant type: must be between %d and %d characters", 4, 8)
 	}
 
@@ -71,4 +90,14 @@ func (cmd *AccessTokenCmd) ValidateCmd() error {
 	}
 
 	return nil
+}
+
+// AccessTokenResponse is a struct to hold the response from the authorization server
+// when an access token is requested successfully as part of the oauth2 authorization code flow.
+type AccessTokenResponse struct {
+	Jti            string          `json:"jti"`
+	AccessToken    string          `json:"access_token" db:"access_token"`
+	AccessExpires  data.CustomTime `json:"access_expires" db:"access_expires"`
+	RefreshToken   string          `json:"refresh_token" db:"refresh_token"`
+	RefreshExpires data.CustomTime `json:"refresh_expires" db:"refresh_expires"`
 }

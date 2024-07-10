@@ -1,4 +1,4 @@
-package session
+package provider
 
 import (
 	"fmt"
@@ -8,21 +8,13 @@ import (
 	"github.com/tdeslauriers/carapace/pkg/config"
 	"github.com/tdeslauriers/carapace/pkg/connect"
 	"github.com/tdeslauriers/carapace/pkg/data"
+	"github.com/tdeslauriers/carapace/pkg/session/types"
 )
 
-// client side
-// response
-type S2sAuthorization struct {
-	Jti            string          `json:"jti" db:"uuid"` // gen'd by s2s service at token creation
-	ServiceName    string          `json:"service_name" db:"service_name"`
-	ServiceToken   string          `json:"service_token" db:"service_token"`
-	TokenExpires   data.CustomTime `json:"token_expires" db:"service_expires"`
-	RefreshToken   string          `json:"refresh_token" db:"refresh_token"`
-	RefreshExpires data.CustomTime `json:"refresh_expires" db:"refresh_expires"`
-}
-
-// s2s token provider -> calls s2s service for tokens, stores and retrieves tokens from local db
+// S2sTokenProvider is an interface for providing service-to-service tokens for service-to-service calls
 type S2sTokenProvider interface {
+	// GetServiceToken gets a service token for a given service name
+	// intended for service-to-service calls
 	GetServiceToken(serviceName string) (string, error)
 }
 
@@ -48,6 +40,9 @@ type s2sTokenProvider struct {
 	logger *slog.Logger
 }
 
+// GetServiceToken implements the S2sTokenProvider interface for service-to-service token retrieval.
+// It looks fro active service tokens in the local db, and if none are found, it will attempt to refresh
+// the token using the refresh token. If no active refresh tokens are found, it will attempt to login and get a new token.
 func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e error) {
 
 	// pull tokens with un-expired refresh
@@ -126,10 +121,10 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 	return authz.ServiceToken, nil
 }
 
-// login client call
+// s2sLogin makes a call to the s2s authentication endpoint to get a new service token
 func (p *s2sTokenProvider) s2sLogin(service string) (*S2sAuthorization, error) {
 
-	login := S2sLoginCmd{
+	login := types.S2sLoginCmd{
 		ClientId:     p.creds.ClientId,
 		ClientSecret: p.creds.ClientSecret,
 		ServiceName:  service,
@@ -143,7 +138,7 @@ func (p *s2sTokenProvider) s2sLogin(service string) (*S2sAuthorization, error) {
 	return &s2sAuthz, nil
 }
 
-// encrypt and save service tokens to local maria db
+// persistS2sToken encrypts and saves service tokens to local maria db
 func (p *s2sTokenProvider) persistS2sToken(authz *S2sAuthorization) error {
 
 	// encrypt service token and refresh token
@@ -175,7 +170,7 @@ func (p *s2sTokenProvider) persistS2sToken(authz *S2sAuthorization) error {
 	return nil
 }
 
-// gets active service tokens from local store
+// retrieveS2sTokens gets active service tokens from local store
 func (p *s2sTokenProvider) retrieveS2sTokens(service string) ([]S2sAuthorization, error) {
 
 	var tokens []S2sAuthorization
@@ -197,7 +192,7 @@ func (p *s2sTokenProvider) retrieveS2sTokens(service string) ([]S2sAuthorization
 	return tokens, nil
 }
 
-// decrypts refresh token and makes refresh client call
+// refreshS2sToken decrypts refresh token and makes refresh client call
 func (p *s2sTokenProvider) refreshS2sToken(refreshToken, serviceName string) (*S2sAuthorization, error) {
 
 	// decrypt refresh token
@@ -207,7 +202,7 @@ func (p *s2sTokenProvider) refreshS2sToken(refreshToken, serviceName string) (*S
 	}
 
 	// create cmd
-	cmd := RefreshCmd{
+	cmd := types.RefreshCmd{
 		RefreshToken: decrypted,
 		ServiceName:  serviceName,
 	}
