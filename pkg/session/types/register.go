@@ -15,13 +15,23 @@ type UserRegisterCmd struct {
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 
-	// Birthdate is an optional user input field
+	// Birthdate is an optional user input field,
+	// as such, it is not included in field level validation.
+	// Note: It is required by certain services:
+	// TODO: build service functionality to add when required.
 	Birthdate string `json:"birthdate,omitempty"`
 
+	// ClientId is not consumed by all endpoints in all use cases,
+	// as such, it is not included in field level validation.
 	ClientId string `json:"client_id,omitempty"`
 
+	// Session is not consumed by all endpoints in all use cases,
+	// as such, it is not included in field level validation.
 	Session string `json:"session,omitempty"`
-	Csrf    string `json:"csrf,omitempty"`
+
+	// Csrf is not consumed by all endpoints in all use cases,
+	// as such, it is not included in field level validation.
+	Csrf string `json:"csrf,omitempty"`
 }
 
 // ValidateCmd performs regex checks on user register cmd fields.

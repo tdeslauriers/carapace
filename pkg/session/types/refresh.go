@@ -7,12 +7,17 @@ import (
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
+// Refresh is an interface that abstracts the S2sRefresh and UserRefresh structs
+// so that they can be used as generic types in the RefreshService interface.
 type Refresh interface {
 	S2sRefresh | UserRefresh
 }
 
+// RefreshService is an interface for services that handle refresh token retrieval and persistence.
 type RefreshService[T Refresh] interface {
+	// GetRefreshToken retrieves a refresh token by token string
 	GetRefreshToken(token string) (*T, error)
+	// PersistRefresh persists a refresh token to the database or cache
 	PersistRefresh(refresh T) error
 }
 
@@ -44,12 +49,14 @@ type RefreshCmd struct {
 	ServiceName  string `json:"service_name,omitempty"`
 }
 
-// ValidateCmd performs regex checks on refresh cmd fields.
+// ValidateCmd performs very limited checks login cmd fields.
+// This is not a complete validation.  The real validation is/should be done in by services
+// checking against these values stored in persistent storage.
+// This is just a basic check to make sure the values are within the expected range.
 func (cmd RefreshCmd) ValidateCmd() error {
 
-	// field input restrictions
-	if !validate.IsValidUuid(cmd.RefreshToken) {
-		return fmt.Errorf("invalid refresh token")
+	if validate.TooShort(cmd.RefreshToken, 16) || validate.TooLong(cmd.RefreshToken, 64) {
+		return fmt.Errorf("invalid refresh token: must be between %d and %d characters", 16, 64)
 	}
 
 	if !validate.IsValidServiceName(cmd.ServiceName) {

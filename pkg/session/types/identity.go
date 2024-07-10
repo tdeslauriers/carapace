@@ -62,6 +62,7 @@ type AccountScopeXref struct {
 }
 
 // BuildAudiences is a helper func to build audience []string from scopes for jwt struct.
+// Note: it is included in this package because it refers directly to the Scope struct in this package.
 func BuildAudiences(scopes []Scope) (unique []string) {
 
 	var services []string

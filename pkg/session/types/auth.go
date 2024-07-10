@@ -2,7 +2,7 @@ package types
 
 import "github.com/tdeslauriers/carapace/pkg/jwt"
 
-// s2s login service -> validates incoming login
+// AuthService is an interface for authentication services that validates credentials, gets user scopes, and mints authorization tokens
 type AuthService interface {
 	// ValidateCredentials validates credentials provided by client, whether s2s or user
 	ValidateCredentials(id, secret string) error

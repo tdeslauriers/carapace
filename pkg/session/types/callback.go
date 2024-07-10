@@ -33,6 +33,10 @@ type AuthCodeCmd struct {
 	Redirect     string       `json:"redirect"`
 }
 
+// ValidateCmd conducts light-weight validation of incoming authcode and session values
+// This is not a complete validation.  The real validation is/should be done in by services
+// checking against these values stored in persistent storage.
+// This is just a basic check to make sure the values are within the expected range.
 func (cmd *AuthCodeCmd) ValidateCmd() error {
 	if validate.TooShort(cmd.AuthCode, 16) || validate.TooLong(cmd.AuthCode, 64) {
 		return fmt.Errorf("invalid auth code: must be between %d and %d characters", 16, 64)
@@ -72,6 +76,10 @@ type AccessTokenCmd struct {
 	RedirectUrl string    `json:"redirect_url"`
 }
 
+// ValidateCmd conducts light-weight validation of incoming access token values
+// This is not a complete validation.  The real validation is/should be done in by services
+// checking against these values stored in persistent storage.
+// This is just a basic check to make sure the values are within the expected range.
 func (cmd *AccessTokenCmd) ValidateCmd() error {
 	if validate.TooShort(string(cmd.Grant), 4) || validate.TooLong(string(cmd.Grant), 8) {
 		return fmt.Errorf("invalid grant type: must be between %d and %d characters", 4, 8)

@@ -31,6 +31,7 @@ func NewS2sTokenProvider(caller connect.S2sCaller, creds S2sCredentials, db data
 
 var _ S2sTokenProvider = (*s2sTokenProvider)(nil)
 
+// s2sTokenProvider implements the S2sTokenProvider interface
 type s2sTokenProvider struct {
 	s2s     connect.S2sCaller
 	creds   S2sCredentials
