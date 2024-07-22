@@ -38,6 +38,11 @@ type AuthCodeCmd struct {
 // checking against these values stored in persistent storage.
 // This is just a basic check to make sure the values are within the expected range.
 func (cmd *AuthCodeCmd) ValidateCmd() error {
+
+	if validate.TooShort(cmd.Session, 16) || validate.TooLong(cmd.Session, 64) {
+		return fmt.Errorf("invalid session: must be between %d and %d characters", 16, 64)
+	}
+
 	if validate.TooShort(cmd.AuthCode, 16) || validate.TooLong(cmd.AuthCode, 64) {
 		return fmt.Errorf("invalid auth code: must be between %d and %d characters", 16, 64)
 	}
