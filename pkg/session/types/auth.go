@@ -7,11 +7,12 @@ type AuthService interface {
 	// ValidateCredentials validates credentials provided by client, whether s2s or user
 	ValidateCredentials(id, secret string) error
 
-	// GetUserScopes gets scopes specific to a service for a given identifier
-	GetUserScopes(uuid, service string) ([]Scope, error)
+	// GetScopes gets scopes specific to a service for a given identifier.
+	// 'user' parameter can be a username or a client id.
+	GetScopes(user, service string) ([]Scope, error)
 
-	// MintAuthzToken builds and signs a jwt token for a given subject and service
-	MintAuthzToken(subject, service string) (*jwt.JwtToken, error) // assumes valid creds
+	// MintToken builds and signs a jwt token for a given subject and service
+	MintToken(subject, service string) (*jwt.JwtToken, error) // assumes valid creds
 }
 
 // UserAuthService is an interface for user authentication services
