@@ -86,8 +86,8 @@ type AccessTokenCmd struct {
 // checking against these values stored in persistent storage.
 // This is just a basic check to make sure the values are within the expected range.
 func (cmd *AccessTokenCmd) ValidateCmd() error {
-	if validate.TooShort(string(cmd.Grant), 4) || validate.TooLong(string(cmd.Grant), 8) {
-		return fmt.Errorf("invalid grant type: must be between %d and %d characters", 4, 8)
+	if validate.TooShort(string(cmd.Grant), 4) || validate.TooLong(string(cmd.Grant), 32) {
+		return fmt.Errorf("invalid grant type: must be between %d and %d characters", 4, 32)
 	}
 
 	if validate.TooShort(cmd.AuthCode, 16) || validate.TooLong(cmd.AuthCode, 64) {
