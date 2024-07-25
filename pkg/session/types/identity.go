@@ -61,23 +61,29 @@ type AccountScopeXref struct {
 	CreatedAt   string `db:"created_at" json:"created_at"`
 }
 
-// BuildAudiences is a helper func to build audience []string from scopes for jwt struct.
+// BuildAudiences is a helper func to build audience []string from a string of space-delimited scope string values, eg., "w:service:* r:service:*"
 // Note: it is included in this package because it refers directly to the Scope struct in this package.
-func BuildAudiences(scopes []Scope) (unique []string) {
+func BuildAudiences(scopes string) (audiences []string) {
 
 	var services []string
-	for _, v := range scopes {
-		s := strings.Split(v.Scope, ":") // splits scope by : -> w:service:*
-		services = append(services, s[1])
+
+	// split scopes by space
+	scps := strings.Split(scopes, " ")
+
+	// iterate over each scope and split by : to get the service name
+	for _, scope := range scps {
+		chunk := strings.Split(scope, ":") // splits scope by : -> w:service:*
+		services = append(services, chunk[1])
 	}
 
-	set := make(map[string]struct{}, 0) // ie, one of each value
+	// build unique (no duplicates) list of services
+	uniqueServices := make(map[string]struct{}, 0) // ie, one of each value
 	for _, service := range services {
-		if _, ok := set[service]; !ok {
-			set[service] = struct{}{}
-			unique = append(unique, service)
+		if _, ok := uniqueServices[service]; !ok {
+			uniqueServices[service] = struct{}{}
+			audiences = append(audiences, service)
 		}
 	}
 
-	return unique
+	return audiences
 }
