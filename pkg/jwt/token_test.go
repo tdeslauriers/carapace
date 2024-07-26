@@ -19,37 +19,37 @@ func TestJwtSignatures(t *testing.T) {
 	if err != nil {
 		t.Log("Private key gen failed: ", err)
 	}
-	signer := NewJwtSigner(privateKey)
+	signer := NewSigner(privateKey)
 
-	header := JwtHeader{ES512, TokenType}
+	header := Header{ES512, TokenType}
 
 	issuedAt := time.Now()
 
-	claims1 := JwtClaims{
-		"3bb72d75-dcfa-400a-a78e-5a4ecd0d3f09",
-		issuer,
-		subject,
-		audience,
-		issuedAt.Unix(),
-		issuedAt.Unix(),
-		issuedAt.Add(5 * time.Minute).Unix(),
-		"r:shaw:* r:otherservice:* w:otherservice:*",
+	claims1 := Claims{
+		Jti:       "3bb72d75-dcfa-400a-a78e-5a4ecd0d3f09",
+		Issuer:    issuer,
+		Subject:   subject,
+		Audience:  audience,
+		IssuedAt:  issuedAt.Unix(),
+		NotBefore: issuedAt.Unix(),
+		Expires:   issuedAt.Add(5 * time.Minute).Unix(),
+		Scopes:    "r:shaw:* r:otherservice:* w:otherservice:*",
 	}
 
-	jwt := JwtToken{Header: header, Claims: claims1}
-	signer.MintJwt(&jwt)
+	jwt := Token{Header: header, Claims: claims1}
+	signer.Mint(&jwt)
 
-	verifier := jwtVerifier{"shaw", &privateKey.PublicKey}
+	verifier := verifier{"shaw", &privateKey.PublicKey}
 	segments := strings.Split(jwt.Token, ".")
 	msg := segments[0] + "." + segments[1]
 	sig, _ := base64.URLEncoding.DecodeString(segments[2])
 
-	if err := verifier.VerifyJwtSignature(msg, sig); err != nil {
+	if err := verifier.VerifySignature(msg, sig); err != nil {
 		t.Logf("failed to verify jwt token signature: %v", err)
 		t.Fail()
 	}
 
-	rebuild, err := verifier.BuildJwtFromToken(jwt.Token)
+	rebuild, err := verifier.BuildFromToken(jwt.Token)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -78,33 +78,31 @@ func TestJwtSignatures(t *testing.T) {
 		t.Fail()
 	}
 
-	claims2 := JwtClaims{
-		"3bb72d75-dcfa-400a-a78e-5a4ecd0d3f05",
-		issuer,
-		"liar-liar",
-		audience,
-		issuedAt.Unix(),
-		issuedAt.Unix(),
-		issuedAt.Add(5 * time.Minute).Unix(),
-		"",
+	claims2 := Claims{
+		Jti:       "3bb72d75-dcfa-400a-a78e-5a4ecd0d3f05",
+		Issuer:    issuer,
+		Subject:   "liar-liar",
+		Audience:  audience,
+		IssuedAt:  issuedAt.Unix(),
+		NotBefore: issuedAt.Unix(),
+		Expires:   issuedAt.Add(5 * time.Minute).Unix(),
+		Scopes:    "",
 	}
 
-	fake := JwtToken{Header: header, Claims: claims2}
-	badMsg, _ := fake.SignatureBaseString()
+	fake := Token{Header: header, Claims: claims2}
+	badMsg, _ := fake.BuildBaseString()
 	legitSig := jwt.Signature
 	forgery := badMsg + "." + base64.URLEncoding.EncodeToString(legitSig)
 
-	if err := verifier.VerifyJwtSignature(badMsg, legitSig); err == nil {
+	if err := verifier.VerifySignature(badMsg, legitSig); err == nil {
 		t.Logf("incorrectly validated jwt w/ a tampered message, but real signature.")
 		t.Fail()
 	}
 
-	_, err = verifier.BuildJwtFromToken(forgery)
+	_, err = verifier.BuildFromToken(forgery)
 	if err == nil {
 		t.Log("Invalid signature means jwt should not be built")
 		t.Fail()
 	}
 
 }
-
-
