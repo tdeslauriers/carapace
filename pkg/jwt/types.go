@@ -4,28 +4,22 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 )
 
 const (
+
 	// S2sUnauthorizedErrMsg is a generalized error message retruned when a service-to-service token is unauthorized.
-	// This could be for many reasons, which will be included in logs.  This exists so that it can be returned to clients
-	// and and logic/decisioning can be based upon it.
 	S2sUnauthorizedErrMsg = "failed to validate s2s token"
 
 	// S2sForbiddenErrMsg is a generalized error message returned when a service-to-service token is unauthorized.
-	// This could be for many reasons, which will be included in logs.  This exists so that it can be returned to clients
-	// and and logic/decisioning can be based upon it.
 	S2sForbiddenErrMsg = "forbidden: incorrect audience, or incorrect or missing scopes"
 
 	// UserUnauthorizedErrMsg is a generalized error message retruned when a service-to-service token is unauthorized.
-	// This could be for many reasons, which will be included in logs.  This exists so that it can be returned to clients
-	// and and logic/decisioning can be based upon it.
 	UserUnauthorizedErrMsg = "failed to validate user token"
 
 	// UserForbdiddenErrMsg is a generalized error message returned when a user token is unauthorized.
-	// This could be for many reasons, which will be included in logs.  This exists so that it can be returned to clients
-	// and and logic/decisioning can be based upon it.
 	UserForbdiddenErrMsg = "forbidden: incorrect audience, or incorrect or missing scopes"
 )
 
@@ -66,12 +60,11 @@ type Claims struct {
 // Token is a struct to hold the jwt header, claims, and signature,
 // it also includes the base64 encoded complete token to be used in http headers
 type Token struct {
-	Header         Header
-	Claims         Claims
-	BaseString     string // first two segments of the token, base64 encoded header.claims
-	Signature      []byte
-	ValidSignature bool   // default false, set to true if signature is verified
-	Token          string // base 64 encoded token header.claims.signature
+	Header     Header
+	Claims     Claims
+	BaseString string // first two segments of the token, base64 encoded header.claims
+	Signature  []byte
+	Token      string // base 64 encoded token header.claims.signature
 }
 
 // BuildBaseString  is a helper funciton that returns a base64 encoded string of the jwt header and claims.
@@ -97,18 +90,19 @@ func (jwt *Token) BuildBaseString() (string, error) {
 	return encodedHeader + "." + encodedClaims, nil
 }
 
-// Build from token is a helper function that takes a jwt token string, decodes it, and returns a jwt Token struct.
+// BuildFromToken is a helper function that takes a jwt token string, decodes it, and returns a jwt Token struct.
 // Important to note that the signature is NOT verified in this function.
-func (v *verifier) BuildFromToken(token string) (*Token, error) {
+func BuildFromToken(token string) (*Token, error) {
 
 	// light weight validation
 	if len(token) < 16 || len(token) > 4096 { // larger than a typical token or a cookie can store
 		return nil, fmt.Errorf("token must be greater than 16 characters and less than 4096 characters")
 	}
 
+	log.Println("TOKEN TOKEN TOKEN: ", token)
 	// split token into segments
 	segments := strings.Split(token, ".")
-	if len(segments) > 3 {
+	if len(segments) < 3 || len(segments) > 3 {
 		return nil, fmt.Errorf("jwt token not properly formatted into 3 segments separated by '.'")
 	}
 
@@ -141,10 +135,9 @@ func (v *verifier) BuildFromToken(token string) (*Token, error) {
 	}
 
 	return &Token{
-		Header:         header,
-		Claims:         claims,
-		BaseString:     segments[0] + "." + segments[1],
-		Signature:      sig,
-		ValidSignature: false,
-		Token:          token}, nil
+		Header:     header,
+		Claims:     claims,
+		BaseString: segments[0] + "." + segments[1],
+		Signature:  sig,
+		Token:      token}, nil
 }
