@@ -28,6 +28,7 @@ type S2sRefresh struct {
 	ServiceName  string          `db:"service_name"`
 	RefreshToken string          `db:"refresh_token"`
 	ClientId     string          `db:"client_uuid"`
+	ClientIndex  string          `db:"client_index"`
 	CreatedAt    data.CustomTime `db:"created_at"`
 	Revoked      bool            `db:"revoked"`
 }
@@ -57,13 +58,14 @@ func (cmd S2sRefreshCmd) ValidateCmd() error {
 
 // UserRefresh is a model for the suer refresh table data.
 type UserRefresh struct {
-	Uuid         string          `db:"uuid"`
-	RefreshIndex string          `db:"refresh_index"`
-	ClientId     string          `db:"client_id"`
-	RefreshToken string          `db:"refresh_token"`
-	Username     string          `db:"username"`
-	CreatedAt    data.CustomTime `db:"created_at"`
-	Revoked      bool            `db:"revoked"`
+	Uuid          string          `db:"uuid"`
+	RefreshIndex  string          `db:"refresh_index"`
+	ClientId      string          `db:"client_id"`
+	RefreshToken  string          `db:"refresh_token"`
+	Username      string          `db:"username"`
+	UsernameIndex string          `db:"username_index"`
+	CreatedAt     data.CustomTime `db:"created_at"`
+	Revoked       bool            `db:"revoked"`
 }
 
 // UserRefreshCmd is a struct for a user refresh token request endpoint to consume.

@@ -18,7 +18,7 @@ func TestCertValidation(t *testing.T) {
 		CommonName:   "RebelAlliance ECDSA-SHA256",
 		Role:         CA,
 	}
-	ca.GenerateEcdsaCert()
+	// ca.GenerateEcdsaCert()
 
 	leaf := CertFields{
 		CertName:     "db-server",
