@@ -203,7 +203,7 @@ func (p *s2sTokenProvider) refreshS2sToken(refreshToken, serviceName string) (*S
 	}
 
 	// create cmd
-	cmd := types.RefreshCmd{
+	cmd := types.S2sRefreshCmd{
 		RefreshToken: decrypted,
 		ServiceName:  serviceName,
 	}
