@@ -61,7 +61,7 @@ type UserRefresh struct {
 	RefreshIndex string          `db:"refresh_index"`
 	ClientId     string          `db:"client_id"`
 	RefreshToken string          `db:"refresh_token"`
-	AccountId    string          `db:"account_uuid"`
+	Username     string          `db:"username"`
 	CreatedAt    data.CustomTime `db:"created_at"`
 	Revoked      bool            `db:"revoked"`
 }
