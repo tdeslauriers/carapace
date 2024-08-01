@@ -39,7 +39,7 @@ type Header struct {
 // Scopes is a space delimited string of scopes
 // Fields for ID Token (OICD Conncet Standard) are included, but omitted if empty
 type Claims struct {
-	Jti       string   `json:"jti"` // jwt unique identifier / uuid
+	Jti       string   `json:"jti,omitempty"` // jwt unique identifier / uuid
 	Issuer    string   `json:"iss"` // url of issuing service
 	Subject   string   `json:"sub"` // email or user/client uuid
 	Audience  []string `json:"aud"` // intended recipient(s) -> restricted service

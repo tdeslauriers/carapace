@@ -11,10 +11,9 @@ type AuthService interface {
 	// 'user' parameter can be a username or a client id.
 	GetScopes(user, service string) ([]Scope, error)
 
-	// MintToken builds and signs a jwt token for a given subject, and scopes.
+	// MintToken builds and signs a jwt token for a given claims struct.
 	// It does not validate or perform checks on these values, it assumes they are valid.
-	// 'scopes' parameter is a space-delimited string of scopes, not a slice of Scope objects.
-	MintToken(subject, scopes string) (*jwt.Token, error)
+	MintToken(claims jwt.Claims) (*jwt.Token, error)
 }
 
 // UserAuthService is an interface for user authentication services
