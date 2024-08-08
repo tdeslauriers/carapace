@@ -138,12 +138,9 @@ func (v *verifier) hasValidScopes(allowedScopes []string, jwt *Token) bool {
 		jwtScopes[scope] = true
 	}
 
-	fmt.Println(allowedScopes)
-
 	// check if allowed scopes are in jwt scopes
 	for _, allowed := range allowedScopes {
 		if jwtScopes[allowed] {
-			fmt.Println("scopes verified")
 			return true
 		}
 	}

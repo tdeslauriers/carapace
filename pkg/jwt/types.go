@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -99,7 +98,6 @@ func BuildFromToken(token string) (*Token, error) {
 		return nil, fmt.Errorf("token must be greater than 16 characters and less than 4096 characters")
 	}
 
-	log.Println("TOKEN TOKEN TOKEN: ", token)
 	// split token into segments
 	segments := strings.Split(token, ".")
 	if len(segments) < 3 || len(segments) > 3 {
