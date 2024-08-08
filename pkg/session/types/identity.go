@@ -35,7 +35,7 @@ type UserAccount struct {
 	Password       string `db:"password" json:"password,omitempty"`
 	Firstname      string `db:"firstname" json:"firstname"`
 	Lastname       string `db:"lastname" json:"lastname"`
-	Birthdate      string `db:"birthdate" json:"bithdate,omitempty"` // string because field encrypted in db
+	Birthdate      string `db:"birth_date" json:"birth_date,omitempty"` // string because field encrypted in db
 	CreatedAt      string `db:"created_at" json:"created_at"`
 	Enabled        bool   `db:"enabled"  json:"enabled,omitempty"`
 	AccountExpired bool   `db:"acccount_expired" json:"account_expired,omitempty"`
