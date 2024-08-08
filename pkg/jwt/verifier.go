@@ -132,19 +132,18 @@ func (v *verifier) hasValidScopes(allowedScopes []string, jwt *Token) bool {
 	// parse scopes string to slice
 	scopes := strings.Split(jwt.Claims.Scopes, " ")
 
-	fmt.Println(scopes)
-
 	// set jwt scopes to map
 	jwtScopes := make(map[string]bool)
 	for _, scope := range scopes {
 		jwtScopes[scope] = true
 	}
 
-	fmt.Println(jwtScopes)
+	fmt.Println(allowedScopes)
 
 	// check if allowed scopes are in jwt scopes
 	for _, allowed := range allowedScopes {
 		if jwtScopes[allowed] {
+			fmt.Println("scopes verified")
 			return true
 		}
 	}
