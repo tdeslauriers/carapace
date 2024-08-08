@@ -40,9 +40,9 @@ type Header struct {
 // Fields for ID Token (OICD Conncet Standard) are included, but omitted if empty
 type Claims struct {
 	Jti       string   `json:"jti,omitempty"` // jwt unique identifier / uuid
-	Issuer    string   `json:"iss"` // url of issuing service
-	Subject   string   `json:"sub"` // email or user/client uuid
-	Audience  []string `json:"aud"` // intended recipient(s) -> restricted service
+	Issuer    string   `json:"iss"`           // url of issuing service
+	Subject   string   `json:"sub"`           // email or user/client uuid
+	Audience  []string `json:"aud"`           // intended recipient(s) -> restricted service
 	IssuedAt  int64    `json:"iat"`
 	NotBefore int64    `json:"nbf,omitempty"`
 	Expires   int64    `json:"exp"`
@@ -91,7 +91,7 @@ func (jwt *Token) BuildBaseString() (string, error) {
 }
 
 // BuildFromToken is a helper function that takes a jwt token string, decodes it, and returns a jwt Token struct.
-// Important to note that the signature is NOT verified in this function.
+// NOTE: that the signature is NOT verified in this function.
 func BuildFromToken(token string) (*Token, error) {
 
 	// light weight validation

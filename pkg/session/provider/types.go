@@ -23,8 +23,8 @@ type S2sAuthorization struct {
 // including the access token, id token, refresh tokens, and expiration times
 type UserAuthorization struct {
 	Jti                string          `json:"jti"` // no db tag because not stored in db: blind index
-	AccessToken        string          `json:"access_token" db:"access_token"`
 	TokenType          string          `json:"token_type" db:"token_type"`
+	AccessToken        string          `json:"access_token" db:"access_token"`
 	AccessTokenExpires data.CustomTime `json:"access_expires" db:"access_expires"`
 	Refresh            string          `json:"refresh_token" db:"refresh_token"`
 	RefreshExpires     data.CustomTime `json:"refresh_expires" db:"refresh_expires"`

@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 
-	"github.com/tdeslauriers/carapace/pkg/data"
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
@@ -103,14 +102,4 @@ func (cmd *AccessTokenCmd) ValidateCmd() error {
 	}
 
 	return nil
-}
-
-// AccessTokenResponse is a struct to hold the response from the authorization server
-// when an access token is requested successfully as part of the oauth2 authorization code flow.
-type AccessTokenResponse struct {
-	Jti            string          `json:"jti"`
-	AccessToken    string          `json:"access_token" db:"access_token"`
-	AccessExpires  data.CustomTime `json:"access_expires" db:"access_expires"`
-	RefreshToken   string          `json:"refresh_token" db:"refresh_token"`
-	RefreshExpires data.CustomTime `json:"refresh_expires" db:"refresh_expires"`
 }

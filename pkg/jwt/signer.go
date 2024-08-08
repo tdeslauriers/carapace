@@ -67,12 +67,12 @@ func (signer *signer) Mint(jwt *Token) error {
 
 	msg, err := jwt.BuildBaseString()
 	if err != nil {
-		return fmt.Errorf("unable to create jwt signature base string(message): %v", err)
+		return fmt.Errorf("failed to create jwt signature base string(message): %v", err)
 	}
 	jwt.BaseString = msg
 
 	if err := signer.createSignature(msg, jwt); err != nil {
-		return fmt.Errorf("unable to create jwt signature: %v", err)
+		return fmt.Errorf("failed to create jwt signature: %v", err)
 	}
 	sig := base64.URLEncoding.EncodeToString(jwt.Signature)
 

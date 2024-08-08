@@ -49,7 +49,7 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 	// pull tokens with un-expired refresh
 	tokens, err := p.retrieveS2sTokens(serviceName)
 	if err != nil {
-		return "", fmt.Errorf("unable to retrieve service tokens for %s: %v", serviceName, err)
+		return "", fmt.Errorf("failed to retrieve service tokens for %s: %v", serviceName, err)
 	}
 
 	// if active refresh tokens exist
@@ -184,7 +184,7 @@ func (p *s2sTokenProvider) retrieveS2sTokens(service string) ([]S2sAuthorization
 				refresh_token, 
 				refresh_expires 
 			FROM servicetoken
-			WHERE refresh_expires > NOW()
+			WHERE refresh_expires > UTC_TIMESTAMP()
 				AND service_name = ?`
 	if err := p.db.SelectRecords(qry, &tokens, service); err != nil {
 		return tokens, fmt.Errorf("failed to select service token records for %s: %v", service, err)
