@@ -337,7 +337,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 			} else {
 				return &ErrorHttp{
 					StatusCode: response.StatusCode,
-					Message:    fmt.Sprintf("attempt %d - received '%d: %s' from POST request to %s service's endpoint %s: retries exhausted", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint),
+					Message:    fmt.Sprintf("attempt %d - received '%d - %s' from POST request to %s service's endpoint %s: retries exhausted", attempt+1, e.StatusCode, e.Message, caller.ServiceName, endpoint),
 				}
 			}
 
