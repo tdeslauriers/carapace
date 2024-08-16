@@ -13,7 +13,7 @@ type ErrorHttp struct {
 }
 
 func (e *ErrorHttp) Error() string {
-	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Message)
+	return fmt.Sprintf("HTTP %d - %s", e.StatusCode, e.Message)
 }
 
 func (e *ErrorHttp) SendJsonErr(w http.ResponseWriter) {

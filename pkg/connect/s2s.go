@@ -323,7 +323,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 				// jump out of retry loop and return error
 				return &ErrorHttp{
 					StatusCode: http.StatusInternalServerError,
-					Message:    fmt.Sprintf("unable to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err),
+					Message:    fmt.Sprintf("failed to unmarshal response body json to %v from %s service's endpoint '%s': %v", reflect.TypeOf(&e), caller.ServiceName, endpoint, err),
 				}
 			}
 
