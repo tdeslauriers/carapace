@@ -355,7 +355,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 			// jump out of retry loop and return error
 			return &ErrorHttp{
 				StatusCode: e.StatusCode,
-				Message:    fmt.Sprintf("received %d: %s from POST call to %s services endpoint %s", e.StatusCode, e.Message, caller.ServiceName, endpoint),
+				Message:    fmt.Sprintf("received %d - %s from POST call to %s services endpoint %s", e.StatusCode, e.Message, caller.ServiceName, endpoint),
 			}
 		}
 	}
