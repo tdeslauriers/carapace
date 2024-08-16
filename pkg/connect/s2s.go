@@ -387,6 +387,7 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 		e.SendJsonErr(w)
 
 	case http.StatusUnauthorized:
+
 		// s2s token unauthorized
 		if errMsg.Message == jwt.S2sUnauthorizedErrMsg {
 			e := ErrorHttp{
@@ -406,6 +407,14 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 			e.SendJsonErr(w)
 			break
 		}
+
+		// all other unauthorized errors
+		e := ErrorHttp{
+			StatusCode: http.StatusUnauthorized,
+			Message:    errMsg.Message,
+		}
+		e.SendJsonErr(w)
+
 	case http.StatusForbidden:
 		// call returned forbidden for s2s token
 		if errMsg.Message == jwt.S2sForbiddenErrMsg {
