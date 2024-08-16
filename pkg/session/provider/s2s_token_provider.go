@@ -85,7 +85,7 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 		p.logger.Info(fmt.Sprintf("refreshing %s s2s token", serviceName))
 		authz, err := p.refreshS2sToken(tokens[0].RefreshToken, serviceName) // decrypts
 		if err != nil {
-			p.logger.Error(fmt.Sprintf("failed to refresh %s s2s token, jti: %s", tokens[0].Jti, tokens[0].ServiceName), "err", err.Error())
+			p.logger.Error(fmt.Sprintf("failed to refresh %s s2s token, jti: %s", tokens[0].ServiceName, tokens[0].Jti), "err", err.Error())
 		}
 
 		// only return and persist if successful
