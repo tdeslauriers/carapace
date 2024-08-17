@@ -414,7 +414,7 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 		// all other unauthorized errors
 		e := ErrorHttp{
 			StatusCode: http.StatusUnauthorized,
-			Message:    "errMsg.Message",
+			Message:    errMsg.Message,
 		}
 		e.SendJsonErr(w)
 
