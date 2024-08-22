@@ -308,10 +308,13 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 		// 2xx -> success
 		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 
-			if err := json.Unmarshal(body, data); err != nil {
-				return &ErrorHttp{
-					StatusCode: http.StatusInternalServerError,
-					Message:    fmt.Sprintf("failed to unmarshal response body json: %v", err),
+			// 201 and 204 -> may not have a response body, unmashal will error if `data` is nil
+			if len(body) > 0 {
+				if err := json.Unmarshal(body, data); err != nil {
+					return &ErrorHttp{
+						StatusCode: http.StatusInternalServerError,
+						Message:    fmt.Sprintf("failed to unmarshal response body json: %v", err),
+					}
 				}
 			}
 			return nil // success -> jump out of retry and return

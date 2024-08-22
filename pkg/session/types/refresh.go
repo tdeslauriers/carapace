@@ -90,3 +90,15 @@ func (cmd UserRefreshCmd) ValidateCmd() error {
 
 	return nil
 }
+
+// DestroyRefreshCmd is a struct for a refresh token destroy request endpoint to consume.
+type DestroyRefreshCmd struct {
+	DestroyRefreshToken string `json:"destroy_refresh"`
+}
+
+func (cmd DestroyRefreshCmd) ValidateCmd() error {
+	if validate.TooShort(cmd.DestroyRefreshToken, 16) || validate.TooLong(cmd.DestroyRefreshToken, 64) {
+		return fmt.Errorf("invalid refresh token: must be between %d and %d characters", 16, 64)
+	}
+	return nil
+}
