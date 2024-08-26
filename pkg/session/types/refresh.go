@@ -17,8 +17,15 @@ type Refresh interface {
 type RefreshService[T Refresh] interface {
 	// GetRefreshToken retrieves a refresh token by token string
 	GetRefreshToken(token string) (*T, error)
+
 	// PersistRefresh persists a refresh token to the database or cache
 	PersistRefresh(refresh T) error
+
+	// DestroyRefresh destroys a refresh token by deleting it from the database or cache
+	DestroyRefresh(token string) error
+
+	// RevokeRefresh revokes a refresh token by setting the revoked flag to true in the database or cache
+	RevokeRefresh(token string) error
 }
 
 // S2sRefresh is a model for the service-to-service refresh table data.
