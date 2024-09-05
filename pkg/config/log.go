@@ -1,16 +1,17 @@
 package config
 
 const (
-	PackageKey = "pkg"
+	ComponentKey = "pkg"
 
-	PackageConnect     = "connect"
-	PackageConfig      = "config"
-	PackageData        = "data"
-	PackageDiagnostics = "diagnostics"
-	PackageJwt         = "jwt"
-	PackageSession     = "session"
-	PackageSign        = "sign"
-	PackageValidate    = "validate"
+	ComponentConnect     = "connect"
+	ComponentConfig      = "config"
+	ComponentData        = "data"
+	ComponentDiagnostics = "diagnostics"
+	ComponentJwt         = "jwt"
+	ComponentScedule     = "schedule"
+	ComponentSession     = "session"
+	ComponentSign        = "sign"
+	ComponentValidate    = "validate"
 
 	ServiceKey = "service"
 

@@ -25,7 +25,7 @@ func NewS2sTokenProvider(caller connect.S2sCaller, creds S2sCredentials, db data
 		db:      db,
 		cryptor: ciph,
 
-		logger: slog.Default().With(slog.String(config.PackageKey, config.PackageSession), slog.String(config.ServiceKey, config.ServiceCarapace)),
+		logger: slog.Default().With(slog.String(config.ComponentKey, config.ComponentSession), slog.String(config.ServiceKey, config.ServiceCarapace)),
 	}
 }
 

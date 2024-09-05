@@ -141,7 +141,7 @@ func IsValidPassword(password string) error {
 
 func MatchesRegex(s, pattern string) bool {
 
-	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
 
 	rgx, err := regexp.Compile(pattern)
 	if err != nil {
@@ -253,7 +253,7 @@ func contains(password, sequence string) bool {
 
 func TooShort(field interface{}, min int) bool {
 
-	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
 
 	switch f := field.(type) {
 	case string:
@@ -268,7 +268,7 @@ func TooShort(field interface{}, min int) bool {
 
 func TooLong(field interface{}, max int) bool {
 
-	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
 
 	switch f := field.(type) {
 	case string:
@@ -283,7 +283,7 @@ func TooLong(field interface{}, max int) bool {
 
 func IsValidUuid(uuid string) bool {
 
-	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
 
 	if TooShort(uuid, 36) || TooLong(uuid, 36) {
 		return false
@@ -299,7 +299,7 @@ func IsValidUuid(uuid string) bool {
 
 func IsValidServiceName(service string) bool {
 
-	logger := slog.Default().With(slog.String(config.PackageJwt, config.PackageValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
 
 	if TooShort(service, ServiceNameMin) || TooLong(service, ServiceNameMax) {
 		return false
