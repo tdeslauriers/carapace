@@ -57,7 +57,8 @@ func (c *cleanup) ExpiredRefresh(hours int) {
 
 		// calc next 2am
 		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if now.Before(next) {
+		if next.Before(now) {
+			// if 2am has already passed today, set it for tomorrow
 			next = next.Add(24 * time.Hour)
 		}
 
@@ -93,7 +94,7 @@ func (c *cleanup) ExpiredAccess() {
 
 		// calc next 2am
 		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if now.Before(next) {
+		if next.Before(now) {
 			next = next.Add(24 * time.Hour)
 		}
 
