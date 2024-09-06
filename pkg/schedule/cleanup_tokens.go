@@ -166,7 +166,7 @@ func (c *cleanup) ExpiredS2s() {
 
 		// calc next 2am
 		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if now.Before(next) {
+		if next.Before(now) {
 			next = next.Add(24 * time.Hour)
 		}
 
@@ -199,7 +199,7 @@ func (c *cleanup) ExpiredSession(hours int) {
 
 		// calc next 2am
 		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if now.Before(next) {
+		if next.Before(now) {
 			next = next.Add(24 * time.Hour)
 		}
 
