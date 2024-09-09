@@ -30,6 +30,7 @@ type UserAccountClientXref struct {
 // UserAccount is a model struct for user account table data.
 type UserAccount struct {
 	Uuid           string `db:"uuid" json:"uuid,omitempty"`
+	UserKey        string `db:"user_key" json:"user_key,omitempty"`
 	Username       string `db:"username" json:"username"`
 	UserIndex      string `db:"user_index" json:"user_index,omitempty"`
 	Password       string `db:"password" json:"password,omitempty"`
