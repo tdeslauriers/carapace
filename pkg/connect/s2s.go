@@ -312,6 +312,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 
 			// 201 and 204 -> may not have a response body, unmashal will error if `data` is nil
 			if len(body) > 0 {
+				fmt.Printf("RAW: %s\n", string(body))
 				if err := json.Unmarshal(body, data); err != nil {
 					return &ErrorHttp{
 						StatusCode: http.StatusInternalServerError,
