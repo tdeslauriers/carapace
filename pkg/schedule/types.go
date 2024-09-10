@@ -13,3 +13,10 @@ type SessionOauthXref struct {
 	UxsessionId string `db:"uxsession_uuid"`
 	OauthflowId string `db:"oauthflwo_uuid"`
 }
+
+type AuthcodeAccountXref struct {
+	Id          int    `db:"id"`
+	AuthcodeId  string `db:"authcode_uuid"`
+	AccountUuid string `db:"account_uuid"`
+	CreatedAt   string `db:"created_at"`
+}

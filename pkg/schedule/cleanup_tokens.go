@@ -24,6 +24,9 @@ type Cleanup interface {
 
 	// ExpiredSession cleans up expired user sessions and the associated oauth2 values
 	ExpiredSession(hours int)
+
+	// ExpiredAuthcode cleans up expired authcodes out of the database and associated xrefs
+	ExpiredAuthcode()
 }
 
 func NewCleanup(db data.SqlRepository) Cleanup {
@@ -281,4 +284,49 @@ func (c *cleanup) ExpiredSession(hours int) {
 		}(hours)
 	}
 
+}
+
+// ExpiredAuthcode cleans up expired authcodes out of the database and associated xrefs
+func (c *cleanup) ExpiredAuthcode() {
+
+	// create local random generator
+	src := rand.NewSource(time.Now().UnixNano())
+	rng := rand.New(src)
+
+	for {
+		// using local time so this will be 2am no matter what timezone the service is in
+		now := time.Now()
+
+		// calc next 2am
+		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
+		if next.Before(now) {
+			// if 2am has already passed today, set it for tomorrow
+			next = next.Add(24 * time.Hour)
+		}
+
+		// add random jitter +/- 30 minutes
+		randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
+		next = next.Add(randInterval)
+
+		// sleep until next 2am
+		time.Sleep(next.Sub(now))
+
+		// EXPIRIES ARE IN UTC, SO USE UTC TIME
+		qry := `DELETE 
+					FROM authcode_account aa 
+						LEFT OUTER JOIN authcode a ON aa.authcode_uuid = a.uuid
+					WHERE a.created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
+		if err := c.sb.DeleteRecord(qry); err != nil {
+			c.logger.Error("failed to delete expired authcode account xref records", "error", err.Error())
+		}
+
+		// EXPIRIES ARE IN UTC, SO USE UTC TIME
+		qry = `DELETE FROM authcode WHERE created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
+		if err := c.sb.DeleteRecord(qry); err != nil {
+			c.logger.Error("failed to delete expired authcodes", "error", err.Error())
+		}
+
+		c.logger.Info("expired authcodes xrefs to account cleaned up")
+
+	}
 }
