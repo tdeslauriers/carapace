@@ -63,7 +63,7 @@ func (cmd S2sRefreshCmd) ValidateCmd() error {
 	return nil
 }
 
-// UserRefresh is a model for the suer refresh table data.
+// UserRefresh is a model for the user refresh table data.
 type UserRefresh struct {
 	Uuid          string          `db:"uuid"`
 	RefreshIndex  string          `db:"refresh_index"`
@@ -71,6 +71,7 @@ type UserRefresh struct {
 	RefreshToken  string          `db:"refresh_token"`
 	Username      string          `db:"username"`
 	UsernameIndex string          `db:"username_index"`
+	Scopes        string          `db:"scopes"`
 	CreatedAt     data.CustomTime `db:"created_at"`
 	Revoked       bool            `db:"revoked"`
 }
