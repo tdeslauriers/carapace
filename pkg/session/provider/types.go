@@ -28,6 +28,6 @@ type UserAuthorization struct {
 	AccessTokenExpires data.CustomTime `json:"access_expires" db:"access_expires"`
 	Refresh            string          `json:"refresh_token" db:"refresh_token"`
 	RefreshExpires     data.CustomTime `json:"refresh_expires" db:"refresh_expires"`
-	IdToken            string          `json:"id_token" db:"id_token"`
-	IdTokenExpires     data.CustomTime `json:"id_expires" db:"id_expires"`
+	IdToken            string          `json:"id_token,omitempty" db:"id_token"`
+	IdTokenExpires     data.CustomTime `json:"id_expires,omitempty" db:"id_expires"`
 }
