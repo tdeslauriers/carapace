@@ -10,6 +10,7 @@ type User struct {
 	Firstname      string          `json:"firstname" db:"firstname"`
 	Lastname       string          `json:"lastname" db:"lastname"`
 	BirthDate      string          `json:"birth_date,omitempty" db:"birth_date"`
+	Slug           string          `json:"slug,omitempty" db:"slug"`
 	CreatedAt      data.CustomTime `json:"created_at" db:"created_at"`
 	Enabled        bool            `json:"enabled" db:"enabled"`
 	AccountExpired bool            `json:"account_expired" db:"account_expired"`
