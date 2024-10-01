@@ -73,39 +73,55 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 					qry := "DELETE FROM servicetoken WHERE uuid = ?"
 					if err := p.db.DeleteRecord(qry, id); err != nil {
 						p.logger.Error(fmt.Sprintf("failed to delete expired service token for %s, jti: %s", serviceName, id), "err", err.Error())
-					} else {
-						p.logger.Info(fmt.Sprintf("deleted expired %s s2s token, jti %s", serviceName, id))
+						return
 					}
+					p.logger.Info(fmt.Sprintf("deleted expired %s s2s token, jti %s", serviceName, id))
 				}(token.Jti)
 			}
 		}
 
-		// if no active s2s tokens exist
-		// get new service token via refresh
-		p.logger.Info(fmt.Sprintf("refreshing %s s2s token", serviceName))
-		authz, err := p.refreshS2sToken(tokens[0].RefreshToken, serviceName) // decrypts
-		if err != nil {
-			p.logger.Error(fmt.Sprintf("failed to refresh %s s2s token, jti: %s", tokens[0].ServiceName, tokens[0].Jti), "err", err.Error())
-		}
+		// if no active s2s tokens exist: get new service token via refresh
+		// loop until success, or all refresh tokens have failed: THIS SHOULD NEVER HAPPEN
+		// return first successful refresh
+		for _, token := range tokens {
+			p.logger.Info(fmt.Sprintf("refreshing %s s2s token, jti %s", serviceName, token.Jti))
 
-		// only return and persist if successful
-		if authz != nil {
-			// persist new service token, etc.
-			go func(a *S2sAuthorization) {
+			// call s2s auth service to refresh token
+			authz, err := p.refreshS2sToken(tokens[0].RefreshToken, serviceName) // decrypts
+			if err != nil {
+				p.logger.Error(fmt.Sprintf("failed to refresh %s s2s token, jti: %s", tokens[0].ServiceName, tokens[0].Jti), "err", err.Error())
+				continue
+			}
 
-				// encrypts before db insertion
-				if err := p.persistS2sToken(a); err != nil {
-					p.logger.Warn(fmt.Sprintf("failed to persist refreshed %s s2s token, jit: %s", serviceName, a.Jti), "err", err.Error())
-				}
-			}(authz)
+			// only return and persist if successful
+			if authz != nil {
+				// persist new service token, etc.
+				go func(a *S2sAuthorization) {
+					if err := p.persistS2sToken(a); err != nil {
+						p.logger.Warn(fmt.Sprintf("failed to persist refreshed %s s2s token, jit: %s", serviceName, a.Jti), "err", err.Error())
+						return
+					}
+				}(authz)
 
-			return authz.ServiceToken, nil
+				// opportunistically delete claimed refresh token/expired service token record
+				// since claimed refresh token will have been deleted by s2s auth service after use.
+				go func(id string) {
+					qry := "DELETE FROM servicetoken WHERE uuid = ?"
+					if err := p.db.DeleteRecord(qry, id); err != nil {
+						p.logger.Error(fmt.Sprintf("failed to delete claimed refresh token for %s, jti: %s", serviceName, id), "err", err.Error())
+						return
+					}
+					p.logger.Info(fmt.Sprintf("deleted claimed refresh token for %s, jti %s", serviceName, id))
+				}(token.Jti)
+	
+				return authz.ServiceToken, nil
+			}
 		}
 	}
 
-	p.logger.Info(fmt.Sprintf("no active %s s2s token found, authenticating", serviceName))
-
 	// no active s2s tokens, no active refresh tokens, get new service token
+	p.logger.Info(fmt.Sprintf("no active %s s2s access or refresh tokens found, authenticating", serviceName))
+
 	// login to s2s authn endpoint
 	authz, err := p.s2sLogin(serviceName)
 	if err != nil {
@@ -116,6 +132,7 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 	go func(a *S2sAuthorization) {
 		if err := p.persistS2sToken(a); err != nil {
 			p.logger.Warn(fmt.Sprintf("failed to persist %s s2s token", serviceName), "err", err.Error())
+			return
 		}
 	}(authz)
 

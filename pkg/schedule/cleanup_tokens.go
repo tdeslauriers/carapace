@@ -256,7 +256,7 @@ func (c *cleanup) ExpiredSession(hours int) {
 
 		// wait group not needed here because the oauthflow records are no longer tied to any other records
 		go func(hours int) {
-			qry = `DELETE 
+			qry = `DELETE o
 					FROM oauthflow o
 						LEFT OUTER JOIN uxsession_oauthflow uo ON o.uuid = uo.oauthflow_uuid
 					WHERE o.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()
@@ -272,7 +272,7 @@ func (c *cleanup) ExpiredSession(hours int) {
 		// this will include both authenicated and unauthenticated sessions (so will be much larger than len(xrefs))
 		// need to make sure xrefs to accesstokens table have been cleared also
 		go func(hours int) {
-			qry = `DELETE 
+			qry = `DELETE u
 					FROM uxsession u
 						LEFT OUTER JOIN uxsession_accesstoken ua ON u.uuid = ua.uxsession_uuid
 					WHERE created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()
@@ -312,21 +312,22 @@ func (c *cleanup) ExpiredAuthcode() {
 		time.Sleep(next.Sub(now))
 
 		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		qry := `DELETE 
+		qry := `DELETE aa
 					FROM authcode_account aa 
 						LEFT OUTER JOIN authcode a ON aa.authcode_uuid = a.uuid
 					WHERE a.created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
 		if err := c.sb.DeleteRecord(qry); err != nil {
 			c.logger.Error("failed to delete expired authcode account xref records", "error", err.Error())
+			return
 		}
 
 		// EXPIRIES ARE IN UTC, SO USE UTC TIME
 		qry = `DELETE FROM authcode WHERE created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
 		if err := c.sb.DeleteRecord(qry); err != nil {
 			c.logger.Error("failed to delete expired authcodes", "error", err.Error())
+			return
 		}
 
 		c.logger.Info("expired authcodes xrefs to account cleaned up")
-
 	}
 }
