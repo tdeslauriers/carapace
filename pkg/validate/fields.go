@@ -97,8 +97,8 @@ func IsValidBirthday(dob string) error {
 		age--
 	}
 
-	if age >= 110 {
-		return fmt.Errorf("birth year greater than 110 years ago")
+	if age >= 120 {
+		return fmt.Errorf("date of birth cannot be greater than 120 years ago")
 	}
 
 	return nil
