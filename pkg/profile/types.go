@@ -34,8 +34,11 @@ func (u *User) ValidateCmd() error {
 	// Username is immutable at this time.
 	// TODO: make funcitonality to change username
 	// only lightweight validation to make sure it isnt too long
-	if len(u.Username) < validate.EmailMin || len(u.Username) > validate.EmailMax {
-		return fmt.Errorf("invalid username: must be greater than %d and less than %d characters long", validate.EmailMin, validate.EmailMax)
+	// Note: may not be present in all operations, check for nil or empty string if needed
+	if u.Username != "" {
+		if len(u.Username) < validate.EmailMin || len(u.Username) > validate.EmailMax {
+			return fmt.Errorf("invalid username: must be greater than %d and less than %d characters long", validate.EmailMin, validate.EmailMax)
+		}
 	}
 
 	// validate Firstname
