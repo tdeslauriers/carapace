@@ -77,6 +77,8 @@ func (u *User) ValidateCmd() error {
 
 // ResetCmd is the model struct for the password reset command where the user knows their current password
 type ResetCmd struct {
+	Csrf string `json:"csrf,omitempty"` // wont be sent thru to the identity service
+
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`
 	ConfirmPassword string `json:"confirm_password"`
