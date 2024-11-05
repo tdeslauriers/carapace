@@ -74,3 +74,32 @@ func (u *User) ValidateCmd() error {
 
 	return nil
 }
+
+// ResetCmd is the model struct for the password reset command where the user knows their current password
+type ResetCmd struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+	ConfirmPassword string `json:"confirm_password"`
+}
+
+// ValidateCmd performs input validation check on reset cmd fields.
+// For the new password, it uses the same validation as the register command.
+func (r *ResetCmd) ValidateCmd() error {
+
+	// lightweight validation to make sure it isnt to short or too long
+	if len(r.CurrentPassword) < validate.PasswordMin || len(r.CurrentPassword) > validate.PasswordMax {
+		return fmt.Errorf("invalid current password: must be greater than %d and less than %d characters long", validate.PasswordMin, validate.PasswordMax)
+	}
+
+	// true input validation since this will be the incoming password in the identity service
+	if err := validate.IsValidPassword(r.NewPassword); err != nil {
+		return fmt.Errorf("invalid new password: %v", err)
+	}
+
+	// check to make sure the new password and confirm password match
+	if r.NewPassword != r.ConfirmPassword {
+		return fmt.Errorf("new password and confirm password do not match")
+	}
+
+	return nil
+}

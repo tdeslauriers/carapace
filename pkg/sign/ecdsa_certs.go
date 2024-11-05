@@ -131,7 +131,7 @@ func (fields *CertFields) buildTemplate() x509.Certificate {
 	}
 
 	// validity period:
-	notBefore := time.Now()
+	notBefore := time.Now().UTC()
 
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
