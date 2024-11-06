@@ -287,11 +287,14 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 		}
 
 		// validate Content-Type is application/json
-		contentType := response.Header.Get("Content-Type")
-		if !strings.HasPrefix(contentType, "application/json") {
-			return &ErrorHttp{
-				StatusCode: http.StatusUnsupportedMediaType,
-				Message:    fmt.Sprintf("POST request returned unexpected content type: got %v want application/json", contentType),
+		// 201 and 204 may not have a response body -> check status code 201 and 204
+		if response.StatusCode != http.StatusCreated && response.StatusCode != http.StatusNoContent {
+			contentType := response.Header.Get("Content-Type")
+			if !strings.HasPrefix(contentType, "application/json") {
+				return &ErrorHttp{
+					StatusCode: http.StatusUnsupportedMediaType,
+					Message:    fmt.Sprintf("POST request returned unexpected content type: got %v want application/json", contentType),
+				}
 			}
 		}
 
