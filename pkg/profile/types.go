@@ -2,6 +2,7 @@ package profile
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
 	"github.com/tdeslauriers/carapace/pkg/validate"
@@ -99,7 +100,7 @@ func (r *ResetCmd) ValidateCmd() error {
 	}
 
 	// check to make sure the new password and confirm password match
-	if r.NewPassword != r.ConfirmPassword {
+	if strings.TrimSpace(r.NewPassword) != strings.TrimSpace(r.ConfirmPassword) {
 		return fmt.Errorf("new password and confirm password do not match")
 	}
 

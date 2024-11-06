@@ -106,6 +106,10 @@ func IsValidBirthday(dob string) error {
 
 func IsValidPassword(password string) error {
 
+	if len(password) > 0 {
+		password = strings.TrimSpace(password)
+	}
+
 	if TooShort(password, PasswordMin) || TooLong(password, PasswordMax) {
 		return fmt.Errorf("password should be between %d and %d characters in length", PasswordMin, PasswordMax)
 	}
