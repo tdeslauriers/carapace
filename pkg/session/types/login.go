@@ -68,8 +68,8 @@ func (cmd *UserLoginCmd) ValidateCmd() error {
 		return fmt.Errorf("invalid response type: must be between %d and %d characters", 4, 8)
 	}
 
-	if validate.TooShort(cmd.State, 16) || validate.TooLong(cmd.State, 64) {
-		return fmt.Errorf("invalid state: must be between %d and %d characters", 16, 64)
+	if validate.TooShort(cmd.State, 16) || validate.TooLong(cmd.State, 256) {
+		return fmt.Errorf("invalid state: must be between %d and %d characters", 16, 256)
 	}
 
 	if validate.TooShort(cmd.Nonce, 16) || validate.TooLong(cmd.Nonce, 64) {
