@@ -53,7 +53,6 @@ func (fields *CertFields) GenerateEcdsaCert() {
 		signingPriv = certPriv
 	} else {
 		// load ca cert
-
 		caCertPem, err := os.ReadFile(fmt.Sprintf("%s-cert.pem", fields.CaCertName))
 		if err != nil {
 			log.Panicf("unable to read %s-cert.pem file", fields.CaCertName)
