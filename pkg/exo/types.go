@@ -7,7 +7,8 @@ import (
 // Config is the configuration for the exo cli command.
 // It contains the values parsed from the command line flags.
 type Config struct {
-	Certs Certs
+	ServiceName string
+	Certs       Certs
 }
 
 // Certs is a struct for the exo cli command to consume.

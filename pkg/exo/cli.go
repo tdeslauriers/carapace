@@ -47,16 +47,23 @@ func Parse() (*Config, error) {
 	certs := flag.Bool("certs", false, certMsg)
 	flag.BoolVar(certs, "c", false, certMsg)
 
+	// service name
+	svcNameMsg := "applies service name to applicable fields in exo commands"
+	svcName := flag.String("service", "", svcNameMsg)
+	flag.StringVar(svcName, "s", "", svcNameMsg)
+
 	// file
 	fileMsg := "imports a file, often containing necessary data for exo fuctionality"
-	certFile := flag.String("file", "", fileMsg)
-	flag.StringVar(certFile, "f", "", fileMsg)
+	file := flag.String("file", "", fileMsg)
+	flag.StringVar(file, "f", "", fileMsg)
 
 	// help message
 	flag.Usage = func() {
+
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		fmt.Fprintf(os.Stderr, "  -c, --certs  %s\n", certMsg)
+		fmt.Fprintf(os.Stderr, "  -s, --service %s\n", svcNameMsg)
 		fmt.Fprintf(os.Stderr, "  -f, --file   %s\n", fileMsg)
 		fmt.Fprintf(os.Stderr, "  -h           Display this help message\n")
 	}
@@ -65,14 +72,23 @@ func Parse() (*Config, error) {
 	flag.Parse()
 
 	return &Config{
+		ServiceName: *svcName,
 		Certs: Certs{
 			Invoked:  *certs,
-			Filename: *certFile,
+			Filename: *file,
 		},
 	}, nil
 }
 
 // Execute is the method that will execute the commands defined in the config struct
 func (exo *exoskeleton) Execute() error {
+
+	// certifcate generation execution
+	if exo.config.Certs.Invoked {
+		if err := certExecution(exo.config.ServiceName, exo.config.Certs.Filename); err != nil {
+			return fmt.Errorf("error executing cert command: %v", err)
+		}
+	}
+
 	return nil
 }

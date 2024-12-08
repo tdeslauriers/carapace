@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -42,7 +43,7 @@ func (fields *CertFields) GenerateEcdsaCert() {
 	}
 
 	// certTemplate
-	certTemplate := fields.buildTemplate()
+	certTemplate := fields.BuildTemplate()
 
 	// signing cert template
 	var parentTemplate x509.Certificate
@@ -90,8 +91,24 @@ func (fields *CertFields) GenerateEcdsaCert() {
 		log.Panicf("failed to create DER for %s certificate: %v", fields.CertName, err)
 	}
 
+	// get current directory
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Panicf("failed to get current directory: %v", err)
+	}
+
+	// create an directory to store the certs
+	now := time.Now()
+	outputDir := fmt.Sprintf("backup_%s_%d_%d_%d", fields.CertName, now.Year(), now.Month(), now.Day())
+	fullPath := filepath.Join(dir, outputDir)
+
+	if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
+		log.Panicf("failed to create directory %s: %v", fullPath, err)
+	}
+
 	// write cert to file
-	certOut, err := os.Create(fmt.Sprintf("%s-cert.pem", fields.CertName))
+	certPath := filepath.Join(fullPath, fmt.Sprintf("%d_%d_%d_%s_cert.pem", now.Year(), now.Month(), now.Day(), fields.CertName))
+	certOut, err := os.Create(certPath)
 	if err != nil {
 		log.Panicf("failed to create file %s-cert.pem: %v", fields.CertName, err)
 	}
@@ -104,7 +121,8 @@ func (fields *CertFields) GenerateEcdsaCert() {
 	certOut.Close()
 
 	// write private key out to file
-	keyOut, err := os.Create(fmt.Sprintf("%s-key.pem", fields.CertName))
+	keyPath := filepath.Join(fullPath, fmt.Sprintf("%d_%d_%d_%s_key.pem", now.Year(), now.Month(), now.Day(), fields.CertName))
+	keyOut, err := os.Create(keyPath)
 	if err != nil {
 		log.Panicf("failed to create file %s-key.pem: %v", fields.CertName, err)
 	}
@@ -122,7 +140,7 @@ func (fields *CertFields) GenerateEcdsaCert() {
 	keyOut.Close()
 }
 
-func (fields *CertFields) buildTemplate() x509.Certificate {
+func (fields *CertFields) BuildTemplate() x509.Certificate {
 
 	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {

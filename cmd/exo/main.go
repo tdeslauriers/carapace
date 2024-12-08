@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/tdeslauriers/carapace/internal/util"
-
 	"github.com/tdeslauriers/carapace/pkg/exo"
 )
 
