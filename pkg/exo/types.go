@@ -8,6 +8,7 @@ import (
 // It contains the values parsed from the command line flags.
 type Config struct {
 	ServiceName string
+	Env         string
 	Certs       Certs
 }
 

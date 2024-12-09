@@ -47,6 +47,11 @@ func Parse() (*Config, error) {
 	certs := flag.Bool("certs", false, certMsg)
 	flag.BoolVar(certs, "c", false, certMsg)
 
+	// environment
+	envMsg := "applies environment tag/instruction to applicable fields in exo commands"
+	env := flag.String("env", "", envMsg)
+	flag.StringVar(env, "e", "", envMsg)
+
 	// service name
 	svcNameMsg := "applies service name to applicable fields in exo commands"
 	svcName := flag.String("service", "", svcNameMsg)
@@ -62,10 +67,11 @@ func Parse() (*Config, error) {
 
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
-		fmt.Fprintf(os.Stderr, "  -c, --certs  %s\n", certMsg)
+		fmt.Fprintf(os.Stderr, "  -c, --certs   %s\n", certMsg)
+		fmt.Fprintf(os.Stderr, "  -e, --env     %s\n", envMsg)
 		fmt.Fprintf(os.Stderr, "  -s, --service %s\n", svcNameMsg)
-		fmt.Fprintf(os.Stderr, "  -f, --file   %s\n", fileMsg)
-		fmt.Fprintf(os.Stderr, "  -h           Display this help message\n")
+		fmt.Fprintf(os.Stderr, "  -f, --file    %s\n", fileMsg)
+		fmt.Fprintf(os.Stderr, "  -h            Display this help message\n")
 	}
 
 	// parse flags
@@ -73,6 +79,7 @@ func Parse() (*Config, error) {
 
 	return &Config{
 		ServiceName: *svcName,
+		Env:         *env,
 		Certs: Certs{
 			Invoked:  *certs,
 			Filename: *file,
@@ -81,11 +88,11 @@ func Parse() (*Config, error) {
 }
 
 // Execute is the method that will execute the commands defined in the config struct
-func (exo *exoskeleton) Execute() error {
+func (cli *exoskeleton) Execute() error {
 
 	// certifcate generation execution
-	if exo.config.Certs.Invoked {
-		if err := certExecution(exo.config.ServiceName, exo.config.Certs.Filename); err != nil {
+	if cli.config.Certs.Invoked {
+		if err := cli.certExecution(); err != nil {
 			return fmt.Errorf("error executing cert command: %v", err)
 		}
 	}

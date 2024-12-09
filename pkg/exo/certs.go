@@ -12,24 +12,24 @@ import (
 
 // certExecution is a helper function that reads in a yaml file and generates a certificate
 // Note: service name can be empty, that is handled within the function
-func certExecution(service, filename string) error {
+func (cli *exoskeleton) certExecution() error {
 
 	// read in yaml file
-	if filename == "" {
+	if cli.config.Certs.Filename == "" {
 		return fmt.Errorf("no file specified for certificate generation")
 	}
 
 	// check for yaml file extension
-	if len(filename) <= 4 {
-		if filename[len(filename)-4:] != ".yml" ||
-			filename[len(filename)-5:] != ".yaml" {
+	if len(cli.config.Certs.Filename) <= 4 {
+		if cli.config.Certs.Filename[len(cli.config.Certs.Filename)-4:] != ".yml" ||
+			cli.config.Certs.Filename[len(cli.config.Certs.Filename)-5:] != ".yaml" {
 			return fmt.Errorf("cert config data file must have a .yaml or .yml extension")
 		}
 		return fmt.Errorf("cert config data file must have a .yaml or .yml extension")
 	}
 
 	// read in yaml file
-	yml, err := os.Open(filename)
+	yml, err := os.Open(cli.config.Certs.Filename)
 	if err != nil {
 		return fmt.Errorf("error reading in yaml file: %v", err)
 	}
@@ -43,12 +43,16 @@ func certExecution(service, filename string) error {
 	}
 
 	// build cert template fields
+	// compose cert name
 	name := string(certData.Type)
 	if certData.Target == util.Db {
 		name = fmt.Sprintf("%s_%s", util.Db, name)
 	}
-	if service != "" {
-		name = fmt.Sprintf("%s_%s", service, name)
+	if cli.config.ServiceName != "" {
+		name = fmt.Sprintf("%s_%s", cli.config.ServiceName, name)
+	}
+	if cli.config.Env != "" {
+		name = fmt.Sprintf("%s_%s", name, cli.config.Env)
 	}
 
 	var r sign.CertRole
