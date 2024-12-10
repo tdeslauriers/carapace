@@ -1,8 +1,11 @@
 package util
 
 const (
-	ComponentKey string = "component"
+	ComponentKey         string = "component"
+	ComponentMain        string = "main"
+	ComponentExo         string = "exo"
+	ComponentOnePassword string = "1password cli"
 
-	ComponentMain string = "main"
-	ComponentExo string = "exo"
+	ServiceKey         string = "service"
+	ServiceOnePassword string = "1password"
 )
