@@ -7,12 +7,12 @@
 
 **Definition:** _a bony or chitinous case or shield covering the back or part of the back of an animal (such as a turtle or crab)._
 
-**Description:** A learning project to build the components of a microservice that are often covered handled 'under the hood' in Java by frameworks such as Spring Cloud or Micronaut.
+**Description:** A learning project to build the components of a microservice that are often handled 'under the hood' in Java web frameworks such as Spring Cloud or Micronaut.
 
-1. Like those projects, the intent is to make a reusable library for other projects down the line.
-2. As the name suggests, there is a slant toward security and overall service hardening, ie, an exoskeleton that can house and provide functionality to any operational/business logic.
+1. Like those projects, the intent is to make reusable packages for other projects to consume and utilize.
+2. As the name suggests, there is a slant toward security and overall service hardening, ie, an exoskeleton that can house and provide functionality to microservices so design can focus on service logic.
 
-**Language Choice**: I chose Go because it is like the 'Sport Mode' version of an automatic transmission. You get a lot of the same control you get with a stick shift, but the standard library is really robust so there is a lot that (in security) is easy to to mess up and difficult to implement successfully.
+**Language Choice**: I chose `Go` because it is like the 'Sport Mode' version of an automatic transmission. You get a lot of the same control you get with a stick shift, with out the difficulty of but the standard library is really robust so the development ba
 
 - The secondary challenge of the learning project is to use as few 3rd party libraries as possible and over time get rid of all of them.
 
