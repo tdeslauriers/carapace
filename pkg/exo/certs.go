@@ -48,18 +48,24 @@ func (cli *exoskeleton) certExecution() error {
 	// compose cert name
 	// naming convention: target_type_env, eg., db_server_dev or service_ca_prod
 	name := strings.Builder{}
+
+	// target chunk of naming convention
 	if data.Certificate.Target != "" {
 		name.WriteString(string(data.Certificate.Target))
 		name.WriteString("_")
 	} else {
 		return errors.New("you must specify a target in yaml for cert generation")
 	}
+
+	// type chunk of naming convention
 	if data.Certificate.Type != "" {
 		name.WriteString(string(data.Certificate.Type))
 		name.WriteString("_")
 	} else {
 		return errors.New("you must specify a type in yaml for cert generation")
 	}
+
+	// env chunk of naming convention
 	if cli.config.Env != "" {
 		name.WriteString(cli.config.Env)
 	} else {
@@ -67,12 +73,12 @@ func (cli *exoskeleton) certExecution() error {
 	}
 
 	var r sign.CertRole
-	switch role := string(data.Certificate.Type); role {
-	case "ca":
+	switch role := data.Certificate.Type; role {
+	case util.CA:
 		r = sign.CA
-	case "server":
+	case util.Server:
 		r = sign.Server
-	case "client":
+	case util.Client:
 		r = sign.Client
 	default:
 		return fmt.Errorf("invalid cert role: %s", role)
@@ -81,7 +87,7 @@ func (cli *exoskeleton) certExecution() error {
 	var caName string // will be blank if ca
 	if r != sign.CA {
 		// eg., db_ca_dev, or service_ca_prod
-		caName = fmt.Sprintf("%s_ca_%s", data.Certificate.Target, cli.config.Env)
+		caName = fmt.Sprintf("%s_%s_%s", data.Certificate.Target, util.CA, cli.config.Env)
 	}
 
 	ips := make([]net.IP, 0, len(data.Certificate.SanIps))

@@ -55,7 +55,7 @@ func (c *cli) GetDocument(title, vault string) ([]byte, error) {
 	// run op command
 	err := cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("error running op get document: %v; stderr: %s", err, stderr.String())
+		return nil, fmt.Errorf("error running op get document %s: %v; stderr: %s", title, err, stderr.String())
 	}
 
 	return out.Bytes(), nil
@@ -91,7 +91,7 @@ func (c *cli) CreateDocument(file, title, vault string, tags []string) error {
 	// run op command
 	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("error running op create document: %v; stderr: %s", err, stderr.String())
+		return fmt.Errorf("error running op create document %s : %v; stderr: %s", title, err, stderr.String())
 	}
 
 	c.logger.Info(fmt.Sprintf("1password document created: %s", out.String()))
