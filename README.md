@@ -12,7 +12,7 @@
 1. Like those projects, the intent is to make reusable packages for other projects to consume and utilize.
 2. As the name suggests, there is a slant toward security and overall service hardening, ie, an exoskeleton that can house and provide functionality to microservices so design can focus on service logic.
 
-**Language Choice**: I chose `Go` because it is like the 'Sport Mode' version of an automatic transmission. You get a lot of the same control you get with a stick shift, with out the difficulty of but the standard library is really robust so the development ba
+**Language Choice**: I chose `Go` because the standard library is really robust so development is very approachable.
 
 - The secondary challenge of the learning project is to use as few 3rd party libraries as possible and over time get rid of all of them.
 
