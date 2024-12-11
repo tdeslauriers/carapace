@@ -72,6 +72,7 @@ func (cli *exoskeleton) certExecution() error {
 		return errors.New("you must specifcy environment (eg: '-e dev') for cert generation")
 	}
 
+	// determine cert role
 	var r sign.CertRole
 	switch role := data.Certificate.Type; role {
 	case util.CA:
@@ -84,12 +85,14 @@ func (cli *exoskeleton) certExecution() error {
 		return fmt.Errorf("invalid cert role: %s", role)
 	}
 
+	// set ca name if applicable
 	var caName string // will be blank if ca
 	if r != sign.CA {
 		// eg., db_ca_dev, or service_ca_prod
 		caName = fmt.Sprintf("%s_%s_%s", data.Certificate.Target, util.CA, cli.config.Env)
 	}
 
+	// parse san ip addresses
 	ips := make([]net.IP, 0, len(data.Certificate.SanIps))
 	for _, ip := range data.Certificate.SanIps {
 		ips = append(ips, net.ParseIP(ip))
