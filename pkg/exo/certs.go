@@ -126,7 +126,7 @@ func (cli *exoskeleton) certExecution() error {
 			return fmt.Errorf("%s", err)
 		}
 	case util.Rsa:
-		// TODO implement rsa cert generation
+		// TODO: implement rsa cert generation
 	default:
 		return fmt.Errorf("invalid crypto algorithm: %s", data.Certificate.Crypto)
 	}
