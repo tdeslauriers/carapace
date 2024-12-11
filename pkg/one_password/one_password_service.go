@@ -10,6 +10,10 @@ import (
 
 // Service is an interface for the one_password service.
 type Service interface {
+
+	// GetDocument gets a document from 1password if it exists
+	GetDocument(title, vault string) ([]byte, error)
+
 	// UpsertDocument upserts a document in 1password, eg., a client certificate .pem file
 	UpsertDocument(path, title, vault string, tags []string) error
 }
@@ -30,6 +34,11 @@ type service struct {
 	cli Cli
 
 	logger *slog.Logger
+}
+
+// GetDocument gets a document from 1password if it exists
+func (s *service) GetDocument(title, vault string) ([]byte, error) {
+	return s.cli.GetDocument(title, vault)
 }
 
 // UpsertDocument upserts a document in 1password, eg., a client certificate .pem file

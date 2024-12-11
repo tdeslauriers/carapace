@@ -1,9 +1,11 @@
 package exo
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/tdeslauriers/carapace/internal/util"
 	"github.com/tdeslauriers/carapace/pkg/sign"
@@ -44,15 +46,24 @@ func (cli *exoskeleton) certExecution() error {
 
 	// build cert template fields
 	// compose cert name
-	name := string(certData.Type)
-	if certData.Target == util.Db {
-		name = fmt.Sprintf("%s_%s", util.Db, name)
+	// naming convention: target_type_env, eg., db_server_dev or service_ca_prod
+	name := strings.Builder{}
+	if certData.Target != "" {
+		name.WriteString(string(certData.Target))
+		name.WriteString("_")
+	} else {
+		return errors.New("you must specify a target in yaml for cert generation")
 	}
-	if cli.config.ServiceName != "" {
-		name = fmt.Sprintf("%s_%s", cli.config.ServiceName, name)
+	if certData.Type != "" {
+		name.WriteString(string(certData.Type))
+		name.WriteString("_")
+	} else {
+		return errors.New("you must specify a type in yaml for cert generation")
 	}
 	if cli.config.Env != "" {
-		name = fmt.Sprintf("%s_%s", name, cli.config.Env)
+		name.WriteString(cli.config.Env)
+	} else {
+		return errors.New("you must specifcy environment (eg: '-e dev') for cert generation")
 	}
 
 	var r sign.CertRole
@@ -67,9 +78,9 @@ func (cli *exoskeleton) certExecution() error {
 		return fmt.Errorf("invalid cert role: %s", role)
 	}
 
-	var caName string // will be blank if not ca
+	var caName string // will be blank if ca
 	if r != sign.CA {
-		caName = name
+		caName = name.String()
 	}
 
 	ips := make([]net.IP, len(certData.SanIps))
@@ -77,8 +88,15 @@ func (cli *exoskeleton) certExecution() error {
 		ips = append(ips, net.ParseIP(ip))
 	}
 
-	fields := sign.CertFields{
-		CertName:     name,
+	// pre-pend service name to cert name if applicable (ie, it is not a ca)
+	certName := name.String()
+	if cli.config.ServiceName != "" {
+		certName = fmt.Sprintf("%s_%s", cli.config.ServiceName, certName)
+	}
+
+	// build cert data fields struct
+	fields := sign.CertData{
+		CertName:     certName,
 		Organisation: []string{certData.Organisation},
 		CommonName:   certData.CommonName,
 		San:          certData.San,
@@ -87,10 +105,15 @@ func (cli *exoskeleton) certExecution() error {
 		CaCertName:   caName,
 	}
 
+	// instantiate the certificate builder interface
+	builder := sign.NewCertBuilder(fields)
+
 	// generate cert
 	switch certData.Crypto {
 	case util.Ecdsa:
-		fields.GenerateEcdsaCert()
+		if err := builder.GenerateEcdsaCert(); err != nil {
+			return fmt.Errorf("error generating ecdsa cert/key pair: %v", err)
+		}
 	case util.Rsa:
 		// TODO implement rsa cert generation
 	default:

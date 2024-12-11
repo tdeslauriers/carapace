@@ -9,60 +9,79 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/big"
-	"net"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/tdeslauriers/carapace/internal/util"
+	onepassword "github.com/tdeslauriers/carapace/pkg/one_password"
 )
 
-type CertRole int
+// CertBuilder is an interface which generates certificates
+type CertBuilder interface {
 
-const (
-	CA CertRole = iota
-	Server
-	Client
-)
+	// GenerateEcdsaCert generates an ecdsa certificate and private key pair
+	GenerateEcdsaCert() error
 
-type CertFields struct {
-	CertName     string
-	Organisation []string
-	CommonName   string // org + signature algo, leaf: domain
-	San          []string
-	SanIps       []net.IP
-	Role         CertRole
-	CaCertName   string
+	// BuildTemplate builds a certificate template for use in certificate generation
+	BuildTemplate() (*x509.Certificate, error)
 }
 
-func (fields *CertFields) GenerateEcdsaCert() {
+// NewCertBuilder is a factory function that returns a new CertBuilder interface
+func NewCertBuilder(d CertData) CertBuilder {
+	return &certBuilder{
+		fields: d,
+		op:     onepassword.NewService(onepassword.NewCli()),
+
+		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentSign)),
+	}
+}
+
+var _ CertBuilder = (*certBuilder)(nil)
+
+// certBuilder is the concrete implementation of the CertBuilder interface
+type certBuilder struct {
+	fields CertData
+	op     onepassword.Service
+
+	logger *slog.Logger
+}
+
+func (cb *certBuilder) GenerateEcdsaCert() error {
 
 	// priave key (golang struct w/ objects and methods)
 	certPriv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
-		log.Panicf("failed to create %s private key: %v", fields.CertName, err)
+		log.Panicf("failed to create %s private key: %v", cb.fields.CertName, err)
 	}
 
 	// certTemplate
-	certTemplate := fields.BuildTemplate()
+	certTemplate, err := cb.BuildTemplate()
+	if err != nil {
+		return err
+	}
 
 	// signing cert template
 	var parentTemplate x509.Certificate
 	var signingPriv *ecdsa.PrivateKey
-	if fields.Role == CA {
+	if cb.fields.Role == CA {
 		// CA is self-signed
-		parentTemplate = certTemplate
+		parentTemplate = *certTemplate
 		signingPriv = certPriv
 	} else {
-		// load ca cert
-		caCertPem, err := os.ReadFile(fmt.Sprintf("%s-cert.pem", fields.CaCertName))
+
+		// fetch the CA cert from 1password
+		caCertPem, err := cb.op.GetDocument(fmt.Sprintf("%s_cert", cb.fields.CaCertName), "Shared")
 		if err != nil {
-			log.Panicf("unable to read %s-cert.pem file", fields.CaCertName)
+			log.Panicf("failed to get %s_cert.pem from 1password: %v", cb.fields.CaCertName, err)
 		}
 
-		// load ca key
-		caKeyPem, err := os.ReadFile(fmt.Sprintf("%s-key.pem", fields.CaCertName))
+		// fetch ca key from 1password
+		caKeyPem, err := cb.op.GetDocument(fmt.Sprintf("%s_key", cb.fields.CaCertName), "Shared")
 		if err != nil {
-			log.Panicf("unable to read %s-key.pem file", fields.CaCertName)
+			log.Panicf("failed to get %s_key.pem from 1password: %v", cb.fields.CaCertName, err)
 		}
 
 		// decode pems to der
@@ -86,9 +105,9 @@ func (fields *CertFields) GenerateEcdsaCert() {
 	}
 
 	// create the certificate
-	derBytes, err := x509.CreateCertificate(rand.Reader, &certTemplate, &parentTemplate, &certPriv.PublicKey, signingPriv)
+	derBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, &parentTemplate, &certPriv.PublicKey, signingPriv)
 	if err != nil {
-		log.Panicf("failed to create DER for %s certificate: %v", fields.CertName, err)
+		log.Panicf("failed to create DER for %s certificate: %v", cb.fields.CertName, err)
 	}
 
 	// get current directory
@@ -99,7 +118,7 @@ func (fields *CertFields) GenerateEcdsaCert() {
 
 	// create an directory to store the certs
 	now := time.Now()
-	outputDir := fmt.Sprintf("backup_%s_%d_%d_%d", fields.CertName, now.Year(), now.Month(), now.Day())
+	outputDir := fmt.Sprintf("backup_%s_%d_%d_%d", cb.fields.CertName, now.Year(), now.Month(), now.Day())
 	fullPath := filepath.Join(dir, outputDir)
 
 	if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
@@ -107,10 +126,10 @@ func (fields *CertFields) GenerateEcdsaCert() {
 	}
 
 	// write cert to file
-	certPath := filepath.Join(fullPath, fmt.Sprintf("%d_%d_%d_%s_cert.pem", now.Year(), now.Month(), now.Day(), fields.CertName))
+	certPath := filepath.Join(fullPath, fmt.Sprintf("%s_cert.pem", cb.fields.CertName))
 	certOut, err := os.Create(certPath)
 	if err != nil {
-		log.Panicf("failed to create file %s-cert.pem: %v", fields.CertName, err)
+		log.Panicf("failed to create file %s-cert.pem: %v", cb.fields.CertName, err)
 	}
 	defer certOut.Close()
 
@@ -118,33 +137,47 @@ func (fields *CertFields) GenerateEcdsaCert() {
 		Type:  "CERTIFICATE",
 		Bytes: derBytes,
 	})
+
 	certOut.Close()
 
 	// write private key out to file
-	keyPath := filepath.Join(fullPath, fmt.Sprintf("%d_%d_%d_%s_key.pem", now.Year(), now.Month(), now.Day(), fields.CertName))
+	keyPath := filepath.Join(fullPath, fmt.Sprintf("%s_key.pem", cb.fields.CertName))
 	keyOut, err := os.Create(keyPath)
 	if err != nil {
-		log.Panicf("failed to create file %s-key.pem: %v", fields.CertName, err)
+		log.Panicf("failed to create file %s-key.pem: %v", cb.fields.CertName, err)
 	}
 	defer keyOut.Close()
 
 	key, err := x509.MarshalECPrivateKey(certPriv)
 	if err != nil {
-		log.Panicf("failed to marshal ecdsa private key for %s: %v", fields.CertName, err)
+		log.Panicf("failed to marshal ecdsa private key for %s: %v", cb.fields.CertName, err)
 	}
 
 	pem.Encode(keyOut, &pem.Block{
 		Type:  "EC PRIVATE KEY",
 		Bytes: key,
 	})
+
 	keyOut.Close()
+
+	// upsert certificate into 1password
+	if err := cb.op.UpsertDocument(certPath, fmt.Sprintf("%s_%s", cb.fields.CertName, "cert"), "Shared", []string{"Family Site"}); err != nil {
+		log.Panicf("failed to upsert %s certificate into 1password: %v", fmt.Sprintf("%s_%s", cb.fields.CertName, "key"), err)
+	}
+
+	// upsert private key into 1password
+	if err := cb.op.UpsertDocument(keyPath, fmt.Sprintf("%s_%s", cb.fields.CertName, "key"), "Shared", []string{"Family Site"}); err != nil {
+		log.Panicf("failed to upsert %s private key into 1password: %v", fmt.Sprintf("%s_%s", cb.fields.CertName, "key"), err)
+	}
+
+	return nil
 }
 
-func (fields *CertFields) BuildTemplate() x509.Certificate {
+func (cb *certBuilder) BuildTemplate() (*x509.Certificate, error) {
 
 	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
-		log.Panicf("unable to generate serial number for %s certificate template: %v", fields.CertName, err)
+		return nil, fmt.Errorf("unable to generate serial number for %s certificate template: %v", cb.fields.CertName, err)
 	}
 
 	// validity period:
@@ -153,16 +186,16 @@ func (fields *CertFields) BuildTemplate() x509.Certificate {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: fields.Organisation,
-			CommonName:   fields.CommonName,
+			Organization: cb.fields.Organisation,
+			CommonName:   cb.fields.CommonName,
 		},
 		NotBefore:             notBefore,
 		BasicConstraintsValid: true,
-		DNSNames:              fields.San,
-		IPAddresses:           fields.SanIps,
+		DNSNames:              cb.fields.San,
+		IPAddresses:           cb.fields.SanIps,
 	}
 
-	switch fields.Role {
+	switch cb.fields.Role {
 	case CA:
 		template.KeyUsage = x509.KeyUsageCertSign | x509.KeyUsageCRLSign
 		template.ExtKeyUsage = nil // not needed for CA
@@ -180,5 +213,5 @@ func (fields *CertFields) BuildTemplate() x509.Certificate {
 		template.IsCA = false
 	}
 
-	return template
+	return &template, nil
 }

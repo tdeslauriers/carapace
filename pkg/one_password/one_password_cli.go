@@ -14,7 +14,7 @@ import (
 // Cli is an interface for the one_password cli.
 type Cli interface {
 	// GetDocument gets a document from 1password if it exists
-	GetDocument(title, vault string) (string, error)
+	GetDocument(title, vault string) ([]byte, error)
 
 	// CreateDocument creates a document item in 1password
 	CreateDocument(file, title, vault string, tags []string) error
@@ -41,7 +41,7 @@ type cli struct {
 }
 
 // GetDocument gets a document from 1password if it exists
-func (c *cli) GetDocument(title, vault string) (string, error) {
+func (c *cli) GetDocument(title, vault string) ([]byte, error) {
 
 	// prepare op command
 	cmd := exec.Command("op", "document", "get", title, "--vault", vault)
@@ -55,10 +55,10 @@ func (c *cli) GetDocument(title, vault string) (string, error) {
 	// run op command
 	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("error running op get document: %v; stderr: %s", err, stderr.String())
+		return nil, fmt.Errorf("error running op get document: %v; stderr: %s", err, stderr.String())
 	}
 
-	return out.String(), nil
+	return out.Bytes(), nil
 }
 
 func (c *cli) CreateDocument(file, title, vault string, tags []string) error {

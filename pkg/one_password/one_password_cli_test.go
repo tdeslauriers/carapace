@@ -14,7 +14,7 @@ func TestGetDoc(t *testing.T) {
 func TestCreateDoc(t *testing.T) {
 	cli := NewCli()
 
-	if err := cli.CreateDocument("/home/atomic/workspace/certs/exo/test.txt", "monkey_wrenc", "Shared", []string{"Family Site"}); err != nil {
+	if err := cli.CreateDocument("./exo/test.txt", "monkey_wrenc", "Shared", []string{"Family Site"}); err != nil {
 
 		t.Errorf("error creating document: %v", err)
 	}
@@ -24,7 +24,7 @@ func TestCreateDoc(t *testing.T) {
 func TestEditDoc(t *testing.T) {
 	cli := NewCli()
 
-	if err := cli.EditDocument("/home/atomic/workspace/certs/exo/test.txt", "monkey_wrench"); err != nil {
+	if err := cli.EditDocument("./exo/test.txt", "monkey_wrench"); err != nil {
 		t.Errorf("error editing document: %v", err)
 	}
 

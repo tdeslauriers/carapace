@@ -15,7 +15,7 @@ type CertTarget string
 
 const (
 	Db   CertTarget = "db"
-	Serv CertTarget = "server"
+	Serv CertTarget = "service"
 )
 
 // CryptoAlgo represents the type of cryptographic algorithm.

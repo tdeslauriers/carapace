@@ -106,8 +106,8 @@ func TestUpsertDocument(t *testing.T) {
 
 type mockCli struct{}
 
-func (m *mockCli) GetDocument(title, vault string) (string, error) {
-	return "", nil
+func (m *mockCli) GetDocument(title, vault string) ([]byte, error) {
+	return nil, nil
 }
 
 func (m *mockCli) CreateDocument(file, title, vault string, tags []string) error {

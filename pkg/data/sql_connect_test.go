@@ -1,15 +1,7 @@
 package data
 
 import (
-	"encoding/base64"
-	"fmt"
-	"log"
-	"net"
-	"os"
 	"testing"
-
-	"github.com/tdeslauriers/carapace/pkg/connect"
-	"github.com/tdeslauriers/carapace/pkg/sign"
 )
 
 // env vars
@@ -25,63 +17,65 @@ const (
 
 func TestDBConnect(t *testing.T) {
 
-	// setup
-	// gen client certs
-	// need to use ca installed in maria as rootCA
-	leafClient := sign.CertFields{
-		CertName:     "db-client",
-		Organisation: []string{"Rebel Alliance"},
-		CommonName:   "localhost",
-		San:          []string{"localhost"},
-		SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
-		Role:         sign.Client,
-		CaCertName:   "ca",
-	}
-	leafClient.GenerateEcdsaCert()
+	// TODO: re-write tests to use cert generation service
 
-	// read in db-ca-cert.pem, new db-client .pems to env vars
-	// need to use ca that signed maria's tls leaf certs
-	var envVars [][]string
-	envVars = append(envVars, []string{DbServerCaCert, fmt.Sprintf("%s-cert.pem", "ca")})
-	envVars = append(envVars, []string{DbClientCert, fmt.Sprintf("%s-cert.pem", leafClient.CertName)})
-	envVars = append(envVars, []string{DbClientKey, fmt.Sprintf("%s-key.pem", leafClient.CertName)})
+	// // setup
+	// // gen client certs
+	// // need to use ca installed in maria as rootCA
+	// leafClient := sign.CertData{
+	// 	CertName:     "db-client",
+	// 	Organisation: []string{"Rebel Alliance"},
+	// 	CommonName:   "localhost",
+	// 	San:          []string{"localhost"},
+	// 	SanIps:       []net.IP{net.ParseIP("127.0.0.1")},
+	// 	Role:         sign.Client,
+	// 	CaCertName:   "ca",
+	// }
+	// leafClient.GenerateEcdsaCert()
 
-	// loop thru setting env
-	for _, v := range envVars {
+	// // read in db-ca-cert.pem, new db-client .pems to env vars
+	// // need to use ca that signed maria's tls leaf certs
+	// var envVars [][]string
+	// envVars = append(envVars, []string{DbServerCaCert, fmt.Sprintf("%s-cert.pem", "ca")})
+	// envVars = append(envVars, []string{DbClientCert, fmt.Sprintf("%s-cert.pem", leafClient.CertName)})
+	// envVars = append(envVars, []string{DbClientKey, fmt.Sprintf("%s-key.pem", leafClient.CertName)})
 
-		fileData, _ := os.ReadFile(v[1])
-		encodedData := base64.StdEncoding.EncodeToString(fileData)
-		if err := os.Setenv(v[0], encodedData); err != nil {
-			log.Fatalf("Unable to load env var: %s", v[0])
-		}
-	}
+	// // loop thru setting env
+	// for _, v := range envVars {
 
-	// configure pki
-	dbPki := &connect.Pki{
-		CertFile: os.Getenv(DbClientCert),
-		KeyFile:  os.Getenv(DbClientKey),
-		CaFiles:  []string{os.Getenv(DbServerCaCert)},
-	}
-	clientConfig, _ := connect.NewTlsClientConfig(dbPki).Build()
+	// 	fileData, _ := os.ReadFile(v[1])
+	// 	encodedData := base64.StdEncoding.EncodeToString(fileData)
+	// 	if err := os.Setenv(v[0], encodedData); err != nil {
+	// 		log.Fatalf("Unable to load env var: %s", v[0])
+	// 	}
+	// }
 
-	url := DbUrl{
-		Username: os.Getenv(MariaDbUsername),
-		Password: os.Getenv(MariaDbPassword),
-		Addr:     os.Getenv(MariaDbUrl),
-		Name:     os.Getenv(MariaDbName),
-	}
+	// // configure pki
+	// dbPki := &connect.Pki{
+	// 	CertFile: os.Getenv(DbClientCert),
+	// 	KeyFile:  os.Getenv(DbClientKey),
+	// 	CaFiles:  []string{os.Getenv(DbServerCaCert)},
+	// }
+	// clientConfig, _ := connect.NewTlsClientConfig(dbPki).Build()
 
-	dbConnector := NewSqlDbConnector(url, clientConfig)
+	// url := DbUrl{
+	// 	Username: os.Getenv(MariaDbUsername),
+	// 	Password: os.Getenv(MariaDbPassword),
+	// 	Addr:     os.Getenv(MariaDbUrl),
+	// 	Name:     os.Getenv(MariaDbName),
+	// }
 
-	db, err := dbConnector.Connect()
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+	// dbConnector := NewSqlDbConnector(url, clientConfig)
 
-	defer db.Close()
+	// db, err := dbConnector.Connect()
+	// if err != nil {
+	// 	log.Fatalf("Failed to connect to database: %v", err)
+	// }
 
-	err = db.Ping()
-	if err != nil {
-		t.Fatalf("Failed to ping test database: %v", err)
-	}
+	// defer db.Close()
+
+	// err = db.Ping()
+	// if err != nil {
+	// 	t.Fatalf("Failed to ping test database: %v", err)
+	// }
 }

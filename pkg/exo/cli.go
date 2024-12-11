@@ -22,7 +22,6 @@ type Exoskeleton interface {
 func New(config Config) Exoskeleton {
 	return &exoskeleton{
 		config: config,
-		// place holder for 1password interface
 
 		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentExo)),
 	}

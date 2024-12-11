@@ -24,8 +24,8 @@ type Certs struct {
 // CertData is a model representing the data to serialize from a yaml file
 // that is read in by the exo cli cert command.
 type CertData struct {
+	Target       util.CertTarget `yaml:"target"` // choice is db or service
 	Type         util.CertType   `yaml:"type"`   // choice is ca, server, or client
-	Target       util.CertTarget `yaml:"target"` // choice is db or server
 	Crypto       util.CryptoAlgo `yaml:"crypto"` // choice is rsa or ecdsa
 	Organisation string          `yaml:"org"`
 	CommonName   string          `yaml:"common_name"`
