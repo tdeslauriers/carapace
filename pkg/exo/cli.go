@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/tdeslauriers/carapace/internal/util"
+	"github.com/tdeslauriers/carapace/pkg/sign"
 )
 
 // Exoskeleton is the Cli interface for carapace.
@@ -22,6 +23,7 @@ type Exoskeleton interface {
 func New(config Config) Exoskeleton {
 	return &exoskeleton{
 		config: config,
+		certs:  sign.NewCertBuilder(),
 
 		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentExo)),
 	}
@@ -32,6 +34,7 @@ var _ Exoskeleton = (*exoskeleton)(nil)
 // exoskeleton is the concrete implementation of the Exo interface.
 type exoskeleton struct {
 	config Config
+	certs  sign.CertBuilder
 
 	logger *slog.Logger
 }

@@ -63,7 +63,7 @@ func (s *service) UpsertDocument(path, title, vault string, tags []string) error
 	doc, err := s.cli.GetItem(title, vault)
 	if err != nil {
 		if strings.Contains(err.Error(), fmt.Sprintf(`"%s" isn't an item`, title)) {
-			s.logger.Error("no document '%s' found in vault: %s", title, vault)
+			s.logger.Warn("no document '%s' found in vault: %s", title, vault)
 		} else {
 			// need to exit if error is not 'not found' error
 			return fmt.Errorf("failed to get item %s: %v", title, err)

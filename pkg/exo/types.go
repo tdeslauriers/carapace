@@ -24,6 +24,13 @@ type Certs struct {
 // CertData is a model representing the data to serialize from a yaml file
 // that is read in by the exo cli cert command.
 type CertData struct {
+	Certificate Certificate `yaml:"certificate"`
+	OnePassword OnePassword `yaml:"one_password"`
+}
+
+// Certifcate is a model for the yaml data fields that the exo service
+// needs to read in to populate the certifcate template.
+type Certificate struct {
 	Target       util.CertTarget `yaml:"target"` // choice is db or service
 	Type         util.CertType   `yaml:"type"`   // choice is ca, server, or client
 	Crypto       util.CryptoAlgo `yaml:"crypto"` // choice is rsa or ecdsa
@@ -31,4 +38,11 @@ type CertData struct {
 	CommonName   string          `yaml:"common_name"`
 	San          []string        `yaml:"san"`
 	SanIps       []string        `yaml:"san_ips"`
+}
+
+// OnePassword is a model representing the data to serialize from a yaml file
+// that is needed by the exo cli to generate certifcates and put them in 1password correctly.
+type OnePassword struct {
+	Vault string   `yaml:"vault"`
+	Tags  []string `yaml:"tags"`
 }

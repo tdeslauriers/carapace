@@ -38,9 +38,9 @@ func (cli *exoskeleton) certExecution() error {
 	defer yml.Close()
 
 	// decode to CertFile struct
-	var certData CertData
+	var data CertData
 	decoder := yaml.NewDecoder(yml)
-	if err := decoder.Decode(&certData); err != nil {
+	if err := decoder.Decode(&data); err != nil {
 		return fmt.Errorf("error decoding yaml file: %v", err)
 	}
 
@@ -48,14 +48,14 @@ func (cli *exoskeleton) certExecution() error {
 	// compose cert name
 	// naming convention: target_type_env, eg., db_server_dev or service_ca_prod
 	name := strings.Builder{}
-	if certData.Target != "" {
-		name.WriteString(string(certData.Target))
+	if data.Certificate.Target != "" {
+		name.WriteString(string(data.Certificate.Target))
 		name.WriteString("_")
 	} else {
 		return errors.New("you must specify a target in yaml for cert generation")
 	}
-	if certData.Type != "" {
-		name.WriteString(string(certData.Type))
+	if data.Certificate.Type != "" {
+		name.WriteString(string(data.Certificate.Type))
 		name.WriteString("_")
 	} else {
 		return errors.New("you must specify a type in yaml for cert generation")
@@ -67,7 +67,7 @@ func (cli *exoskeleton) certExecution() error {
 	}
 
 	var r sign.CertRole
-	switch role := string(certData.Type); role {
+	switch role := string(data.Certificate.Type); role {
 	case "ca":
 		r = sign.CA
 	case "server":
@@ -80,11 +80,12 @@ func (cli *exoskeleton) certExecution() error {
 
 	var caName string // will be blank if ca
 	if r != sign.CA {
-		caName = name.String()
+		// eg., db_ca_dev, or service_ca_prod
+		caName = fmt.Sprintf("%s_ca_%s", data.Certificate.Target, cli.config.Env)
 	}
 
-	ips := make([]net.IP, len(certData.SanIps))
-	for _, ip := range certData.SanIps {
+	ips := make([]net.IP, 0, len(data.Certificate.SanIps))
+	for _, ip := range data.Certificate.SanIps {
 		ips = append(ips, net.ParseIP(ip))
 	}
 
@@ -95,29 +96,30 @@ func (cli *exoskeleton) certExecution() error {
 	}
 
 	// build cert data fields struct
-	fields := sign.CertData{
+	fields := sign.CertFields{
 		CertName:     certName,
-		Organisation: []string{certData.Organisation},
-		CommonName:   certData.CommonName,
-		San:          certData.San,
+		Organisation: []string{data.Certificate.Organisation},
+		CommonName:   data.Certificate.CommonName,
+		San:          data.Certificate.San,
 		SanIps:       ips,
 		Role:         r,
 		CaCertName:   caName,
+
+		// 1password fields
+		OpVault: data.OnePassword.Vault,
+		OpTags:  data.OnePassword.Tags,
 	}
 
-	// instantiate the certificate builder interface
-	builder := sign.NewCertBuilder(fields)
-
 	// generate cert
-	switch certData.Crypto {
+	switch data.Certificate.Crypto {
 	case util.Ecdsa:
-		if err := builder.GenerateEcdsaCert(); err != nil {
-			return fmt.Errorf("error generating ecdsa cert/key pair: %v", err)
+		if err := cli.certs.GenerateEcdsaCert(fields); err != nil {
+			return fmt.Errorf("%s", err)
 		}
 	case util.Rsa:
 		// TODO implement rsa cert generation
 	default:
-		return fmt.Errorf("invalid crypto algorithm: %s", certData.Crypto)
+		return fmt.Errorf("invalid crypto algorithm: %s", data.Certificate.Crypto)
 	}
 
 	return nil

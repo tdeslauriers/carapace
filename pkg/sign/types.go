@@ -10,8 +10,8 @@ const (
 	Client
 )
 
-// CertData is a model representing the data a user needs to provide for cert generation 
-type CertData struct {
+// CertFields is a model representing the data a user needs to provide for cert generation
+type CertFields struct {
 	CertName     string
 	Organisation []string
 	CommonName   string // org + signature algo, leaf: domain
@@ -19,4 +19,8 @@ type CertData struct {
 	SanIps       []net.IP
 	Role         CertRole
 	CaCertName   string
+
+	// 1password fields
+	OpVault string   // 1password vault name
+	OpTags  []string // 1password tags needed if certifcate is created vs updated.
 }
