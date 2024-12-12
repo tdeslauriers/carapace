@@ -46,16 +46,16 @@ func (s *service) UpsertDocument(path, title, vault string, tags []string) error
 
 	// light weight input validation
 	if len(path) < 1 {
-		return fmt.Errorf("file path is required")
+		return fmt.Errorf("file path is required to upsert 1password item/document")
 	}
 	if len(title) < 1 {
-		return fmt.Errorf("title is required")
+		return fmt.Errorf("title is required to upsert 1password item/document")
 	}
 	if len(vault) < 1 {
-		return fmt.Errorf("vault is required")
+		return fmt.Errorf("vault is required to upsert 1password item/document")
 	}
 	if len(tags) < 1 {
-		return fmt.Errorf("tags are required")
+		return fmt.Errorf("tags are required to upsert 1password item/document")
 	}
 
 	// Using get item vs get document to check if document exists so that the value is not
@@ -63,27 +63,27 @@ func (s *service) UpsertDocument(path, title, vault string, tags []string) error
 	doc, err := s.cli.GetItem(title, vault)
 	if err != nil {
 		if strings.Contains(err.Error(), fmt.Sprintf(`"%s" isn't an item`, title)) {
-			s.logger.Warn("no document '%s' found in vault: %s", title, vault)
+			s.logger.Warn(fmt.Sprintf("no 1password item '%s' found in vault: %s", title, vault))
 		} else {
 			// need to exit if error is not 'not found' error
-			return fmt.Errorf("failed to get item %s: %v", title, err)
+			return fmt.Errorf("failed to get 1password item %s: %v", title, err)
 		}
 	}
 
 	// if document doesn't exist, create it
 	if doc == nil {
-		s.logger.Info(fmt.Sprintf("creating document: %s in vault: %s", title, vault))
+		s.logger.Info(fmt.Sprintf("creating 1password item/document: %s in vault: %s", title, vault))
 		if err := s.cli.CreateDocument(path, title, vault, tags); err != nil {
-			return fmt.Errorf("failed to create document: %v", err)
+			return fmt.Errorf("failed to create 1password document: %v", err)
 		}
 
 		return nil
 	}
 
 	// if document exists, edit document.
-	s.logger.Info(fmt.Sprintf("updating document: %s in vault: %s", title, vault))
+	s.logger.Info(fmt.Sprintf("updating 1password item/document: %s in vault: %s", title, vault))
 	if err := s.cli.EditDocument(path, title); err != nil {
-		return fmt.Errorf("faield to edit document: %v", err)
+		return fmt.Errorf("failed to edit 1password item/document: %v", err)
 	}
 
 	return nil
