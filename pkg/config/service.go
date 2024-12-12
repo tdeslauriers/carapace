@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-
-
 func Load(def SvcDefinition) (*Config, error) {
 
 	if def.ServiceName == "" {
@@ -153,8 +151,8 @@ func (config *Config) readCerts(def SvcDefinition) error {
 		config.Certs.DbClientKey = &envDbClientKey
 	}
 
-	// ca cert
-	if def.Tls == MutualTls || def.Requires.Client || def.Requires.Db {
+	// ca cert - services
+	if def.Tls == MutualTls || def.Requires.Client {
 		envCaCert, ok := os.LookupEnv(fmt.Sprintf("%sCA_CERT", serviceName))
 		if !ok {
 			return fmt.Errorf(fmt.Sprintf("%sCA_CERT not set", serviceName))
@@ -168,9 +166,16 @@ func (config *Config) readCerts(def SvcDefinition) error {
 			config.Certs.ClientCa = &envCaCert
 		}
 
-		if def.Requires.Db {
-			config.Certs.DbCaCert = &envCaCert
+	}
+
+	// ca cert - db
+	if def.Requires.Db {
+		envDbCaCert, ok := os.LookupEnv(fmt.Sprintf("%sDB_CA_CERT", serviceName))
+		if !ok {
+			return fmt.Errorf(fmt.Sprintf("%sDB_CA_CERT not set", serviceName))
 		}
+
+		config.Certs.DbCaCert = &envDbCaCert
 	}
 
 	return nil
