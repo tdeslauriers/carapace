@@ -10,6 +10,7 @@ type Config struct {
 	ServiceName string
 	Env         string
 	Certs       Certs
+	KeyPair     bool
 }
 
 // Certs is a struct for the exo cli command to consume.

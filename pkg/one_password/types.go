@@ -11,16 +11,16 @@ type Item struct {
 	Id             string   `json:"id"`
 	Title          string   `json:"title"`
 	Tags           []string `json:"tags"`
-	Version        int      `json:"version"`
+	Version        int      `json:"version,omitempty"`
 	Vault          Vault    `json:"vault"`
-	Category       string   `json:"category"`
-	LastEditedBy   string   `json:"last_edited_by"`
-	CreatedAt      string   `json:"created_at"`
-	UpdatedAt      string   `json:"updated_at"`
+	Category       string   `json:"category,omitempty"`
+	LastEditedBy   string   `json:"last_edited_by,omitempty"`
+	CreatedAt      string   `json:"created_at,omitempty"`
+	UpdatedAt      string   `json:"updated_at,omitempty"`
 	AdditionalInfo string   `json:"additional_information"`
-	Urls           []Url    `json:"urls"`
+	Urls           []Url    `json:"urls,omitempty"`
 	Fields         []Field  `json:"fields"`
-	Files          []File   `json:"files"`
+	Files          []File   `json:"files,omitempty"`
 }
 
 // Url is a model for the json output of the url object from the 1password cli

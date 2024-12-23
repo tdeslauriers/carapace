@@ -16,6 +16,12 @@ type Service interface {
 
 	// UpsertDocument upserts a document in 1password, eg., a client certificate .pem file
 	UpsertDocument(path, title, vault string, tags []string) error
+
+	// GetItem gets an item from 1password if it exists
+	GetItem(title, vault string) (*Item, error)
+
+	// UpsertItem upserts an item in 1password
+	UpsertItem(item *Item) error
 }
 
 // New is a factory function that returns a new one_password service interface.
@@ -84,6 +90,59 @@ func (s *service) UpsertDocument(path, title, vault string, tags []string) error
 	s.logger.Info(fmt.Sprintf("updating 1password item/document: %s in vault: %s", title, vault))
 	if err := s.cli.EditDocument(path, title); err != nil {
 		return fmt.Errorf("failed to edit 1password item/document: %v", err)
+	}
+
+	return nil
+}
+
+// GetItem gets an item from 1password if it exists
+func (s *service) GetItem(title, vault string) (*Item, error) {
+	return s.cli.GetItem(title, vault)
+}
+
+// UpsertItem upserts an item in 1password
+func (s *service) UpsertItem(item *Item) error {
+
+	// light weight input validation
+	if item == nil {
+		return fmt.Errorf("item is required to upsert 1password item")
+	}
+	if len(item.Title) < 1 {
+		return fmt.Errorf("title is required to upsert 1password item")
+	}
+	if len(item.Vault.Name) < 1 {
+		return fmt.Errorf("vault is required to upsert 1password item")
+	}
+	if len(item.Fields) < 1 {
+		return fmt.Errorf("fields are required to upsert 1password item")
+	}
+
+	// check if item exists so that "duplicate values" are not created
+	// 1password will allow you to create more than one entry with the same name.
+	i, err := s.cli.GetItem(item.Title, item.Vault.Name)
+	if err != nil {
+		if strings.Contains(err.Error(), fmt.Sprintf(`"%s" isn't an item`, item.Title)) {
+			s.logger.Warn(fmt.Sprintf("no 1password item '%s' found in vault: %s", item.Title, item.Vault.Name))
+		} else {
+			// need to exit if error is not 'not found' error
+			return fmt.Errorf("failed to get 1password item %s: %v", item.Title, err)
+		}
+	}
+
+	// if item doesn't exist, create it
+	if i == nil {
+		s.logger.Info(fmt.Sprintf("creating 1password item: %s in vault: %s", item.Title, item.Vault.Name))
+		if err := s.cli.CreateItem(item); err != nil {
+			return fmt.Errorf("failed to create 1password item: %v", err)
+		}
+
+		return nil
+	}
+
+	// if item exists, edit item.
+	s.logger.Info(fmt.Sprintf("updating 1password item: %s in vault: %s", item.Title, item.Vault.Name))
+	if err := s.cli.EditItem(i); err != nil {
+		return fmt.Errorf("failed to edit 1password item: %v", err)
 	}
 
 	return nil

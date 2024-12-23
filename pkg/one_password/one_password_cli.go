@@ -24,6 +24,12 @@ type Cli interface {
 
 	// GetItem gets an item from 1password if it exists
 	GetItem(title, vault string) (*Item, error)
+
+	// CreateItem creates an item in 1password
+	CreateItem(item *Item) error
+
+	// EditItem edits an item in 1password
+	EditItem(item *Item) error
 }
 
 // NewCli is a factory function that returns a new one_password cli interface.
@@ -127,7 +133,7 @@ func (c *cli) EditDocument(file, title string) error {
 func (c *cli) GetItem(title, vault string) (*Item, error) {
 
 	// prepare op command
-	cmd := exec.Command("op", "item", "get", title, "--vault", vault, "--format", "json")
+	cmd := exec.Command("op", "item", "get", title, "--vault", vault, "--format", "json", "--reveal")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -147,4 +153,60 @@ func (c *cli) GetItem(title, vault string) (*Item, error) {
 	}
 
 	return &item, nil
+}
+
+// CreateItem creates an item in 1password
+func (c *cli) CreateItem(item *Item) error {
+
+	// op cli needs the --category argument to work: Login, Password, Server, etc.,
+	// However, MUST be omitted from template/json in that case.
+	// Handling here so that nothing needs to be remembered when createing items.
+	category := item.Category
+	item.Category = "" // --> becomes omitempty in the marshalled json object below.
+
+	// marshal 1password item to json
+	itemJson, err := json.Marshal(item)
+	if err != nil {
+		return fmt.Errorf("failed to marshal item: %v", err)
+	}
+
+	// prepare 1password command
+	// --template= needs a real file path to a template file.
+	// "-" lets you pass in standard input: see https://developer.1password.com/docs/cli/reference/management-commands/item#create-an-item-using-a-json-template
+	cmd := exec.Command("op", "item", "create", "--category", category, "-")
+	cmd.Stdin = strings.NewReader(string(itemJson))
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error running `op item create --category %s - <item json>`: %v; output: %s", category, err, output)
+	}
+
+	c.logger.Info(fmt.Sprintf("1password item created: %s", item.Title))
+
+	return nil
+}
+
+// EditItem edits an item in 1password
+func (c *cli) EditItem(item *Item) error {
+
+	// marshal edited 1password item to json
+	itemJson, err := json.Marshal(item)
+	if err != nil {
+		return fmt.Errorf("failed to marshal item: %v", err)
+	}
+
+	// prepare 1password command
+	// --template= needs a file path to a template file.
+	// "-" lets you pass in standard input: see https://developer.1password.com/docs/cli/reference/management-commands/item#create-an-item-using-a-json-template
+	cmd := exec.Command("op", "item", "edit", item.Title, "-")
+	cmd.Stdin = strings.NewReader(string(itemJson))
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error running `op item edit `: %v; output: %s", err, output)
+	}
+
+	c.logger.Info(fmt.Sprintf("1password item edited: %s", item.Title))
+
+	return nil
 }

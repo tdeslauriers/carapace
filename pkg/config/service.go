@@ -46,15 +46,15 @@ func Load(def SvcDefinition) (*Config, error) {
 	}
 
 	// read in service auth env vars
-	if def.Requires.Client {
-		err = config.serviceAuthEnvVars(def)
+	if def.Requires.S2sClient {
+		err = config.s2sAuthEnvVars(def)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// read in user auth url env var
-	if def.Requires.UserAuthUrl {
+	if def.Requires.Identity {
 		err = config.userAuthEnvVars(def)
 		if err != nil {
 			return nil, err
@@ -113,7 +113,7 @@ func (config *Config) readCerts(def SvcDefinition) error {
 	config.Certs.ServerKey = &envServerKey
 
 	// client
-	if def.Requires.Client {
+	if def.Requires.S2sClient {
 
 		// client cert
 		envClientCert, ok := os.LookupEnv(fmt.Sprintf("%sCLIENT_CERT", serviceName))
@@ -152,7 +152,7 @@ func (config *Config) readCerts(def SvcDefinition) error {
 	}
 
 	// ca cert - services
-	if def.Tls == MutualTls || def.Requires.Client {
+	if def.Tls == MutualTls || def.Requires.S2sClient {
 		envCaCert, ok := os.LookupEnv(fmt.Sprintf("%sCA_CERT", serviceName))
 		if !ok {
 			return fmt.Errorf(fmt.Sprintf("%sCA_CERT not set", serviceName))
@@ -162,7 +162,7 @@ func (config *Config) readCerts(def SvcDefinition) error {
 			config.Certs.ServerCa = &envCaCert
 		}
 
-		if def.Requires.Client {
+		if def.Requires.S2sClient {
 			config.Certs.ClientCa = &envCaCert
 		}
 
@@ -237,35 +237,37 @@ func (config *Config) databaseEnvVars(def SvcDefinition) error {
 	return nil
 }
 
-func (config *Config) serviceAuthEnvVars(def SvcDefinition) error {
+// s2sAuthEnvVars is a helper function that reads in the environment variables for service to service authentication
+func (config *Config) s2sAuthEnvVars(def SvcDefinition) error {
 
 	var serviceName string
 	if def.ServiceName != "" {
 		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
 	}
 
-	envRanUrl, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_URL", serviceName))
+	envS2sUrl, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_URL", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sS2S_AUTH_URL not set", serviceName))
 	}
 
-	envRanClientId, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_CLIENT_ID", serviceName))
+	envS2sClientId, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_CLIENT_ID", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sS2S_AUTH_CLIENT_ID not set", serviceName))
 	}
 
-	envRanClientSecret, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_CLIENT_SECRET", serviceName))
+	envS2sClientSecret, ok := os.LookupEnv(fmt.Sprintf("%sS2S_AUTH_CLIENT_SECRET", serviceName))
 	if !ok {
 		return fmt.Errorf(fmt.Sprintf("%sS2S_AUTH_CLIENT_SECRET not set", serviceName))
 	}
 
-	config.ServiceAuth.Url = envRanUrl
-	config.ServiceAuth.ClientId = envRanClientId
-	config.ServiceAuth.ClientSecret = envRanClientSecret
+	config.ServiceAuth.Url = envS2sUrl
+	config.ServiceAuth.ClientId = envS2sClientId
+	config.ServiceAuth.ClientSecret = envS2sClientSecret
 
 	return nil
 }
 
+// userAuthEnvVars is a helper function that reads in the environment variables for user authentication
 func (config *Config) userAuthEnvVars(def SvcDefinition) error {
 
 	var serviceName string

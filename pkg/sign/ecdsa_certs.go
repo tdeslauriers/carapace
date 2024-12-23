@@ -33,7 +33,7 @@ func NewCertBuilder() CertBuilder {
 	return &certBuilder{
 		op: onepassword.NewService(onepassword.NewCli()),
 
-		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentSign)),
+		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentCert)),
 	}
 }
 

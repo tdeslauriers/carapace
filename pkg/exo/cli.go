@@ -24,6 +24,7 @@ func New(config Config) Exoskeleton {
 	return &exoskeleton{
 		config: config,
 		certs:  sign.NewCertBuilder(),
+		keyGen: sign.NewKeyGenerator(),
 
 		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentExo)),
 	}
@@ -35,6 +36,7 @@ var _ Exoskeleton = (*exoskeleton)(nil)
 type exoskeleton struct {
 	config Config
 	certs  sign.CertBuilder
+	keyGen sign.KeyGenerator
 
 	logger *slog.Logger
 }
@@ -48,6 +50,11 @@ func Parse() (*Config, error) {
 	certMsg := "invokes certificate generation based on a yaml file"
 	certs := flag.Bool("certs", false, certMsg)
 	flag.BoolVar(certs, "c", false, certMsg)
+
+	// jwt signing key pair
+	keyPairMsg := "invokes ecdsa jwt signing key pair generation"
+	keyPair := flag.Bool("key-pair", false, keyPairMsg)
+	flag.BoolVar(keyPair, "k", false, keyPairMsg)
 
 	// environment
 	envMsg := "applies environment tag/instruction to applicable fields in exo commands"
@@ -69,11 +76,12 @@ func Parse() (*Config, error) {
 
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
-		fmt.Fprintf(os.Stderr, "  -c, --certs   %s\n", certMsg)
-		fmt.Fprintf(os.Stderr, "  -e, --env     %s\n", envMsg)
-		fmt.Fprintf(os.Stderr, "  -s, --service %s\n", svcNameMsg)
-		fmt.Fprintf(os.Stderr, "  -f, --file    %s\n", fileMsg)
-		fmt.Fprintf(os.Stderr, "  -h            Display this help message\n")
+		fmt.Fprintf(os.Stderr, "  -c, --certs    %s\n", certMsg)
+		fmt.Fprintf(os.Stderr, "  -k, --key-pair %s\n", keyPairMsg)
+		fmt.Fprintf(os.Stderr, "  -e, --env      %s\n", envMsg)
+		fmt.Fprintf(os.Stderr, "  -s, --service  %s\n", svcNameMsg)
+		fmt.Fprintf(os.Stderr, "  -f, --file     %s\n", fileMsg)
+		fmt.Fprintf(os.Stderr, "  -h             Display this help message\n")
 	}
 
 	// parse flags
@@ -86,6 +94,7 @@ func Parse() (*Config, error) {
 			Invoked:  *certs,
 			Filename: *file,
 		},
+		KeyPair: *keyPair,
 	}, nil
 }
 
@@ -96,6 +105,24 @@ func (cli *exoskeleton) Execute() error {
 	if cli.config.Certs.Invoked {
 		if err := cli.certExecution(); err != nil {
 			return fmt.Errorf("error executing cert command: %v", err)
+		}
+	}
+
+	// jwt key pair generation execution
+	if cli.config.KeyPair {
+
+		// check for service name
+		if cli.config.ServiceName == "" {
+			return fmt.Errorf("you must specify a service name for key pair generation, eg., '-s shaw'")
+		}
+
+		// check for environment
+		if cli.config.Env == "" {
+			return fmt.Errorf("you must specify an environment for key pair generation, eg., '-e dev'")
+		}
+
+		if err := cli.keyPairExecution(); err != nil {
+			return fmt.Errorf("error executing key pair command: %v", err)
 		}
 	}
 

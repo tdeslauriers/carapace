@@ -32,10 +32,47 @@ func TestEditDoc(t *testing.T) {
 
 func TestGetItem(t *testing.T) {
 	cli := NewCli()
-	item, err := cli.GetItem("monkey_wrench", "Shared")
+	item, err := cli.GetItem("monkey_wrench", "world_site")
 	if err != nil {
 		t.Errorf("error getting item: %v", err)
 	}
 
 	t.Logf("item: %+v", item)
+}
+
+func TestCreateItem(t *testing.T) {
+
+	cli := NewCli()
+	item := &Item{
+		Title:    "monkey_wrench",
+		Vault:    Vault{Name: "world_site"},
+		Tags:     []string{"Family Site"},
+		Category: "Login",
+		Fields: []Field{
+			{Label: "test_key", Value: "password123", Type: "concealed"},
+		},
+	}
+
+	if err := cli.CreateItem(item); err != nil {
+		t.Errorf("error creating item: %v", err)
+	}
+}
+
+func TestEditItem(t *testing.T) {
+	cli := NewCli()
+	item, err := cli.GetItem("monkey_wrench", "world_site")
+	if err != nil {
+		t.Errorf("error getting item: %v", err)
+	}
+
+	for i, f := range item.Fields {
+		if f.Label == "test_key" {
+			item.Fields[i].Value = "totally_different_password"
+			break
+		}
+	}
+
+	if err := cli.EditItem(item); err != nil {
+		t.Errorf("error editing item: %v", err)
+	}
 }

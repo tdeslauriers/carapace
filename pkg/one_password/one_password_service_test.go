@@ -137,3 +137,11 @@ func (m *mockCli) GetItem(title, vault string) (*Item, error) {
 		Tags: []string{"Endor"},
 	}, nil
 }
+
+func (m *mockCli) CreateItem(item *Item) error {
+	return nil
+}
+
+func (m *mockCli) EditItem(item *Item) error {
+	return nil
+}

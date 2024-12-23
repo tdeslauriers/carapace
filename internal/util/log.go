@@ -4,7 +4,8 @@ const (
 	ComponentKey         string = "component"
 	ComponentMain        string = "main"
 	ComponentExo         string = "exo"
-	ComponentSign        string = "certificate builder"
+	ComponentCert        string = "certificate builder"
+	ComponentKeyGen      string = "key pair generator"
 	ComponentOnePassword string = "1password cli"
 
 	ServiceKey         string = "service"
