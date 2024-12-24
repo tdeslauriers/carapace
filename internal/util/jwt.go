@@ -4,7 +4,7 @@ package util
 const (
 	OpSigningKeyPairTitle string = "jwt_key_pair"
 	OpVaultName           string = "world_site"
-	OpCategory            string = "Login"
+	OpCategory            string = "LOGIN"
 	OpTag0                string = "Family Site"
 
 	OpEcdsaPrivateKeyLabel string = "signing_key"
