@@ -229,8 +229,10 @@ func (config *Config) databaseEnvVars(def SvcDefinition) error {
 	// index key
 	if def.Requires.IndexKey {
 		envIndexSecret, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_HMAC_INDEX_SECRET", serviceName))
-		if ok {
+		if ok && envIndexSecret != "" {
 			config.Database.IndexSecret = envIndexSecret
+		} else {
+			return fmt.Errorf(fmt.Sprintf("%sDATABASE_HMAC_INDEX_SECRET not set", serviceName))
 		}
 	}
 
