@@ -9,6 +9,8 @@ import (
 	"io"
 )
 
+
+
 func GenerateAesGcmKey() []byte {
 
 	// AES-256
@@ -19,11 +21,17 @@ func GenerateAesGcmKey() []byte {
 	return key
 }
 
+// Cryptor is an interface for encrypting and decrypting service data
 type Cryptor interface {
+
+	// EncryptServiceData encrypts plaintext data
 	EncryptServiceData(string) (string, error)
+
+	// DecryptServiceData decrypts ciphertext data
 	DecryptServiceData(string) (string, error)
 }
 
+// NewServiceAesGcmKey returns a new Cryptor interface for encrypting and decrypting service data
 func NewServiceAesGcmKey(secret []byte) Cryptor {
 	return &serviceAesGcmKey{
 		secret: secret,

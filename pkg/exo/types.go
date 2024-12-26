@@ -10,6 +10,7 @@ type Config struct {
 	ServiceName string
 	Env         string
 	Certs       Certs
+	Secret      string // name of secret to generate
 	KeyPair     bool
 }
 

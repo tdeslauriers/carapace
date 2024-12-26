@@ -21,6 +21,7 @@ type Service interface {
 	GetItem(title, vault string) (*Item, error)
 
 	// UpsertItem upserts an item in 1password
+	// 
 	UpsertItem(item *Item) error
 }
 
