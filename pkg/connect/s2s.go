@@ -159,7 +159,7 @@ func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 			// jump out of retry loop and return error
 			return &ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
-				Message:    fmt.Sprintf("failedto read response body: %v", err),
+				Message:    fmt.Sprintf("failed to read response body: %v", err),
 			}
 		}
 
@@ -360,7 +360,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 			if err := json.Unmarshal(body, &e); err != nil {
 				return &ErrorHttp{
 					StatusCode: http.StatusInternalServerError,
-					Message:    fmt.Sprintf("unable to unmarshal response body json: %v", err),
+					Message:    fmt.Sprintf("failed to unmarshal response body json: %v", err),
 				}
 			}
 			// jump out of retry loop and return error

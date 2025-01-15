@@ -1,9 +1,11 @@
 package types
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
+	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
 // IdentityClient is a struct for identity client data, NOT the same as S2S client data:
@@ -53,6 +55,43 @@ type Scope struct {
 	Description string `db:"description" json:"description"`
 	CreatedAt   string `db:"created_at" json:"created_at"`
 	Active      bool   `db:"active" json:"active"`
+	Slug        string `db:"slug" json:"slug"`
+}
+
+// ValidateCmd performs regex checks on scope fields.
+func (s *Scope) ValidateCmd() error {
+
+	// uuid's and dates may not yet exist, so those must be checked separately
+
+	if s.Uuid != "nil" {
+		if !validate.IsValidUuid(s.Uuid) {
+			return fmt.Errorf("invalid scope id in scope payload")
+		}
+	}
+
+	if !validate.IsValidServiceName(s.ServiceName) {
+		return fmt.Errorf("invalid service name in scope payload")
+	}
+
+	if validate.TooShort(s.Scope, 1) || validate.TooLong(s.Scope, 64) {
+		return fmt.Errorf("invalid scope in scope payload")
+	}
+
+	if err := validate.IsValidName(s.Name); err != nil {
+		return fmt.Errorf("invalid name in scope payload: %v", err)
+	}
+
+	if !validate.TooShort(s.Description, 2) || !validate.TooLong(s.Description, 256) {
+		return fmt.Errorf("invalid description in scope payload")
+	}
+
+	if s.Slug != "nil" {
+		if !validate.IsValidUuid(s.Slug) {
+			return fmt.Errorf("invalid slug in scope payload")
+		}
+	}
+
+	return nil
 }
 
 // AccountScopeXref is a model struct xref table joining user accounts and scopes tables.

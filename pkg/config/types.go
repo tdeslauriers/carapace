@@ -32,7 +32,7 @@ type Database struct {
 	Name        string
 	Username    string
 	Password    string
-	FieldKey    string
+	FieldSecret string
 	IndexSecret string
 }
 

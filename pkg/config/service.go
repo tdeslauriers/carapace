@@ -218,16 +218,16 @@ func (config *Config) databaseEnvVars(def SvcDefinition) error {
 	config.Database.Password = envDbPassword
 
 	// field level encryption key
-	if def.Requires.AesKey {
+	if def.Requires.AesSecret {
 		envFieldsKey, ok := os.LookupEnv(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_SECRET", serviceName))
 		if !ok {
 			return fmt.Errorf(fmt.Sprintf("%sFIELD_LEVEL_AES_GCM_SECRET not set", serviceName))
 		}
-		config.Database.FieldKey = envFieldsKey
+		config.Database.FieldSecret = envFieldsKey
 	}
 
 	// index key
-	if def.Requires.IndexKey {
+	if def.Requires.IndexSecret {
 		envIndexSecret, ok := os.LookupEnv(fmt.Sprintf("%sDATABASE_HMAC_INDEX_SECRET", serviceName))
 		if ok && envIndexSecret != "" {
 			config.Database.IndexSecret = envIndexSecret

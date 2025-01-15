@@ -18,15 +18,16 @@ type SvcDefinition struct {
 // Requires is a list of service requirements meant to inform service configuration.
 type Requires struct {
 	// S2sClient indicates that the service requires a client certificate and s2s authentication
-	S2sClient     bool
+	S2sClient bool
+
+	// Db indicates that the service requires a database connection and credentials
+	Db          bool
+	IndexSecret bool
+	AesSecret   bool
+
 	S2sSigningKey bool
 	// S2sVerifyingKey indicates that the service requires a verifying key for s2s JWTs
 	S2sVerifyingKey bool
-
-	// Db indicates that the service requires a database connection and credentials
-	Db       bool
-	IndexKey bool
-	AesKey   bool
 
 	// Identity indicates that the service requires making requests to the identity service
 	Identity       bool
