@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
+	"github.com/tdeslauriers/carapace/pkg/session/types"
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
@@ -21,6 +22,7 @@ type User struct {
 	Enabled        bool            `json:"enabled" db:"enabled"`
 	AccountExpired bool            `json:"account_expired" db:"account_expired"`
 	AccountLocked  bool            `json:"account_locked" db:"account_locked"`
+	Scopes         []types.Scope   `json:"scopes,omitempty"` // will not always be present; call specific/depenedent
 }
 
 func (u *User) ValidateCmd() error {
