@@ -18,6 +18,8 @@ type Verifier interface {
 	IsAuthorized(allowedScopes []string, token string) (bool, error)
 }
 
+// NewVerifier creates a new Verifier object with a service name and public key.
+// Note: service name is provided to ensure it is in the token audiences.
 func NewVerifier(svcName string, pubKey *ecdsa.PublicKey) Verifier {
 	return &verifier{
 		ServiceName: svcName,
