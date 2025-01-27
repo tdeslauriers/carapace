@@ -376,6 +376,7 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 // handle upstream errors returned by the other two above funtions.
 // Adds in meta data to the logging from the caller struct.
 func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) {
+	caller.logger.Info(fmt.Sprintf("handling upstream error: %+v", err))
 
 	// checks for expected ErrorHttp type and handles logging and writing to response if different type
 	errMsg, ok := err.(*ErrorHttp)
@@ -427,6 +428,7 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 		e.SendJsonErr(w)
 
 	case http.StatusForbidden:
+		caller.logger.Info(fmt.Sprintf("handling forbidden error: %s", errMsg.Message))
 		// call returned forbidden for s2s token
 		if errMsg.Message == jwt.S2sForbiddenErrMsg {
 			e := ErrorHttp{
