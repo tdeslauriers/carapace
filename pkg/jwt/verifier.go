@@ -103,7 +103,7 @@ func (v *verifier) IsAuthorized(allowedScopes []string, token string) (bool, err
 	if v.hasValidScopes(allowedScopes, jwt) {
 		return true, nil
 	} else {
-		return false, fmt.Errorf("forbiddon: incorrect or missing scopes")
+		return false, fmt.Errorf("forbidden: incorrect or missing scopes")
 	}
 }
 
