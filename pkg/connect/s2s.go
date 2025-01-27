@@ -428,7 +428,6 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 		e.SendJsonErr(w)
 
 	case http.StatusForbidden:
-		caller.logger.Info(fmt.Sprintf("handling forbidden error: %s", errMsg.Message))
 		// call returned forbidden for s2s token
 		if errMsg.Message == jwt.S2sForbiddenErrMsg {
 			e := ErrorHttp{
@@ -441,6 +440,7 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 
 		// call returned forbidden for user token
 		if errMsg.Message == jwt.UserForbdiddenErrMsg {
+			caller.logger.Info(fmt.Sprintf("returning forbidden error: %s", errMsg.Message))
 			e := ErrorHttp{
 				StatusCode: http.StatusForbidden,
 				Message:    "forbidden",
