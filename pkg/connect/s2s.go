@@ -214,7 +214,6 @@ func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 				}
 			}
 			// jump out of retry loop and return error
-			caller.logger.Info(fmt.Sprintf("GET request FORBIDDEN: %s: %s", e.StatusCode, e.Message))
 			return &ErrorHttp{
 				StatusCode: e.StatusCode,
 				Message:    e.Message,
@@ -377,7 +376,6 @@ func (caller *s2sCaller) PostToService(endpoint, s2sToken, authToken string, cmd
 // handle upstream errors returned by the other two above funtions.
 // Adds in meta data to the logging from the caller struct.
 func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) {
-	caller.logger.Info(fmt.Sprintf("handling upstream error: %+v", err))
 
 	// checks for expected ErrorHttp type and handles logging and writing to response if different type
 	errMsg, ok := err.(*ErrorHttp)
@@ -402,7 +400,7 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 	case http.StatusUnauthorized:
 
 		// s2s token unauthorized
-		if errMsg.Message == jwt.S2sUnauthorizedErrMsg {
+		if strings.Contains(errMsg.Message, jwt.S2sUnauthorizedErrMsg) {
 			e := ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
 				Message:    "internal server error",
@@ -412,7 +410,7 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 		}
 
 		// user token unauthorized
-		if errMsg.Message == jwt.UserUnauthorizedErrMsg {
+		if strings.Contains(errMsg.Message, jwt.UserUnauthorizedErrMsg) {
 			e := ErrorHttp{
 				StatusCode: http.StatusUnauthorized,
 				Message:    "unauthorized",
@@ -430,7 +428,7 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 
 	case http.StatusForbidden:
 		// call returned forbidden for s2s token
-		if errMsg.Message == jwt.S2sForbiddenErrMsg {
+		if strings.Contains(errMsg.Message, jwt.S2sForbiddenErrMsg) {
 			e := ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
 				Message:    "internal server error", // this should never happen --> means I didnt provision the service correctly
@@ -440,8 +438,7 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 		}
 
 		// call returned forbidden for user token
-		if errMsg.Message == jwt.UserForbdiddenErrMsg {
-			caller.logger.Info(fmt.Sprintf("returning forbidden error: %s", errMsg.Message))
+		if strings.Contains(errMsg.Message, jwt.UserForbdiddenErrMsg) {
 			e := ErrorHttp{
 				StatusCode: http.StatusForbidden,
 				Message:    "forbidden",
