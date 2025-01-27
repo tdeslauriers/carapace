@@ -427,9 +427,9 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 		e.SendJsonErr(w)
 
 	case http.StatusForbidden:
-		caller.logger.Error("FORBIDDEN ERROR CASE", "err", errMsg.Message)
 		// call returned forbidden for s2s token
 		if strings.Contains(errMsg.Message, jwt.S2sForbiddenErrMsg) {
+			caller.logger.Error(errMsg.Message)
 			e := ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
 				Message:    "internal server error", // this should never happen --> means I didnt provision the service correctly
@@ -440,7 +440,6 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 
 		// call returned forbidden for user token
 		if strings.Contains(errMsg.Message, jwt.UserForbdiddenErrMsg) {
-			caller.logger.Error("FORBIDDEN ERROR CASE CORRECTLY HANDLED", "err", errMsg.Message)
 			e := ErrorHttp{
 				StatusCode: http.StatusForbidden,
 				Message:    "forbidden",
@@ -448,8 +447,6 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 			e.SendJsonErr(w)
 			break
 		}
-
-		caller.logger.Error("FORBIDDEN ERROR FAILED", "err", errMsg.Message)
 
 	case http.StatusMethodNotAllowed:
 		e := ErrorHttp{
