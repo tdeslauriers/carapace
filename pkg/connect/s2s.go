@@ -214,6 +214,7 @@ func (caller *s2sCaller) GetServiceData(endpoint, s2sToken, authToken string, da
 				}
 			}
 			// jump out of retry loop and return error
+			caller.logger.Info(fmt.Sprintf("GET request FORBIDDEN: %s: %s", e.StatusCode, e.Message))
 			return &ErrorHttp{
 				StatusCode: e.StatusCode,
 				Message:    e.Message,
