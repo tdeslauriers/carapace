@@ -69,16 +69,16 @@ func (s *Scope) ValidateCmd() error {
 		}
 	}
 
-	if !validate.IsValidServiceName(s.ServiceName) {
-		return fmt.Errorf("invalid service name in scope payload")
+	if ok, err := validate.IsValidServiceName(s.ServiceName); !ok {
+		return fmt.Errorf("invalid service name in scope payload: %v", err)
 	}
 
-	if validate.TooShort(s.Scope, 1) || validate.TooLong(s.Scope, 64) {
-		return fmt.Errorf("invalid scope in scope payload")
+	if ok, err := validate.IsValidScope(s.Scope); !ok {
+		return fmt.Errorf("invalid scope in scope payload: %v", err)
 	}
 
-	if err := validate.IsValidName(s.Name); err != nil {
-		return fmt.Errorf("invalid name in scope payload: %v", err)
+	if ok, err := validate.IsValidScopeName(s.Name); !ok {
+		return fmt.Errorf("invalid scope name in scope payload: %v", err)
 	}
 
 	if !validate.TooShort(s.Description, 2) || !validate.TooLong(s.Description, 256) {

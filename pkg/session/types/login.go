@@ -23,8 +23,8 @@ func (cmd *S2sLoginCmd) ValidateCmd() error {
 		return fmt.Errorf("invalid client id")
 	}
 
-	if !validate.IsValidServiceName(cmd.ServiceName) {
-		return fmt.Errorf("invalid service name")
+	if ok, err := validate.IsValidServiceName(cmd.ServiceName); !ok {
+		return fmt.Errorf("invalid service in s2s login payload: %v", err)
 	}
 
 	if validate.TooShort(cmd.ClientSecret, validate.PasswordMin) || validate.TooLong(cmd.ClientSecret, validate.EmailMax) {

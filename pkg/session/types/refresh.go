@@ -56,8 +56,8 @@ func (cmd S2sRefreshCmd) ValidateCmd() error {
 		return fmt.Errorf("invalid refresh token: must be between %d and %d characters", 16, 64)
 	}
 
-	if !validate.IsValidServiceName(cmd.ServiceName) {
-		return fmt.Errorf("invalid service name")
+	if ok, err := validate.IsValidServiceName(cmd.ServiceName); !ok {
+		return fmt.Errorf("invalid service name in s2s refresh payload: %v", err)
 	}
 
 	return nil
