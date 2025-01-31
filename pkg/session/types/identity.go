@@ -47,9 +47,8 @@ type UserAccount struct {
 }
 
 // Scope is a model for the scope table data, NOT jwt string object in the jwt package.
+// Do not add fields from other contexts/concerns like csrf.
 type Scope struct {
-	Csrf string `json:"csrf,omitempty"` // used by gateway, but not s2s
-
 	Uuid        string `db:"uuid" json:"scope_id"`
 	ServiceName string `db:"service_name" json:"service_name"`
 	Scope       string `db:"scope" json:"scope"`
