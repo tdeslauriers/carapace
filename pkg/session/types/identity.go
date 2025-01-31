@@ -49,14 +49,14 @@ type UserAccount struct {
 // Scope is a model for the scope table data, NOT jwt string object in the jwt package.
 // Do not add fields from other contexts/concerns like csrf.
 type Scope struct {
-	Uuid        string `db:"uuid" json:"scope_id"`
+	Uuid        string `db:"uuid" json:"scope_id,omitempty"`
 	ServiceName string `db:"service_name" json:"service_name"`
 	Scope       string `db:"scope" json:"scope"`
 	Name        string `db:"name"  json:"name"`
 	Description string `db:"description" json:"description"`
 	CreatedAt   string `db:"created_at" json:"created_at"`
 	Active      bool   `db:"active" json:"active"`
-	Slug        string `db:"slug" json:"slug"`
+	Slug        string `db:"slug" json:"slug,omitempty"`
 }
 
 // ValidateCmd performs regex checks on scope fields.
@@ -64,7 +64,7 @@ func (s *Scope) ValidateCmd() error {
 
 	// uuid's and dates may not yet exist, so those must be checked separately
 
-	if s.Uuid != "nil" {
+	if s.Uuid != "" {
 		if !validate.IsValidUuid(s.Uuid) {
 			return fmt.Errorf("invalid scope id in scope payload")
 		}
@@ -86,7 +86,7 @@ func (s *Scope) ValidateCmd() error {
 		return fmt.Errorf("invalid description in scope payload")
 	}
 
-	if s.Slug != "nil" {
+	if s.Slug != "" {
 		if !validate.IsValidUuid(s.Slug) {
 			return fmt.Errorf("invalid slug in scope payload")
 		}
