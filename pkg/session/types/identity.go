@@ -83,7 +83,7 @@ func (s *Scope) ValidateCmd() error {
 		return fmt.Errorf("invalid scope name in scope payload: %v", err)
 	}
 
-	if !validate.TooShort(s.Description, 2) || !validate.TooLong(s.Description, 256) {
+	if validate.TooShort(s.Description, 2) || validate.TooLong(s.Description, 256) {
 		return fmt.Errorf("invalid description in scope payload")
 	}
 
