@@ -108,3 +108,49 @@ func (r *ResetCmd) ValidateCmd() error {
 
 	return nil
 }
+
+// Client is a model struct that represents editable fields, ie not passwords,
+// for a client in the clients table of the identity service db.
+// it can also be returned with it's scopes in a list, but this is a composite and must be assembled.
+type Client struct {
+	Id             string          `json:"id,omitempty" db:"uuid"`
+	Name           string          `json:"name" db:"name"`
+	Owner          string          `json:"owner" db:"owner"`
+	CreatedAt      data.CustomTime `json:"created_at" db:"created_at"`
+	Enabled        bool            `json:"enabled" db:"enabled"`
+	AccountExpired bool            `json:"account_expired" db:"account_expired"`
+	AccountLocked  bool            `json:"account_locked" db:"account_locked"`
+	Slug           string          `json:"slug,omitempty" db:"slug"`
+	Scopes         []types.Scope   `json:"scopes,omitempty"`
+}
+
+// ValidateCmd performs input validation check on client fields.
+func (c *Client) ValidateCmd() error {
+
+	if c.Id != "" && !validate.IsValidUuid(c.Id) {
+		return fmt.Errorf("invalid or not well formatted client id")
+	}
+
+	if valid, err := validate.IsValidServiceName(c.Name); !valid {
+		return fmt.Errorf("invalid client name: %v", err)
+	}
+
+	if err := validate.IsValidName(c.Owner); err != nil {
+		return fmt.Errorf("invalid client owner: %v", err)
+	}
+
+	// CreatedAt is a timestamp created programmatically,
+	// no validation needed, will be dropped on all updates
+
+	// Enabled is a boolean, no validation needed
+
+	// AccountExpired is a boolean, no validation needed
+
+	// AccountLocked is a boolean, no validation needed
+
+	if c.Slug != "" && !validate.IsValidUuid(c.Slug) {
+		return fmt.Errorf("invalid or not well formatted slug")
+	}
+
+	return nil
+}
