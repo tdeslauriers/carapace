@@ -80,7 +80,8 @@ func (u *User) ValidateCmd() error {
 
 // ResetCmd is the model struct for the password reset command where the user knows their current password
 type ResetCmd struct {
-	Csrf string `json:"csrf,omitempty"` // wont be sent thru to the identity service
+	Csrf       string `json:"csrf,omitempty"`        // wont be sent thru to the identity service
+	ResourceId string `json:"resource_id,omitempty"` // wont be sent thru to the identity service, only the s2s service
 
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`
@@ -90,6 +91,16 @@ type ResetCmd struct {
 // ValidateCmd performs input validation check on reset cmd fields.
 // For the new password, it uses the same validation as the register command.
 func (r *ResetCmd) ValidateCmd() error {
+
+	// validate csrf
+	if !validate.IsValidUuid(r.Csrf) {
+		return fmt.Errorf("invalid csrf")
+	}
+
+	// validate resource id if present
+	if r.ResourceId != "" && !validate.IsValidUuid(r.ResourceId) {
+		return fmt.Errorf("invalid resource id")
+	}
 
 	// lightweight validation to make sure it isnt to short or too long
 	if len(r.CurrentPassword) < validate.PasswordMin || len(r.CurrentPassword) > validate.PasswordMax {
