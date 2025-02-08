@@ -447,6 +447,12 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 			e.SendJsonErr(w)
 			break
 		}
+	case http.StatusNotFound:
+		e := ErrorHttp{
+			StatusCode: http.StatusNotFound,
+			Message:    errMsg.Message,
+		}
+		e.SendJsonErr(w)
 
 	case http.StatusMethodNotAllowed:
 		e := ErrorHttp{
