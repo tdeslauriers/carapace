@@ -93,11 +93,13 @@ type ResetCmd struct {
 func (r *ResetCmd) ValidateCmd() error {
 
 	// validate csrf
-	if !validate.IsValidUuid(r.Csrf) {
+	// Note: csrf is not sent to the identity or s2s service, only the gateway
+	if r.Csrf != "" && !validate.IsValidUuid(r.Csrf) {
 		return fmt.Errorf("invalid csrf")
 	}
 
 	// validate resource id if present
+	// Note: resource id is not sent to the identity, only the s2s service
 	if r.ResourceId != "" && !validate.IsValidUuid(r.ResourceId) {
 		return fmt.Errorf("invalid resource id")
 	}
