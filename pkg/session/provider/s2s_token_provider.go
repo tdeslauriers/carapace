@@ -89,7 +89,7 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 			// call s2s auth service to refresh token
 			authz, err := p.refreshS2sToken(tokens[0].RefreshToken, serviceName) // decrypts
 			if err != nil {
-				p.logger.Error(fmt.Sprintf("failed to refresh %s s2s token, jti: %s", tokens[0].ServiceName, tokens[0].Jti), "err", err.Error())
+				p.logger.Error(fmt.Sprintf("failed to refresh %s s2s token, jti %s: %s", tokens[0].ServiceName, tokens[0].Jti, err.Error()))
 				continue
 			}
 
@@ -113,7 +113,8 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 					}
 					p.logger.Info(fmt.Sprintf("deleted claimed refresh token for %s, jti %s", serviceName, id))
 				}(token.Jti)
-	
+
+				p.logger.Info(fmt.Sprintf("successfully refreshed %s s2s token: jti %s", serviceName, authz.Jti))
 				return authz.ServiceToken, nil
 			}
 		}
@@ -136,6 +137,7 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 		}
 	}(authz)
 
+	p.logger.Info(fmt.Sprintf("successfully authenticated to %s s2s authentication service: jti %s", serviceName, authz.Jti))
 	return authz.ServiceToken, nil
 }
 
