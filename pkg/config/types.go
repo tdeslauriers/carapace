@@ -11,6 +11,7 @@ type Config struct {
 	UserAuth        UserAuth
 	Jwt             Jwt
 	OauthRedirect   OauthRedirect
+	Tasks           Tasks
 }
 
 type Certs struct {
@@ -43,6 +44,10 @@ type ServiceAuth struct {
 }
 
 type UserAuth struct {
+	Url string
+}
+
+type Tasks struct {
 	Url string
 }
 

@@ -37,4 +37,7 @@ type Requires struct {
 
 	// OauthRedirect indicates that the service requires oauth client id and redirect url
 	OauthRedirect bool
+
+	// Tasks indicates that the service requires making requests to the tasks service
+	Tasks bool
 }

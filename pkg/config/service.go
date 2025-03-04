@@ -84,6 +84,14 @@ func Load(def SvcDefinition) (*Config, error) {
 		config.OauthRedirect.CallbackClientId = envOauthCallbackClientId
 	}
 
+	// read in tasks service env vars
+	if def.Requires.Tasks {
+		err = config.tasksServiceEnvVars(def)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return config, nil
 }
 
@@ -334,6 +342,24 @@ func (config *Config) JwtEnvVars(def SvcDefinition) error {
 		}
 		config.Jwt.UserVerifyingKey = envUserVerifyingKey
 	}
+
+	return nil
+}
+
+func (config *Config) tasksServiceEnvVars(def SvcDefinition) error {
+
+	var serviceName string
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
+
+	}
+
+	envTasksUrl, ok := os.LookupEnv(fmt.Sprintf("%sTASKS_URL", serviceName))
+	if !ok {
+		return fmt.Errorf(fmt.Sprintf("%sTASKS_URL not set", serviceName))
+	}
+
+	config.Tasks.Url = envTasksUrl
 
 	return nil
 }
