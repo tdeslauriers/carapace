@@ -42,6 +42,8 @@ type serviceAesGcmKey struct {
 	secret []byte // Env Var
 }
 
+// EncryptServiceData is the concrete implementation of the Cryptor interface function
+// Note: takes in a byte array (for versatility) and returns a base64 encoded string
 func (key *serviceAesGcmKey) EncryptServiceData(clear []byte) (string, error) {
 
 	if len(key.secret) != 32 {
@@ -68,6 +70,7 @@ func (key *serviceAesGcmKey) EncryptServiceData(clear []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 
+// EncryptServiceData is the concrete implementation of the Cryptor interface function
 func (key *serviceAesGcmKey) DecryptServiceData(ciphertext string) ([]byte, error) {
 
 	if len(key.secret) != 32 {
