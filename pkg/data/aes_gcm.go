@@ -9,8 +9,6 @@ import (
 	"io"
 )
 
-
-
 func GenerateAesGcmKey() []byte {
 
 	// AES-256
@@ -24,11 +22,11 @@ func GenerateAesGcmKey() []byte {
 // Cryptor is an interface for encrypting and decrypting service data
 type Cryptor interface {
 
-	// EncryptServiceData encrypts plaintext data
-	EncryptServiceData(string) (string, error)
+	// EncryptServiceData encrypts data and returns encrypted value as a base64 encoded string
+	EncryptServiceData([]byte) (string, error)
 
-	// DecryptServiceData decrypts ciphertext data
-	DecryptServiceData(string) (string, error)
+	// DecryptServiceData decrypts ciphertext (encrypted + encoded in base64) data to a clear byte array
+	DecryptServiceData(string) ([]byte, error)
 }
 
 // NewServiceAesGcmKey returns a new Cryptor interface for encrypting and decrypting service data
@@ -44,7 +42,7 @@ type serviceAesGcmKey struct {
 	secret []byte // Env Var
 }
 
-func (key *serviceAesGcmKey) EncryptServiceData(plaintext string) (string, error) {
+func (key *serviceAesGcmKey) EncryptServiceData(clear []byte) (string, error) {
 
 	if len(key.secret) != 32 {
 		panic("AES key must be exactly 32 bytes long")
@@ -65,11 +63,12 @@ func (key *serviceAesGcmKey) EncryptServiceData(plaintext string) (string, error
 		return "", err
 	}
 
-	encrypted := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+	// nonce is prepended to the encrypted value so it can be extracted on decryption
+	encrypted := gcm.Seal(nonce, nonce, clear, nil)
 	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 
-func (key *serviceAesGcmKey) DecryptServiceData(ciphertext string) (string, error) {
+func (key *serviceAesGcmKey) DecryptServiceData(ciphertext string) ([]byte, error) {
 
 	if len(key.secret) != 32 {
 		panic("AES key must be exactly 32 bytes long")
@@ -77,30 +76,30 @@ func (key *serviceAesGcmKey) DecryptServiceData(ciphertext string) (string, erro
 
 	c, err := aes.NewCipher(key.secret)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	gcm, err := cipher.NewGCM(c)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// decode ciphertext to bytes
 	encrypted, err := base64.StdEncoding.DecodeString(ciphertext)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	nonceSize := gcm.NonceSize()
 	if len(encrypted) < nonceSize {
-		return "", fmt.Errorf("ciphertext too short")
+		return nil, fmt.Errorf("ciphertext too short")
 	}
 
 	nonce, cipherBytes := encrypted[:nonceSize], encrypted[nonceSize:]
 	decrypted, err := gcm.Open(nil, nonce, cipherBytes, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(decrypted), nil
+	return decrypted, nil
 }
