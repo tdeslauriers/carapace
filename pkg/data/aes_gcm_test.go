@@ -14,7 +14,7 @@ func TestAesCipher(t *testing.T) {
 
 	serviceKey := NewServiceAesGcmKey(r)
 
-	encrypted, err := serviceKey.EncryptServiceData(Plaintext)
+	encrypted, err := serviceKey.EncryptServiceData([]byte(Plaintext))
 	if err != nil {
 		t.Logf("Failed to encrypt test data: %v", err)
 		t.Fail()
@@ -25,12 +25,12 @@ func TestAesCipher(t *testing.T) {
 		t.Log(err)
 		t.Fail()
 	}
-	if Plaintext != decrypted {
+	if Plaintext != string(decrypted) {
 		t.Logf("Failed to decrypt data correctly, decrypted: %s", decrypted)
 		t.Fail()
 	}
 
-	sameCrypted, err := serviceKey.EncryptServiceData(Plaintext)
+	sameCrypted, err := serviceKey.EncryptServiceData([]byte(Plaintext))
 	if err != nil {
 		t.Logf("Failed to encrypt test data: %v", err)
 		t.Fail()

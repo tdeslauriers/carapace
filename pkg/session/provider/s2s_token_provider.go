@@ -65,7 +65,7 @@ func (p *s2sTokenProvider) GetServiceToken(serviceName string) (jwt string, e er
 				if err != nil {
 					p.logger.Error(fmt.Sprintf("failed to decrypt %s s2s token, jti: %s", serviceName, token.Jti), "err", err.Error())
 				} else {
-					return decrypted, nil
+					return string(decrypted), nil
 				}
 			} else {
 				// opportunistically delete expired service token
@@ -162,13 +162,13 @@ func (p *s2sTokenProvider) s2sLogin(service string) (*S2sAuthorization, error) {
 func (p *s2sTokenProvider) persistS2sToken(authz *S2sAuthorization) error {
 
 	// encrypt service token and refresh token
-	encServiceToken, err := p.cryptor.EncryptServiceData(authz.ServiceToken)
+	encServiceToken, err := p.cryptor.EncryptServiceData([]byte(authz.ServiceToken))
 	if err != nil {
 		return fmt.Errorf("failed to encrypt s2s token: %v", err)
 	}
 	authz.ServiceToken = encServiceToken
 
-	encRefreshToken, err := p.cryptor.EncryptServiceData(authz.RefreshToken)
+	encRefreshToken, err := p.cryptor.EncryptServiceData([]byte(authz.RefreshToken))
 	if err != nil {
 		return fmt.Errorf("failed to encrypt refresh token: %v", err)
 	}
@@ -223,7 +223,7 @@ func (p *s2sTokenProvider) refreshS2sToken(refreshToken, serviceName string) (*S
 
 	// create cmd
 	cmd := types.S2sRefreshCmd{
-		RefreshToken: decrypted,
+		RefreshToken: string(decrypted),
 		ServiceName:  serviceName,
 	}
 	var s2sAuthz S2sAuthorization
