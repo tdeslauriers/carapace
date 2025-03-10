@@ -15,6 +15,7 @@ type Allowance struct {
 	Slug         string          `json:"slug,omitempty" db:"slug"`
 	SlugIndex    string          `json:"slug_index,omitempty" db:"slug_index"`
 	CreatedAt    data.CustomTime `json:"created_at" db:"created_at"`
+	UpdatedAt    data.CustomTime `json:"updated_at" db:"updated_at"`
 	IsArchived   bool            `json:"is_archived" db:"is_archived"`
 	IsActive     bool            `json:"is_active" db:"is_active"`
 	IsCalculated bool            `json:"is_calculated" db:"is_calculated"`
