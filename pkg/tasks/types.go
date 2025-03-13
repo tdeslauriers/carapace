@@ -7,6 +7,8 @@ import (
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
+// Allowance is a struct that represents a user's allowance as it exists in the database.
+// It can also be used for json, though the indexes will be omitted.
 type Allowance struct {
 	Id           string          `json:"id,omitempty" db:"uuid"`
 	Balance      float64         `json:"balance" db:"balance"`
@@ -44,5 +46,46 @@ func (a *Allowance) ValidateCmd() error {
 		return fmt.Errorf("invalid balance: must be greater than or equal to 0")
 	}
 
+	return nil
+}
+
+// UpdateAllowanceCmd is a struct that represents the command to update an allowance in the allownace service.
+// It does not represent a data model in the database.
+type UpdateAllowanceCmd struct {
+	Csrf string `json:"csrf,omitempty"`
+
+	Credit       float64 `json:"credit"`
+	Debit        float64 `json:"debit"`
+	IsArchived   bool    `json:"is_archived"`
+	IsActive     bool    `json:"is_active"`
+	IsCalculated bool    `json:"is_calculated"`
+}
+
+// ValidateCmd validates the UpdateAllowanceCmd struct
+// Note: it does not include any business logic validation, only data validation.
+func (u *UpdateAllowanceCmd) ValidateCmd() error {
+	if u.Csrf != "" {
+		if !validate.IsValidUuid(u.Csrf) {
+			return fmt.Errorf("invalid csrf token submitted with request")
+		}
+	}
+
+	if u.Credit < 0 {
+		return fmt.Errorf("invalid credit: must be greater than or equal to 0")
+	}
+
+	if u.Credit > 10000 {
+		return fmt.Errorf("invalid credit: must be less than or equal to 10,000, since that is ridiculous")
+	}
+
+	if u.Debit < 0 {
+		return fmt.Errorf("invalid debit: must be greater than or equal to 0")
+	}
+
+	if u.Debit > 10000 {
+		return fmt.Errorf("invalid debit: must be less than or equal to 10,000, since that is ridiculous")
+	}
+
+	// validation of boolean values is not necessary: business logic will determine if they are valid in service.
 	return nil
 }
