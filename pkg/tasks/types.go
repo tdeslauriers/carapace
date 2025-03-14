@@ -75,16 +75,16 @@ func (u *UpdateAllowanceCmd) ValidateCmd() error {
 		return fmt.Errorf("invalid credit: must be greater than or equal to 0")
 	}
 
-	if u.Credit > 10000 {
-		return fmt.Errorf("invalid credit: must be less than or equal to 10,000, since that is ridiculous")
+	if u.Credit > 1000000 {
+		return fmt.Errorf("invalid credit: must be less than or equal to $10,000, since that is ridiculous")
 	}
 
 	if u.Debit < 0 {
 		return fmt.Errorf("invalid debit: must be greater than or equal to 0")
 	}
 
-	if u.Debit > 10000 {
-		return fmt.Errorf("invalid debit: must be less than or equal to 10,000, since that is ridiculous")
+	if u.Debit > 1000000 {
+		return fmt.Errorf("invalid debit: must be less than or equal to $10,000, since that is ridiculous")
 	}
 
 	// validation of boolean values is not necessary: business logic will determine if they are valid in service.
