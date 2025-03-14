@@ -9,9 +9,10 @@ import (
 
 // Allowance is a struct that represents a user's allowance as it exists in the database.
 // It can also be used for json, though the indexes will be omitted.
+// Balance is counted in cents to avoid Superman 3 style errors.
 type Allowance struct {
 	Id           string          `json:"id,omitempty" db:"uuid"`
-	Balance      float64         `json:"balance" db:"balance"`
+	Balance      int64           `json:"balance" db:"balance"`
 	Username     string          `json:"username,omitempty" db:"username"`
 	UserIndex    string          `json:"user_index,omitempty" db:"user_index"`
 	Slug         string          `json:"slug,omitempty" db:"slug"`
@@ -54,11 +55,11 @@ func (a *Allowance) ValidateCmd() error {
 type UpdateAllowanceCmd struct {
 	Csrf string `json:"csrf,omitempty"`
 
-	Credit       float64 `json:"credit"`
-	Debit        float64 `json:"debit"`
-	IsArchived   bool    `json:"is_archived"`
-	IsActive     bool    `json:"is_active"`
-	IsCalculated bool    `json:"is_calculated"`
+	Credit       int64 `json:"credit"`
+	Debit        int64 `json:"debit"`
+	IsArchived   bool  `json:"is_archived"`
+	IsActive     bool  `json:"is_active"`
+	IsCalculated bool  `json:"is_calculated"`
 }
 
 // ValidateCmd validates the UpdateAllowanceCmd struct
