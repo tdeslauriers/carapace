@@ -12,7 +12,7 @@ import (
 // Balance is counted in cents to avoid Superman 3 style errors.
 type Allowance struct {
 	Id           string          `json:"id,omitempty" db:"uuid"`
-	Balance      int64           `json:"balance" db:"balance"`
+	Balance      uint64          `json:"balance" db:"balance"`
 	Username     string          `json:"username,omitempty" db:"username"`
 	UserIndex    string          `json:"user_index,omitempty" db:"user_index"`
 	Slug         string          `json:"slug,omitempty" db:"slug"`
@@ -43,10 +43,6 @@ func (a *Allowance) ValidateCmd() error {
 		return fmt.Errorf("invalid or not well formatted slug")
 	}
 
-	if a.Balance < 0 {
-		return fmt.Errorf("invalid balance: must be greater than or equal to 0")
-	}
-
 	return nil
 }
 
@@ -55,11 +51,11 @@ func (a *Allowance) ValidateCmd() error {
 type UpdateAllowanceCmd struct {
 	Csrf string `json:"csrf,omitempty"`
 
-	Credit       int64 `json:"credit"`
-	Debit        int64 `json:"debit"`
-	IsArchived   bool  `json:"is_archived"`
-	IsActive     bool  `json:"is_active"`
-	IsCalculated bool  `json:"is_calculated"`
+	Credit       uint64 `json:"credit"`
+	Debit        uint64 `json:"debit"`
+	IsArchived   bool   `json:"is_archived"`
+	IsActive     bool   `json:"is_active"`
+	IsCalculated bool   `json:"is_calculated"`
 }
 
 // ValidateCmd validates the UpdateAllowanceCmd struct
@@ -71,16 +67,8 @@ func (u *UpdateAllowanceCmd) ValidateCmd() error {
 		}
 	}
 
-	if u.Credit < 0 {
-		return fmt.Errorf("invalid credit: must be greater than or equal to 0")
-	}
-
 	if u.Credit > 1000000 {
 		return fmt.Errorf("invalid credit: must be less than or equal to $10,000, since that is ridiculous")
-	}
-
-	if u.Debit < 0 {
-		return fmt.Errorf("invalid debit: must be greater than or equal to 0")
 	}
 
 	if u.Debit > 1000000 {
