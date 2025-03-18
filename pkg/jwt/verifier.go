@@ -14,8 +14,9 @@ type Verifier interface {
 	// VerifySignature takes in a message and signature and verifies the signature against the message
 	VerifySignature(msg string, sig []byte) error
 
-	// IsAuthorized takes in a list of allowed scopes and a token string and returns a boolean and error
-	IsAuthorized(allowedScopes []string, token string) (bool, error)
+	// BuildAuthorized takes in a list of allowed scopes and a token string a jwt object ONLY if the token is authorized
+	// by a valid signature.  Otherwise it retuns nil and an error.
+	BuildAuthorized(allowedScopes []string, token string) (*Token, error)
 }
 
 // NewVerifier creates a new Verifier object with a service name and public key.
@@ -69,42 +70,42 @@ func (v *verifier) VerifySignature(msg string, sig []byte) error {
 // IsAuthorized implements the Verifier interface.  In this implementation, it validates the signature,
 // as well as checks the token for valid audiences, scopes, and expiration.
 // It also checks for "Bearer " and snips if present
-func (v *verifier) IsAuthorized(allowedScopes []string, token string) (bool, error) {
+func (v *verifier) BuildAuthorized(allowedScopes []string, token string) (*Token, error) {
 
 	token = strings.TrimPrefix(token, "Bearer ")
 
-	jwt, err := BuildFromToken(token)
+	jot, err := BuildFromToken(token)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// check signature
-	if err := v.VerifySignature(jwt.BaseString, jwt.Signature); err != nil {
-		return false, err
+	if err := v.VerifySignature(jot.BaseString, jot.Signature); err != nil {
+		return nil, err
 	}
 
 	// check issued time.
 	// padding time to avoid clock sync issues.
-	if time.Now().Add(2*time.Second).Unix() < jwt.Claims.IssuedAt {
-		return false, fmt.Errorf("unauthorized: issued at is in the future")
+	if time.Now().Add(2*time.Second).Unix() < jot.Claims.IssuedAt {
+		return nil, fmt.Errorf("unauthorized: issued at is in the future")
 	}
 
 	// check expiry
-	if time.Now().Unix() > jwt.Claims.Expires {
-		return false, fmt.Errorf("unauthorized: token expired")
+	if time.Now().Unix() > jot.Claims.Expires {
+		return nil, fmt.Errorf("unauthorized: token expired")
 	}
 
 	// check audiences
-	if ok := v.hasValidAudences(jwt); !ok {
-		return false, fmt.Errorf("forbidden: incorrect audience")
+	if ok := v.hasValidAudences(jot); !ok {
+		return nil, fmt.Errorf("forbidden: incorrect audience")
 	}
 
 	// check scopes
-	if v.hasValidScopes(allowedScopes, jwt) {
-		return true, nil
-	} else {
-		return false, fmt.Errorf("forbidden: incorrect or missing scopes")
+	if ok := v.hasValidScopes(allowedScopes, jot); !ok {
+		return nil, fmt.Errorf("forbidden: incorrect or missing scopes")
 	}
+
+	return jot, nil
 }
 
 // hasValidAudiences is a helper method which checks if the jwt token has the correct audience.

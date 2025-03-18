@@ -45,8 +45,8 @@ func TestIsAuthorized(t *testing.T) {
 					Scopes:    "r:shaw:* r:otherservice:* w:otherservice:*",
 				},
 			},
-			valid: true,
-			err:   nil,
+
+			err: nil,
 		},
 		{
 			name: "fail - valid signature, no scopes",
@@ -63,8 +63,8 @@ func TestIsAuthorized(t *testing.T) {
 					Scopes:    "",
 				},
 			},
-			valid: false,
-			err:   errors.New("forbiddon: incorrect or missing scopes"),
+
+			err: errors.New("forbidden: incorrect or missing scopes"),
 		},
 		{
 			name: "fail - valid signature, tampered base string",
@@ -81,8 +81,8 @@ func TestIsAuthorized(t *testing.T) {
 					Scopes:    "r:shaw:* r:otherservice:* w:otherservice:*",
 				},
 			},
-			valid: false,
-			err:   errors.New("unauthorized: failed to verify jwt signature"),
+
+			err: errors.New("unauthorized: failed to verify jwt signature"),
 		},
 		{
 			name: "fail - valid signature, expired token",
@@ -99,8 +99,8 @@ func TestIsAuthorized(t *testing.T) {
 					Scopes:    "r:shaw:* r:otherservice:* w:otherservice:*",
 				},
 			},
-			valid: false,
-			err:   errors.New("unauthorized: token expired"),
+
+			err: errors.New("unauthorized: token expired"),
 		},
 		{
 			name: "fail - valid signature, future issued at",
@@ -117,8 +117,8 @@ func TestIsAuthorized(t *testing.T) {
 					Scopes:    "r:shaw:* r:otherservice:* w:otherservice:*",
 				},
 			},
-			valid: false,
-			err:   errors.New("unauthorized: issued at is in the future"),
+
+			err: errors.New("unauthorized: issued at is in the future"),
 		},
 		{
 			name: "fail - valid signature, incorrect audience",
@@ -135,8 +135,8 @@ func TestIsAuthorized(t *testing.T) {
 					Scopes:    "r:shaw:* r:otherservice:* w:otherservice:*",
 				},
 			},
-			valid: false,
-			err:   errors.New("forbidden: incorrect audience"),
+
+			err: errors.New("forbidden: incorrect audience"),
 		},
 		{
 			name: "fail - valid signature, incorrect scopes",
@@ -153,8 +153,8 @@ func TestIsAuthorized(t *testing.T) {
 					Scopes:    "r:otherservice:* w:otherservice:*",
 				},
 			},
-			valid: false,
-			err:   errors.New("forbiddon: incorrect or missing scopes"),
+
+			err: errors.New("forbidden: incorrect or missing scopes"),
 		},
 		{
 			name: "fail - empty signature",
@@ -171,8 +171,8 @@ func TestIsAuthorized(t *testing.T) {
 					Scopes:    "r:shaw:* r:otherservice:* w:otherservice:*",
 				},
 			},
-			valid: false,
-			err:   errors.New("unauthorized: missing signature"),
+
+			err: errors.New("unauthorized: missing signature"),
 		},
 		{
 			name: "fail - invalid signature: truncated", // trucated signature
@@ -190,8 +190,8 @@ func TestIsAuthorized(t *testing.T) {
 				},
 				Signature: []byte("invalid-signature"),
 			},
-			valid: false,
-			err:   errors.New("failed to decode signature from token:"),
+
+			err: errors.New("failed to decode signature from token:"),
 		},
 		{
 			name: "fail - invalid signature: wrong signature", // taken from a different test case
@@ -209,8 +209,8 @@ func TestIsAuthorized(t *testing.T) {
 				},
 				Signature: []byte("invalid-signature"),
 			},
-			valid: false,
-			err:   errors.New("unauthorized: failed to verify jwt signature"),
+
+			err: errors.New("unauthorized: failed to verify jwt signature"),
 		},
 	}
 
@@ -250,12 +250,9 @@ func TestIsAuthorized(t *testing.T) {
 				tc.jwt.Token = tc.jwt.BaseString + "." + "AHodklXjRKSu5Xu1_Fs5tfYm4l9IRv6l4gKAP8j1MEzmwvbWMziVl_3foJOAy5GFXBsxq7E40r9ZH9HOEP25NAvzAAai54I2twNS-DM81tbiaLpOjDwOqU4PImPcaKaoWAkLZKfm7jeFmYHqLu3o_-rcO3aHvb7CchRj8MLVXgE9UxgA"
 			}
 
-			valid, err := verifier.IsAuthorized(RealAllowedScopes, tc.jwt.Token)
+			_, err = verifier.BuildAuthorized(RealAllowedScopes, tc.jwt.Token)
 			if err != nil && !strings.Contains(err.Error(), tc.err.Error()) {
 				t.Errorf("Expected error: %v, got: %v", tc.err, err)
-			}
-			if valid != tc.valid {
-				t.Errorf("Expected %v, got %v", tc.valid, valid)
 			}
 		})
 	}
