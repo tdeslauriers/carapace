@@ -14,7 +14,8 @@ type Verifier interface {
 	// VerifySignature takes in a message and signature and verifies the signature against the message
 	VerifySignature(msg string, sig []byte) error
 
-	// BuildAuthorized takes in a list of allowed scopes and a token string a jwt object ONLY if the token is authorized
+	// BuildAuthorized takes in a list of allowed scopes and a token string
+	// and creates a jwt object ONLY if the token is authorized
 	// by a valid signature.  Otherwise it retuns nil and an error.
 	BuildAuthorized(allowedScopes []string, token string) (*Token, error)
 }

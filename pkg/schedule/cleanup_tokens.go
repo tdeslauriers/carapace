@@ -49,39 +49,42 @@ type cleanup struct {
 
 // ExpiredRefresh cleans up expired refresh tokens
 func (c *cleanup) ExpiredRefresh(hours int) {
-
 	// create local random generator
 	src := rand.NewSource(time.Now().UnixNano())
 	rng := rand.New(src)
 
-	for {
-		// using local time so this will be 2am no matter what timezone the service is in
-		now := time.Now()
+	go func() {
+		for {
+			// using local time so this will be 2am no matter what timezone the service is in
+			now := time.Now()
 
-		// calc next 2am
-		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if next.Before(now) {
-			// if 2am has already passed today, set it for tomorrow
-			next = next.Add(24 * time.Hour)
+			// calc next 2am
+			next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
+			if next.Before(now) {
+				// if 2am has already passed today, set it for tomorrow
+				next = next.Add(24 * time.Hour)
+			}
+
+			// add random jitter +/- 30 minutes
+			randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
+			next = next.Add(randInterval)
+
+			duration := time.Until(next)
+			c.logger.Info("scheduling expired refresh cleanup", "runAt", next)
+
+			timer := time.NewTimer(duration)
+			<-timer.C // Wait until it's time to run
+
+			// execute deletion of expired refresh tokens
+			// EXPIRIES ARE IN UTC, SO USE UTC TIME
+			qry := `DELETE FROM refresh WHERE created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()`
+			if err := c.sb.DeleteRecord(qry, hours); err != nil {
+				c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
+			} else {
+				c.logger.Info("expired refresh tokens cleaned up")
+			}
 		}
-
-		// add random jitter +/- 30 minutes
-		randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
-		next = next.Add(randInterval)
-
-		// sleep until next 2am
-		time.Sleep(next.Sub(now))
-
-		// execute deletion of expired refresh tokens
-		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		qry := `DELETE FROM refresh WHERE created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()`
-		if err := c.sb.DeleteRecord(qry, hours); err != nil {
-			c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
-		}
-
-		c.logger.Info("expired refresh tokens cleaned up")
-	}
-
+	}()
 }
 
 // ExpiredAccess cleans up expired access tokens if their attached refresh has expired
@@ -91,69 +94,75 @@ func (c *cleanup) ExpiredAccess() {
 	src := rand.NewSource(time.Now().UnixNano())
 	rng := rand.New(src)
 
-	for {
-		// using local time so this will be 2am no matter what timezone the service is in
-		now := time.Now()
+	go func() {
 
-		// calc next 2am
-		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if next.Before(now) {
-			next = next.Add(24 * time.Hour)
-		}
+		for {
+			// using local time so this will be 2am no matter what timezone the service is in
+			now := time.Now()
 
-		// add random jitter +/- 30 minutes
-		randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
-		next = next.Add(randInterval)
+			// calc next 2am
+			next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
+			if next.Before(now) {
+				next = next.Add(24 * time.Hour)
+			}
 
-		// sleep until next 2am
-		time.Sleep(next.Sub(now))
+			// add random jitter +/- 30 minutes
+			randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
+			next = next.Add(randInterval)
 
-		// need to delete xref records first to avoid constraint violation
-		// Note: access tokens are short lived, so query aimed at the expired refresh tokens attached to them.
-		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		qry := `SELECT 
+			duration := time.Until(next)
+			c.logger.Info("scheduling expired access cleanup", "runAt", next)
+
+			timer := time.NewTimer(duration)
+			<-timer.C // Wait until it's time to run
+
+			// need to delete xref records first to avoid constraint violation
+			// Note: access tokens are short lived, so query aimed at the expired refresh tokens attached to them.
+			// EXPIRIES ARE IN UTC, SO USE UTC TIME
+			qry := `SELECT 
 					ua.id,
 					ua.uxsession_uuid,
 					ua.accesstoken_uuid
 				FROM uxsession_accesstoken ua
 					LEFT OUTER JOIN accesstoken a ON ua.accesstoken_uuid = a.uuid
 				WHERE a.refresh_expires < UTC_TIMESTAMP()`
-		var xrefs []SessionAccessXref
-		if err := c.sb.SelectRecords(qry, &xrefs); err != nil {
-			c.logger.Error("failed to select expired uxsession_accesstoken xrefs", "error", err.Error())
-			return
-		}
-
-		// check if there are any xrefs to delete
-		if len(xrefs) > 0 {
-			c.logger.Info("removing xrefs between expired access/refresh tokens and sessions")
-
-			// delete xrefs
-			var wg sync.WaitGroup
-			for _, xref := range xrefs {
-
-				wg.Add(1)
-				go func(id int, wg *sync.WaitGroup) {
-					defer wg.Done()
-
-					qry = `DELETE FROM uxsession_accesstoken WHERE id = ?`
-					if err := c.sb.DeleteRecord(qry, id); err != nil {
-						c.logger.Error(fmt.Sprintf("failed to delete uxsession_accesstoken xref id %d for expired accesstoken id/jti %s", id, xref.AccesstokenId), "err", err.Error())
-					}
-				}(xref.Id, &wg)
+			var xrefs []SessionAccessXref
+			if err := c.sb.SelectRecords(qry, &xrefs); err != nil {
+				c.logger.Error("failed to select expired uxsession_accesstoken xrefs", "error", err.Error())
+				return
 			}
 
-			wg.Wait()
-		}
+			// check if there are any xrefs to delete
+			if len(xrefs) > 0 {
+				c.logger.Info("removing xrefs between expired access/refresh tokens and sessions")
 
-		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		qry = `DELETE FROM accesstoken WHERE refresh_expires < UTC_TIMESTAMP()`
-		if err := c.sb.DeleteRecord(qry); err != nil {
-			c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
-		}
+				// delete xrefs
+				var wg sync.WaitGroup
+				for _, xref := range xrefs {
 
-		c.logger.Info(fmt.Sprintf("%d expired access tokens cleaned up", len(xrefs)))
-	}
+					wg.Add(1)
+					go func(id int, wg *sync.WaitGroup) {
+						defer wg.Done()
+
+						qry = `DELETE FROM uxsession_accesstoken WHERE id = ?`
+						if err := c.sb.DeleteRecord(qry, id); err != nil {
+							c.logger.Error(fmt.Sprintf("failed to delete uxsession_accesstoken xref id %d for expired accesstoken id/jti %s", id, xref.AccesstokenId), "err", err.Error())
+						}
+					}(xref.Id, &wg)
+				}
+
+				wg.Wait()
+			}
+
+			// EXPIRIES ARE IN UTC, SO USE UTC TIME
+			qry = `DELETE FROM accesstoken WHERE refresh_expires < UTC_TIMESTAMP()`
+			if err := c.sb.DeleteRecord(qry); err != nil {
+				c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
+			}
+
+			c.logger.Info(fmt.Sprintf("%d expired access tokens cleaned up", len(xrefs)))
+		}
+	}()
 }
 
 // ExpiredS2s cleans up expired service-to-service tokens if their attached refresh has expired
@@ -163,31 +172,36 @@ func (c *cleanup) ExpiredS2s() {
 	src := rand.NewSource(time.Now().UnixNano())
 	rng := rand.New(src)
 
-	for {
-		// using local time so this will be 2am no matter what timezone the service is in
-		now := time.Now()
+	go func() {
+		for {
+			// using local time so this will be 2am no matter what timezone the service is in
+			now := time.Now()
 
-		// calc next 2am
-		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if next.Before(now) {
-			next = next.Add(24 * time.Hour)
+			// calc next 2am
+			next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
+			if next.Before(now) {
+				next = next.Add(24 * time.Hour)
+			}
+
+			// add random jitter +/- 30 minutes
+			randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
+			next = next.Add(randInterval)
+
+			duration := time.Until(next)
+			c.logger.Info("scheduling expired access cleanup", "runAt", next)
+
+			timer := time.NewTimer(duration)
+			<-timer.C // Wait until it's time to run
+
+			// EXPIRIES ARE IN UTC, SO USE UTC TIME
+			qry := `DELETE FROM servicetoken WHERE refresh_expires < UTC_TIMESTAMP()`
+			if err := c.sb.DeleteRecord(qry); err != nil {
+				c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
+			}
+
+			c.logger.Info("expired service-to-service tokens cleaned up")
 		}
-
-		// add random jitter +/- 30 minutes
-		randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
-		next = next.Add(randInterval)
-
-		// sleep until next 2am
-		time.Sleep(next.Sub(now))
-
-		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		qry := `DELETE FROM servicetoken WHERE refresh_expires < UTC_TIMESTAMP()`
-		if err := c.sb.DeleteRecord(qry); err != nil {
-			c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
-		}
-
-		c.logger.Info("expired service-to-service tokens cleaned up")
-	}
+	}()
 }
 
 // ExpiredSession cleans up expired user sessions and the associated oauth2 values
@@ -196,128 +210,132 @@ func (c *cleanup) ExpiredSession(hours int) {
 	src := rand.NewSource(time.Now().UnixNano())
 	rng := rand.New(src)
 
-	for {
-		// using local time so this will be 2am no matter what timezone the service is in
-		now := time.Now()
+	go func(hours int) {
+		for {
+			// using local time so this will be 2am no matter what timezone the service is in
+			now := time.Now()
 
-		// calc next 2am
-		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if next.Before(now) {
-			next = next.Add(24 * time.Hour)
-		}
+			// calc next 2am
+			next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
+			if next.Before(now) {
+				next = next.Add(24 * time.Hour)
+			}
 
-		// add random jitter +/- 30 minutes
-		randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
-		next = next.Add(randInterval)
+			// add random jitter +/- 30 minutes
+			randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
+			next = next.Add(randInterval)
 
-		// sleep until next 2am
-		time.Sleep(next.Sub(now))
+			duration := time.Until(next)
+			c.logger.Info("scheduling expired access cleanup", "runAt", next)
 
-		// need to delete xref records first to avoid constraint violation
-		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		// Note: number of xrefs will be less than the number of sessions because oauth2 values SHOULD only be tied to unauth'ned sessions
-		// Note: sessions and oauthflow records are created at different times, so using the session created_at time to determine expiry
-		// because it doesnt matter if the oauthflow is expired since it cannot be used without a valid session.
-		var wg sync.WaitGroup
-		// oauth xrefs
-		qry := `SELECT 
+			timer := time.NewTimer(duration)
+			<-timer.C // Wait until it's time to run
+
+			// need to delete xref records first to avoid constraint violation
+			// EXPIRIES ARE IN UTC, SO USE UTC TIME
+			// Note: number of xrefs will be less than the number of sessions because oauth2 values SHOULD only be tied to unauth'ned sessions
+			// Note: sessions and oauthflow records are created at different times, so using the session created_at time to determine expiry
+			// because it doesnt matter if the oauthflow is expired since it cannot be used without a valid session.
+			var wg sync.WaitGroup
+			// oauth xrefs
+			qry := `SELECT 
 					uo.id,
 					uo.uxsession_uuid,
 					uo.oauthflow_uuid
 				FROM uxsession_oauthflow uo
 					LEFT OUTER JOIN uxsession u ON uo.uxsession_uuid = u.uuid
 				WHERE u.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()`
-		var xrefsOauth []SessionOauthXref
-		if err := c.sb.SelectRecords(qry, &xrefsOauth, hours); err != nil {
-			c.logger.Error("failed to select expired uxsession_oauthflow xrefs", "error", err.Error())
-			return
-		}
-
-		// check if there are any xrefs to delete
-		if len(xrefsOauth) > 0 {
-			c.logger.Info("removing xrefs between expired sessions and oauth2 values")
-
-			// delete xrefs
-			for _, xref := range xrefsOauth {
-
-				wg.Add(1)
-				go func(id int, wg *sync.WaitGroup) {
-					defer wg.Done()
-
-					qry = `DELETE FROM uxsession_oauthflow WHERE id = ?`
-					if err := c.sb.DeleteRecord(qry, id); err != nil {
-						c.logger.Error(fmt.Sprintf("failed to delete uxsession_oauthflow xref id %d for expired oauthflow id %s", id, xref.OauthflowId), "err", err.Error())
-					}
-				}(xref.Id, &wg)
+			var xrefsOauth []SessionOauthXref
+			if err := c.sb.SelectRecords(qry, &xrefsOauth, hours); err != nil {
+				c.logger.Error("failed to select expired uxsession_oauthflow xrefs", "error", err.Error())
+				return
 			}
-		}
 
-		// access token xrefs
-		qry = `SELECT
+			// check if there are any xrefs to delete
+			if len(xrefsOauth) > 0 {
+				c.logger.Info("removing xrefs between expired sessions and oauth2 values")
+
+				// delete xrefs
+				for _, xref := range xrefsOauth {
+
+					wg.Add(1)
+					go func(id int, wg *sync.WaitGroup) {
+						defer wg.Done()
+
+						qry = `DELETE FROM uxsession_oauthflow WHERE id = ?`
+						if err := c.sb.DeleteRecord(qry, id); err != nil {
+							c.logger.Error(fmt.Sprintf("failed to delete uxsession_oauthflow xref id %d for expired oauthflow id %s", id, xref.OauthflowId), "err", err.Error())
+						}
+					}(xref.Id, &wg)
+				}
+			}
+
+			// access token xrefs
+			qry = `SELECT
 					ua.id,
 					ua.uxsession_uuid,
 					ua.accesstoken_uuid
 				FROM uxsession_accesstoken ua
 					LEFT OUTER JOIN uxsession u ON ua.uxsession_uuid = u.uuid
 				WHERE u.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()`
-		var xrefsAuth []SessionAccessXref
-		if err := c.sb.SelectRecords(qry, &xrefsAuth, hours); err != nil {
-			c.logger.Error("failed to select expired uxsession_accesstoken xrefs", "error", err.Error())
-			return
-		}
-
-		// check if there are any xrefs to delete
-		if len(xrefsAuth) > 0 {
-			c.logger.Info("removing xrefs between expired sessions and access tokens")
-
-			// delete xrefs
-			for _, xref := range xrefsAuth {
-
-				wg.Add(1)
-				go func(id int, wg *sync.WaitGroup) {
-					defer wg.Done()
-
-					qry = `DELETE FROM uxsession_accesstoken WHERE id = ?`
-					if err := c.sb.DeleteRecord(qry, id); err != nil {
-						c.logger.Error(fmt.Sprintf("failed to delete uxsession_accesstoken xref id %d for expired accesstoken id %s", id, xref.AccesstokenId), "err", err.Error())
-					}
-				}(xref.Id, &wg)
+			var xrefsAuth []SessionAccessXref
+			if err := c.sb.SelectRecords(qry, &xrefsAuth, hours); err != nil {
+				c.logger.Error("failed to select expired uxsession_accesstoken xrefs", "error", err.Error())
+				return
 			}
-		}
 
-		// wait for all xrefs to be deleted before deleting the sessions and oauthflow records
-		wg.Wait()
+			// check if there are any xrefs to delete
+			if len(xrefsAuth) > 0 {
+				c.logger.Info("removing xrefs between expired sessions and access tokens")
 
-		// wait group not needed here because the oauthflow records are no longer tied to any other records
-		go func(hours int) {
-			qry = `DELETE o
+				// delete xrefs
+				for _, xref := range xrefsAuth {
+
+					wg.Add(1)
+					go func(id int, wg *sync.WaitGroup) {
+						defer wg.Done()
+
+						qry = `DELETE FROM uxsession_accesstoken WHERE id = ?`
+						if err := c.sb.DeleteRecord(qry, id); err != nil {
+							c.logger.Error(fmt.Sprintf("failed to delete uxsession_accesstoken xref id %d for expired accesstoken id %s", id, xref.AccesstokenId), "err", err.Error())
+						}
+					}(xref.Id, &wg)
+				}
+			}
+
+			// wait for all xrefs to be deleted before deleting the sessions and oauthflow records
+			wg.Wait()
+
+			// wait group not needed here because the oauthflow records are no longer tied to any other records
+			go func(hours int) {
+				qry = `DELETE o
 					FROM oauthflow o
 						LEFT OUTER JOIN uxsession_oauthflow uo ON o.uuid = uo.oauthflow_uuid
 					WHERE o.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()
 						AND uo.oauthflow_uuid IS NULL`
-			if err := c.sb.DeleteRecord(qry, hours); err != nil {
-				c.logger.Error("failed to delete expired oauthflow values", "error", err.Error())
-			}
-			c.logger.Info("expired and unattached oauthflow records cleaned up")
-		}(hours)
+				if err := c.sb.DeleteRecord(qry, hours); err != nil {
+					c.logger.Error("failed to delete expired oauthflow values", "error", err.Error())
+				}
+				c.logger.Info("expired and unattached oauthflow records cleaned up")
+			}(hours)
 
-		// remove expired sessions
-		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		// this will include both authenicated and unauthenticated sessions (so will be much larger than len(xrefs))
-		// need to make sure xrefs to accesstokens table have been cleared also
-		go func(hours int) {
-			qry = `DELETE u
+			// remove expired sessions
+			// EXPIRIES ARE IN UTC, SO USE UTC TIME
+			// this will include both authenicated and unauthenticated sessions (so will be much larger than len(xrefs))
+			// need to make sure xrefs to accesstokens table have been cleared also
+			go func(hours int) {
+				qry = `DELETE u
 					FROM uxsession u
 						LEFT OUTER JOIN uxsession_accesstoken ua ON u.uuid = ua.uxsession_uuid
 					WHERE u.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()
 						AND ua.uxsession_uuid IS NULL`
-			if err := c.sb.DeleteRecord(qry, hours); err != nil {
-				c.logger.Error("failed to delete expired user sessions", "error", err.Error())
-			}
-			c.logger.Info("expired user sessions cleaned up")
-		}(hours)
-	}
-
+				if err := c.sb.DeleteRecord(qry, hours); err != nil {
+					c.logger.Error("failed to delete expired user sessions", "error", err.Error())
+				}
+				c.logger.Info("expired user sessions cleaned up")
+			}(hours)
+		}
+	}(hours)
 }
 
 // ExpiredAuthcode cleans up expired authcodes out of the database and associated xrefs
@@ -327,41 +345,46 @@ func (c *cleanup) ExpiredAuthcode() {
 	src := rand.NewSource(time.Now().UnixNano())
 	rng := rand.New(src)
 
-	for {
-		// using local time so this will be 2am no matter what timezone the service is in
-		now := time.Now()
+	go func() {
+		for {
+			// using local time so this will be 2am no matter what timezone the service is in
+			now := time.Now()
 
-		// calc next 2am
-		next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
-		if next.Before(now) {
-			// if 2am has already passed today, set it for tomorrow
-			next = next.Add(24 * time.Hour)
-		}
+			// calc next 2am
+			next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
+			if next.Before(now) {
+				// if 2am has already passed today, set it for tomorrow
+				next = next.Add(24 * time.Hour)
+			}
 
-		// add random jitter +/- 30 minutes
-		randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
-		next = next.Add(randInterval)
+			// add random jitter +/- 30 minutes
+			randInterval := time.Duration(rng.Intn(61)-30) * time.Minute
+			next = next.Add(randInterval)
 
-		// sleep until next 2am
-		time.Sleep(next.Sub(now))
+			duration := time.Until(next)
+			c.logger.Info("scheduling expired access cleanup", "runAt", next)
 
-		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		qry := `DELETE aa
+			timer := time.NewTimer(duration)
+			<-timer.C // Wait until it's time to run
+
+			// EXPIRIES ARE IN UTC, SO USE UTC TIME
+			qry := `DELETE aa
 					FROM authcode_account aa 
 						LEFT OUTER JOIN authcode a ON aa.authcode_uuid = a.uuid
 					WHERE a.created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
-		if err := c.sb.DeleteRecord(qry); err != nil {
-			c.logger.Error("failed to delete expired authcode account xref records", "error", err.Error())
-			return
-		}
+			if err := c.sb.DeleteRecord(qry); err != nil {
+				c.logger.Error("failed to delete expired authcode account xref records", "error", err.Error())
+				return
+			}
 
-		// EXPIRIES ARE IN UTC, SO USE UTC TIME
-		qry = `DELETE FROM authcode WHERE created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
-		if err := c.sb.DeleteRecord(qry); err != nil {
-			c.logger.Error("failed to delete expired authcodes", "error", err.Error())
-			return
-		}
+			// EXPIRIES ARE IN UTC, SO USE UTC TIME
+			qry = `DELETE FROM authcode WHERE created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
+			if err := c.sb.DeleteRecord(qry); err != nil {
+				c.logger.Error("failed to delete expired authcodes", "error", err.Error())
+				return
+			}
 
-		c.logger.Info("expired authcodes xrefs to account cleaned up")
-	}
+			c.logger.Info("expired authcodes xrefs to account cleaned up")
+		}
+	}()
 }
