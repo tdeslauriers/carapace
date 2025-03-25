@@ -1,7 +1,9 @@
 package tasks
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
 	"github.com/tdeslauriers/carapace/pkg/validate"
@@ -76,5 +78,158 @@ func (u *UpdateAllowanceCmd) ValidateCmd() error {
 	}
 
 	// validation of boolean values is not necessary: business logic will determine if they are valid in service.
+	return nil
+}
+
+// cadence is a type that represents the cadence of a task template's recurrence.
+type Cadence string
+
+// possible cadence values => for unmarrshalling json validation
+const (
+	Adhoc     Cadence = "ADHOC"
+	Daily     Cadence = "DAILY"
+	Weekly    Cadence = "WEEKLY"
+	Monthly   Cadence = "MONTHLY"
+	Quarterly Cadence = "QUARTERLY"
+	Anually   Cadence = "ANNUALLY"
+)
+
+// customr unmarshaler for cadence type so that it errors on invalid values
+func (c *Cadence) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	switch s {
+	case string(Adhoc), string(Daily), string(Weekly), string(Monthly), string(Quarterly), string(Anually):
+		*c = Cadence(s)
+		return nil
+	default:
+		return fmt.Errorf("invalid cadence: %q", s)
+	}
+}
+
+// IsValidCadence checks if a cadence is valid
+// redundant if the custom unmarshaler is used on a json payload, but that isnt guaranteed.
+func (c *Cadence) IsValidCadence() error {
+	switch *c {
+	case Adhoc, Daily, Weekly, Monthly, Quarterly, Anually:
+		return nil
+	default:
+		return fmt.Errorf("invalid cadence: %q", *c)
+	}
+}
+
+// Category is a type that represents the category of a task template, such as "work" or "home".
+type Category string
+
+const (
+	Bills  Category = "BILLS"
+	Car    Category = "CAR"
+	Dev    Category = "DEV"
+	Health Category = "HEALTH"
+	House  Category = "HOUSE"
+	Kids   Category = "KIDS"
+	Pets   Category = "PETS"
+	Sports Category = "SPORTS"
+	Study  Category = "STUDY"
+	Work   Category = "WORK"
+	Yard   Category = "YARD"
+	Other  Category = "OTHER"
+)
+
+// UnmarshalJSON is a custom unmarshaler for the Category type so that it errors on invalid values.
+func (c *Category) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	switch s {
+	case string(Bills), string(Car), string(Dev), string(Health), string(House), string(Kids),
+		string(Pets), string(Sports), string(Study), string(Work), string(Yard), string(Other):
+		*c = Category(s)
+		return nil
+	default:
+		return fmt.Errorf("invalid category: %q", s)
+	}
+}
+
+// IsValidCategory checks if a category is valid
+// redundant if the custom unmarshaler is used on a json payload, but that isnt guaranteed.
+func (c *Category) IsValidCategory() error {
+	switch *c {
+	case Bills, Car, Dev, Health, House, Kids, Pets, Sports, Study, Work, Yard, Other:
+		return nil
+	default:
+		return fmt.Errorf("invalid category: %q", *c)
+	}
+}
+
+// TaskTemplate is a struct for a json model meant to update/insert task templates.
+// It is not a database model and is a subset of the db record fields.
+type TemplateCmd struct {
+	Csrf string `json:"csrf,omitempty"`
+
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Cadence     Cadence  `json:"cadence"`
+	Category    Category `json:"category"`
+	IsArchived  bool     `json:"is_archived"`
+
+	Assignees []string `json:"assignees"` // email addresses/usernames
+}
+
+// ValidateCmd validates the TemplateCmd struct
+// Note: it does not include any business logic validation, only data validation.
+func (t *TemplateCmd) ValidateCmd() error {
+
+	// csrf
+	if t.Csrf != "" {
+		if !validate.IsValidUuid(t.Csrf) {
+			return fmt.Errorf("invalid csrf token submitted with request")
+		}
+	}
+
+	// name
+	if len(strings.TrimSpace(t.Name)) < 2 || len(strings.TrimSpace(t.Name)) > 64 {
+		return fmt.Errorf("name is a required field and must be between 2 and 64 characters in length")
+	}
+
+	// description
+	if len(strings.TrimSpace(t.Description)) < 2 || len(strings.TrimSpace(t.Description)) > 255 {
+		return fmt.Errorf("description is a required field and must be between 2 and 255 characters in length")
+	}
+
+	// cadence
+	if len(t.Cadence) == 0 {
+		return fmt.Errorf("cadence is a required field")
+	}
+
+	if err := t.Cadence.IsValidCadence(); err != nil {
+		return err
+	}
+
+	// category
+	if len(t.Category) == 0 {
+		return fmt.Errorf("category is a required field")
+	}
+
+	if err := t.Category.IsValidCategory(); err != nil {
+		return err
+	}
+
+	// assignees
+	if len(t.Assignees) == 0 {
+		return fmt.Errorf("assignees is a required field")
+	}
+
+	for _, a := range t.Assignees {
+		if err := validate.IsValidEmail(a); err != nil {
+			return fmt.Errorf("invalid assignee: %v", err)
+		}
+	}
+
 	return nil
 }
