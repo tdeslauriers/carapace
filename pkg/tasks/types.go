@@ -233,3 +233,17 @@ func (t *TemplateCmd) ValidateCmd() error {
 
 	return nil
 }
+
+// Template is a struct that represents a task template as in json
+// not it includes a slice of assignees, which is not in the db model.
+type Template struct {
+	Id          string          `json:"id,omitempty"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Cadence     Cadence         `json:"cadence"`
+	Category    Category        `json:"category"`
+	Slug        string          `json:"slug,omitempty"`
+	CreatedAt   data.CustomTime `json:"created_at"`
+	IsArchived  bool            `json:"is_archived"`
+	Assignees   []Allowance     `json:"assignees"`
+}
