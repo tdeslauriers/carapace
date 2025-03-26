@@ -188,7 +188,7 @@ func (c *cleanup) ExpiredS2s() {
 			next = next.Add(randInterval)
 
 			duration := time.Until(next)
-			c.logger.Info("scheduling expired access cleanup", "runAt", next)
+			c.logger.Info("scheduling expired s2s cleanup", "runAt", next)
 
 			timer := time.NewTimer(duration)
 			<-timer.C // Wait until it's time to run
@@ -226,7 +226,7 @@ func (c *cleanup) ExpiredSession(hours int) {
 			next = next.Add(randInterval)
 
 			duration := time.Until(next)
-			c.logger.Info("scheduling expired access cleanup", "runAt", next)
+			c.logger.Info("scheduling expired session token cleanup", "runAt", next)
 
 			timer := time.NewTimer(duration)
 			<-timer.C // Wait until it's time to run
@@ -362,7 +362,7 @@ func (c *cleanup) ExpiredAuthcode() {
 			next = next.Add(randInterval)
 
 			duration := time.Until(next)
-			c.logger.Info("scheduling expired access cleanup", "runAt", next)
+			c.logger.Info("scheduling expired auth code cleanup", "runAt", next)
 
 			timer := time.NewTimer(duration)
 			<-timer.C // Wait until it's time to run
