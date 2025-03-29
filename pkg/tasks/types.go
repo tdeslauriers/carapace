@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
+	"github.com/tdeslauriers/carapace/pkg/profile"
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
@@ -245,5 +246,5 @@ type Template struct {
 	Slug        string          `json:"slug,omitempty"`
 	CreatedAt   data.CustomTime `json:"created_at"`
 	IsArchived  bool            `json:"is_archived"`
-	Assignees   []Allowance     `json:"assignees"`
+	Assignees   []profile.User     `json:"assignees"`
 }
