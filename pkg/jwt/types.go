@@ -56,6 +56,30 @@ type Claims struct {
 	Birthdate  string `json:"birthdate,omitempty"`   // date of birth
 }
 
+// MapAudiences is a convenience method that creates a map of audiences from the claims for easy lookup.
+func (c *Claims) MapAudiences() map[string]bool {
+
+	audMap := make(map[string]bool, len(c.Audience))
+
+	for _, aud := range c.Audience {
+		audMap[aud] = true
+	}
+	return audMap
+}
+
+// MapScopes is a convenience method that creates a map of scopes from the claims for easy lookup.
+func (c *Claims) MapScopes() map[string]bool {
+
+	scopes := strings.Split(c.Scopes, " ")
+
+	scopeMap := make(map[string]bool, len(scopes))
+	for _, scope := range scopes {
+		scopeMap[scope] = true
+	}
+
+	return scopeMap
+}
+
 // Token is a struct to hold the jwt header, claims, and signature,
 // it also includes the base64 encoded complete token to be used in http headers
 type Token struct {

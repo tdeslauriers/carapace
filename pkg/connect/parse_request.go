@@ -37,7 +37,7 @@ func GetSessionToken(r *http.Request) (string, error) {
 	// get the session token from the request
 	sessionToken := r.Header.Get("Authorization")
 	if sessionToken == "" {
-		return "", fmt.Errorf("no session token found in request")
+		return "", fmt.Errorf("session not found in request 'Authorization' header")
 	}
 
 	if !validate.IsValidUuid(sessionToken) {
