@@ -173,11 +173,12 @@ func (c *Category) IsValidCategory() error {
 type TemplateCmd struct {
 	Csrf string `json:"csrf,omitempty"`
 
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Cadence     Cadence  `json:"cadence"`
-	Category    Category `json:"category"`
-	IsArchived  bool     `json:"is_archived"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	Cadence      Cadence  `json:"cadence"`
+	Category     Category `json:"category"`
+	IsCalculated bool     `json:"is_calculated"`
+	IsArchived   bool     `json:"is_archived"`
 
 	Assignees []string `json:"assignees"` // email addresses/usernames
 }
