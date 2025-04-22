@@ -238,18 +238,19 @@ func (t *TemplateCmd) ValidateCmd() error {
 // Template is a struct that represents a task template as in json
 // not it includes a slice of assignees, which is not in the db model.
 type Template struct {
-	Id          string          `json:"id,omitempty"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Cadence     Cadence         `json:"cadence"`
-	Category    Category        `json:"category"`
-	Slug        string          `json:"slug,omitempty"`
-	CreatedAt   data.CustomTime `json:"created_at"`
-	IsArchived  bool            `json:"is_archived"`
-	Assignees   []profile.User  `json:"assignees"`
+	Id           string          `json:"id,omitempty"`
+	Name         string          `json:"name"`
+	Description  string          `json:"description"`
+	Cadence      Cadence         `json:"cadence"`
+	Category     Category        `json:"category"`
+	IsCalculated bool            `json:"is_calculated"`
+	Slug         string          `json:"slug,omitempty"`
+	CreatedAt    data.CustomTime `json:"created_at"`
+	IsArchived   bool            `json:"is_archived"`
+	Assignees    []profile.User  `json:"assignees"`
 }
 
-// Task is a struct that represents a task as in json
+// Task is a model that represents a task as in json
 // It is a composite object of fields from task and task template models.
 // It also includes a slice of assignees.
 type Task struct {
@@ -266,6 +267,8 @@ type Task struct {
 	IsArchived     bool            `json:"is_archived"`     // Task record field
 	Assignees      profile.User    `json:"assignees"`       // Task assignee via xref (only one person per task record)
 }
+
+// TaskRecord
 
 // TaskQueryParams is a map of keys that represents the allowed query parameters for a task template.
 var TaskQueryParams map[string]struct{} = map[string]struct{}{
