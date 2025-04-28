@@ -387,9 +387,9 @@ func ValidateQueryParams(params map[string][]string) error {
 						break
 					}
 				}
-				if isAll {
-					return fmt.Errorf("assignee parameter(s) cannot be/include 'all' if other user parameter values are present")
-				}
+			}
+			if isAll {
+				return fmt.Errorf("assignee parameter(s) cannot be/include 'all' if other user parameter values are present")
 			}
 		}
 
