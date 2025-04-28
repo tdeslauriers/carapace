@@ -369,10 +369,26 @@ func ValidateQueryParams(params map[string][]string) error {
 				}
 
 				// check if assignee is valid
+				// Note: not allowed to search by email address -> PII + too easy to guess
+				// check if valid assignee code
 				_, ok := AssigneeCodes[a]
-
+				// check if valid uuid for search as a slug
 				if !ok && !validate.IsValidUuid(a) {
 					return fmt.Errorf("invalid assignee parameter: %s", a)
+				}
+			}
+
+			// check that if 'all' is present, it is the only value
+			var isAll bool
+			if len(assigneeList) > 1 {
+				for _, a := range assigneeList {
+					if a == "all" {
+						isAll = true
+						break
+					}
+				}
+				if isAll {
+					return fmt.Errorf("assignee parameter(s) cannot be/include 'all' if other user parameter values are present")
 				}
 			}
 		}
