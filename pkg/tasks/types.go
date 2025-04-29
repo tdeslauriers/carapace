@@ -268,7 +268,7 @@ type Task struct {
 	TaskSlug       string          `json:"task_slug,omitempty"` // Task record slug
 	IsArchived     bool            `json:"is_archived"`         // Task record field
 	AllowanceSlug  string          `json:"allowance_slug"`      // Task record allowance slug
-	Assignees      profile.User    `json:"assignees"`           // Task assignee via xref (only one person per task record)
+	Assignee       profile.User    `json:"assignee"`            // Task assignee via xref (only one person per task record)
 }
 
 // TaskRecord
