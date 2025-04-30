@@ -255,20 +255,20 @@ type Template struct {
 // It is a composite object of fields from task and task template models.
 // It also includes a slice of assignees.
 type Task struct {
-	Id             string          `json:"id,omitempty"`        // Tasks record uuid
-	Name           string          `json:"name"`                // Task template name
-	Description    string          `json:"description"`         // Task template description
-	Cadence        Cadence         `json:"cadence"`             // Task template cadence
-	Category       Category        `json:"category"`            // Task template category
-	CreatedAt      data.CustomTime `json:"created_at"`          // Task record created at
-	IsComplete     bool            `json:"is_complete"`         // Task record field
-	CompletedAt    data.CustomTime `json:"completed_at"`        // Task record field
-	IsSatisfactory bool            `json:"is_satisfactory"`     // Task record field
-	IsProactive    bool            `json:"is_proactive"`        // Task record field
-	TaskSlug       string          `json:"task_slug,omitempty"` // Task record slug
-	IsArchived     bool            `json:"is_archived"`         // Task record field
-	AllowanceSlug  string          `json:"allowance_slug"`      // Task record allowance slug
-	Assignee       profile.User    `json:"assignee"`            // Task assignee via xref (only one person per task record)
+	Id             string          `json:"id,omitempty"`           // Tasks record uuid
+	Name           string          `json:"name"`                   // Task template name
+	Description    string          `json:"description"`            // Task template description
+	Cadence        Cadence         `json:"cadence"`                // Task template cadence
+	Category       Category        `json:"category"`               // Task template category
+	CreatedAt      data.CustomTime `json:"created_at"`             // Task record created at
+	IsComplete     bool            `json:"is_complete"`            // Task record field
+	CompletedAt    string          `json:"completed_at,omitempty"` // Task record field
+	IsSatisfactory bool            `json:"is_satisfactory"`        // Task record field
+	IsProactive    bool            `json:"is_proactive"`           // Task record field
+	TaskSlug       string          `json:"task_slug,omitempty"`    // Task record slug
+	IsArchived     bool            `json:"is_archived"`            // Task record field
+	AllowanceSlug  string          `json:"allowance_slug"`         // Task record allowance slug
+	Assignee       profile.User    `json:"assignee"`               // Task assignee via xref (only one person per task record)
 }
 
 // TaskRecord
