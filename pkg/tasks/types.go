@@ -592,3 +592,44 @@ func ValidateQueryParams(params map[string][]string) error {
 
 	return nil
 }
+
+// TaskStatusCmd is a model for updating the status of a task
+// recieved by the gateway service.
+type TaskStatusCmd struct {
+	Csrf     string `json:"csrf,omitempty"`
+	TaskSlug string `json:"task_slug"`
+	Status   string `json:"status"`
+}
+
+// ValidateCmd validates the TaskStatusCmd struct
+// Note: it does not include any business logic validation, only data validation.
+func (t *TaskStatusCmd) ValidateCmd() error {
+	// csrf
+	if t.Csrf != "" {
+		if !validate.IsValidUuid(t.Csrf) {
+			return fmt.Errorf("invalid csrf token submitted with request")
+		}
+	}
+
+	// task slug
+	if t.TaskSlug != "" {
+		if !validate.IsValidUuid(t.TaskSlug) {
+			return fmt.Errorf("invalid task slug")
+		}
+	}
+
+	// status
+	if len(t.Status) <= 0 {
+		return fmt.Errorf("status is a required field")
+	}
+
+	t.Status = strings.ToLower(strings.TrimSpace(t.Status))
+
+	switch t.Status {
+	case "is_complete", "is_satisfactory", "is_proactive", "is_archived":
+	default:
+		return fmt.Errorf("invalid status: %s", t.Status)
+	}
+
+	return nil
+}
