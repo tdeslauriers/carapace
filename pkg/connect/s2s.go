@@ -14,6 +14,7 @@ import (
 
 	"github.com/tdeslauriers/carapace/pkg/config"
 	"github.com/tdeslauriers/carapace/pkg/jwt"
+	"github.com/tdeslauriers/carapace/pkg/permissions"
 )
 
 var rng *rand.Rand
@@ -440,6 +441,16 @@ func (caller *s2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 
 		// call returned forbidden for user token
 		if strings.Contains(errMsg.Message, jwt.UserForbdiddenErrMsg) {
+			e := ErrorHttp{
+				StatusCode: http.StatusForbidden,
+				Message:    "forbidden",
+			}
+			e.SendJsonErr(w)
+			break
+		}
+
+		// call returned forbidden for permissions
+		if strings.Contains(errMsg.Message, permissions.UserForbidden) {
 			e := ErrorHttp{
 				StatusCode: http.StatusForbidden,
 				Message:    "forbidden",
