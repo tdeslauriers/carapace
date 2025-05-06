@@ -13,13 +13,14 @@ const (
 	S2sUnauthorizedErrMsg = "failed to validate s2s access token"
 
 	// S2sForbiddenErrMsg is a generalized error message returned when a service-to-service token is unauthorized.
-	S2sForbiddenErrMsg = "forbidden: s2s access token does not contain either the correct audience, the correct scopes, and/or the correct permissions"
+	S2sForbiddenErrMsg = "forbidden: s2s access token does not contain either the correct audience, the correct scopes, or both"
 
 	// UserUnauthorizedErrMsg is a generalized error message retruned when a service-to-service token is unauthorized.
 	UserUnauthorizedErrMsg = "failed to validate user access token"
 
 	// UserForbdiddenErrMsg is a generalized error message returned when a user token is unauthorized.
-	UserForbdiddenErrMsg = "forbidden: user access token does not contain either the correct audience, the correct scopes, and or the correct permissions"
+	UserForbdiddenErrMsg = "forbidden: user access token does not contain either the correct audience, the correct scopes, or both"
+
 )
 
 const (

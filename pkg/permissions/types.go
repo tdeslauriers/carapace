@@ -2,6 +2,10 @@ package permissions
 
 import "github.com/tdeslauriers/carapace/pkg/data"
 
+const (
+	UserForbidden string = "forbidden: user does not have the correct permissions"
+)
+
 // Permission is a model struct for the permissions table in a resource
 // representing a fine grained permission local to that application.
 type Permission struct {
