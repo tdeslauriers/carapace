@@ -248,7 +248,16 @@ type Template struct {
 	Slug         string          `json:"slug,omitempty"`
 	CreatedAt    data.CustomTime `json:"created_at"`
 	IsArchived   bool            `json:"is_archived"`
-	Assignees    []profile.User  `json:"assignees"`
+	Assignees    []Assignee      `json:"assignees"`
+}
+
+// Assignee is a model that is a composite of the profile.User model and the Allowance model.
+// It is used to represent a user that is assigned to a task template.
+type Assignee struct {
+	Username      string `json:"username,omitempty"`  // email address
+	Firstname     string `json:"firstname,omitempty"` // first name
+	Lastname      string `json:"lastname,omitempty"`  // last name
+	AllowanceSlug string `json:"allowance_slug"`      // allowance slug
 }
 
 // Task is a model that represents a task as in json
