@@ -40,4 +40,10 @@ type Requires struct {
 
 	// Tasks indicates that the service requires making requests to the tasks service
 	Tasks bool
+
+	// Gallery indicates that the service requires making requests to the gallery service
+	Gallery bool
+
+	// ObjectStorage indicates that the service requires object storage configuration
+	ObjectStorage bool
 }

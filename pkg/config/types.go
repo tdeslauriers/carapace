@@ -12,6 +12,8 @@ type Config struct {
 	Jwt             Jwt
 	OauthRedirect   OauthRedirect
 	Tasks           Tasks
+	Gallery         Gallery
+	ObjectStorage   ObjectStorage
 }
 
 type Certs struct {
@@ -51,6 +53,10 @@ type Tasks struct {
 	Url string
 }
 
+type Gallery struct {
+	Url string
+}
+
 type Jwt struct {
 	S2sSigningKey   string
 	S2sVerifyingKey string
@@ -62,4 +68,11 @@ type Jwt struct {
 type OauthRedirect struct {
 	CallbackUrl      string
 	CallbackClientId string
+}
+
+type ObjectStorage struct {
+	Url       string
+	Bucket    string // assumes one bucket per service, like one db per service
+	AccessKey string // username, effectively
+	SecretKey string // password, effectively
 }

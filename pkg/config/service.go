@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Load is a function that loads the service configuration from environment variables based on the provided service definition.
 func Load(def SvcDefinition) (*Config, error) {
 
 	if def.ServiceName == "" {
@@ -92,9 +93,26 @@ func Load(def SvcDefinition) (*Config, error) {
 		}
 	}
 
+	// read in gallery service env vars
+	if def.Requires.Gallery {
+		err = config.galleryServiceEnvVars(def)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// read in object storage env vars
+	if def.Requires.ObjectStorage {
+		err = config.objectStorageEnvVars(def)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return config, nil
 }
 
+// readCerts is a helper function that reads in the environment variables for certificates
 func (config *Config) readCerts(def SvcDefinition) error {
 
 	var serviceName string
@@ -189,6 +207,7 @@ func (config *Config) readCerts(def SvcDefinition) error {
 	return nil
 }
 
+// databaseEnvVars is a helper function that reads in the environment variables for the database connection
 func (config *Config) databaseEnvVars(def SvcDefinition) error {
 
 	var serviceName string
@@ -296,6 +315,7 @@ func (config *Config) userAuthEnvVars(def SvcDefinition) error {
 	return nil
 }
 
+// JwtEnvVars is a helper function that reads in the environment variables for JWT signing and verifying keys
 func (config *Config) JwtEnvVars(def SvcDefinition) error {
 
 	var serviceName string
@@ -346,6 +366,7 @@ func (config *Config) JwtEnvVars(def SvcDefinition) error {
 	return nil
 }
 
+// tasksServiceEnvVars is a helper function that reads in the environment variables for the tasks service
 func (config *Config) tasksServiceEnvVars(def SvcDefinition) error {
 
 	var serviceName string
@@ -360,6 +381,65 @@ func (config *Config) tasksServiceEnvVars(def SvcDefinition) error {
 	}
 
 	config.Tasks.Url = envTasksUrl
+
+	return nil
+}
+
+// galleryServiceEnvVars is a helper function that reads in the environment variables for the gallery service
+func (config *Config) galleryServiceEnvVars(def SvcDefinition) error {
+
+	var serviceName string
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
+
+	}
+
+	envGalleryUrl, ok := os.LookupEnv(fmt.Sprintf("%sGALLERY_URL", serviceName))
+	if !ok {
+		return fmt.Errorf(fmt.Sprintf("%sGALLERY_URL not set", serviceName))
+	}
+
+	config.Gallery.Url = envGalleryUrl
+
+	return nil
+}
+
+// objectStorageEnvVars is a helper function that reads in the environment variables for object storage configuration
+func (config *Config) objectStorageEnvVars(def SvcDefinition) error {
+
+	// check for a service name to append to the environment variable names
+	var serviceName string
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
+	}
+
+	// read in url from environment variable
+	envObjectStorageUrl, ok := os.LookupEnv(fmt.Sprintf("%sOBJECT_STORAGE_URL", serviceName))
+	if !ok {
+		return fmt.Errorf(fmt.Sprintf("%sOBJECT_STORAGE_URL not set", serviceName))
+	}
+	config.ObjectStorage.Url = envObjectStorageUrl
+
+	// read in bucket from environment variable
+	envObjectStorageBucket, ok := os.LookupEnv(fmt.Sprintf("%sOBJECT_STORAGE_BUCKET", serviceName))
+	if !ok {
+		return fmt.Errorf(fmt.Sprintf("%sOBJECT_STORAGE_BUCKET not set", serviceName))
+	}
+	config.ObjectStorage.Bucket = envObjectStorageBucket
+
+	// read in access key from environment variable
+	envObjectStorageAccessKey, ok := os.LookupEnv(fmt.Sprintf("%sOBJECT_STORAGE_ACCESS_KEY", serviceName))
+	if !ok {
+		return fmt.Errorf(fmt.Sprintf("%sOBJECT_STORAGE_ACCESS_KEY not set", serviceName))
+	}
+	config.ObjectStorage.AccessKey = envObjectStorageAccessKey
+
+	// read in secret key from environment variable
+	envObjectStorageSecretKey, ok := os.LookupEnv(fmt.Sprintf("%sOBJECT_STORAGE_SECRET_KEY", serviceName))
+	if !ok {
+		return fmt.Errorf(fmt.Sprintf("%sOBJECT_STORAGE_SECRET_KEY not set", serviceName))
+	}
+	config.ObjectStorage.SecretKey = envObjectStorageSecretKey
 
 	return nil
 }
