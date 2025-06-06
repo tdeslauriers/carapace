@@ -139,7 +139,7 @@ func (config *Config) readCerts(def SvcDefinition) error {
 	config.Certs.ServerKey = &envServerKey
 
 	// client
-	if def.Requires.S2sClient {
+	if def.Requires.S2sClient || def.Requires.ObjectStorage {
 
 		// client cert
 		envClientCert, ok := os.LookupEnv(fmt.Sprintf("%sCLIENT_CERT", serviceName))
@@ -178,7 +178,8 @@ func (config *Config) readCerts(def SvcDefinition) error {
 	}
 
 	// ca cert - services
-	if def.Tls == MutualTls || def.Requires.S2sClient {
+	if def.Tls == MutualTls || def.Requires.S2sClient || def.Requires.ObjectStorage {
+
 		envCaCert, ok := os.LookupEnv(fmt.Sprintf("%sCA_CERT", serviceName))
 		if !ok {
 			return fmt.Errorf(fmt.Sprintf("%sCA_CERT not set", serviceName))

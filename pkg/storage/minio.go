@@ -11,7 +11,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// New creates a new instance of the ObjectStorage interface..
+// New creates a new instance of the ObjectStorage interface.
 func New(config Config, tls *tls.Config, expiry time.Duration) (ObjectStorage, error) {
 
 	// tlsClient

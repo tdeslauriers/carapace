@@ -41,7 +41,7 @@ func (config *tlsClientConfig) Build() (*tls.Config, error) {
 		return nil, err
 	}
 
-	// Load host's CA certificates
+	// load host's CA certificates
 	systemCertPool, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get system cert pool: %v", err)
