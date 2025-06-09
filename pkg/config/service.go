@@ -189,7 +189,7 @@ func (config *Config) readCerts(def SvcDefinition) error {
 			config.Certs.ServerCa = &envCaCert
 		}
 
-		if def.Requires.S2sClient {
+		if def.Requires.S2sClient || def.Requires.ObjectStorage {
 			config.Certs.ClientCa = &envCaCert
 		}
 
