@@ -16,4 +16,7 @@ type ObjectStorage interface {
 
 	// GetSignedUrl generates a signed URL for accessing an object in the storage service.
 	GetSignedUrl(objectKey string) (*url.URL, error)
+
+	// GetPreSignedPutUrl generates a pre-signed URL for uploading an object to the storage service.
+	GetPreSignedPutUrl(objectKey string) (*url.URL, error)
 }

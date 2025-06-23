@@ -63,3 +63,15 @@ func (m *minioStorage) GetSignedUrl(objectKey string) (*url.URL, error) {
 	// return the signed URL as a string
 	return signedUrl, nil
 }
+
+func (m *minioStorage) GetPreSignedPutUrl(objectKey string) (*url.URL, error) {
+
+	// fetches a signed URL for the specified object key with the defined expiry duration
+	signedUrl, err := m.client.PresignedPutObject(m.ctx, m.bucket, objectKey, m.expiry)
+	if err != nil {
+		return nil, err
+	}
+
+	// return the signed URL as a string
+	return signedUrl, nil
+}
