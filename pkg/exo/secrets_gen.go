@@ -16,8 +16,8 @@ func (e *exoskeleton) secretGenExecution() error {
 	// build seceret name
 	secretName := fmt.Sprintf("%s_%s_secret_%s", e.config.ServiceName, e.config.Secret, e.config.Env)
 
-	// generate jwt key pair
-	if err := e.secretGen.Generate32ByteKey(secretName); err != nil {
+	// generate key
+	if err := e.secretGen.GenerateKey(secretName, e.config.ByteLength); err != nil {
 		return fmt.Errorf("failed to generate secrets: %v", err)
 	}
 

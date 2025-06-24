@@ -59,6 +59,11 @@ func Parse() (*Config, error) {
 	secrets := flag.String("secrets", "", secretsMsg)
 	flag.StringVar(secrets, "sec", "", secretsMsg)
 
+	// byte length of secrets: should be setup so optional, ie, had defaults if omitted
+	byteLengthMsg := "length of secret to generate, defaults to 32 bytes if not set, generally"
+	byteLength := flag.Int("byte-length", 32, byteLengthMsg)
+	flag.IntVar(byteLength, "bl", 32, byteLengthMsg)
+
 	// jwt signing key pair
 	keyPairMsg := "invokes ecdsa jwt signing key pair generation"
 	keyPair := flag.Bool("key-pair", false, keyPairMsg)
@@ -84,13 +89,14 @@ func Parse() (*Config, error) {
 
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
-		fmt.Fprintf(os.Stderr, "  -c,   --certs     %s\n", certMsg)
-		fmt.Fprintf(os.Stderr, "  -k,   --key-pair  %s\n", keyPairMsg)
-		fmt.Fprintf(os.Stderr, "  -sec, --secrets   %s\n", secretsMsg)
-		fmt.Fprintf(os.Stderr, "  -e,   --env       %s\n", envMsg)
-		fmt.Fprintf(os.Stderr, "  -s,   --service   %s\n", svcNameMsg)
-		fmt.Fprintf(os.Stderr, "  -f,   --file      %s\n", fileMsg)
-		fmt.Fprintf(os.Stderr, "  -h                Display this help message\n")
+		fmt.Fprintf(os.Stderr, "  -c,   --certs       %s\n", certMsg)
+		fmt.Fprintf(os.Stderr, "  -k,   --key-pair    %s\n", keyPairMsg)
+		fmt.Fprintf(os.Stderr, "  -sec, --secrets     %s\n", secretsMsg)
+		fmt.Fprintf(os.Stderr, "  -bl,  --byte-length %s\n", byteLengthMsg)
+		fmt.Fprintf(os.Stderr, "  -e,   --env         %s\n", envMsg)
+		fmt.Fprintf(os.Stderr, "  -s,   --service     %s\n", svcNameMsg)
+		fmt.Fprintf(os.Stderr, "  -f,   --file        %s\n", fileMsg)
+		fmt.Fprintf(os.Stderr, "  -h                  Display this help message\n")
 	}
 
 	// parse flags
@@ -103,8 +109,9 @@ func Parse() (*Config, error) {
 			Invoked:  *certs,
 			Filename: *file,
 		},
-		Secret:  *secrets,
-		KeyPair: *keyPair,
+		Secret:     *secrets,
+		KeyPair:    *keyPair,
+		ByteLength: *byteLength,
 	}, nil
 }
 

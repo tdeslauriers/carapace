@@ -14,8 +14,8 @@ import (
 // SecretGenerator is an interface for generating a 32 byte keys for data operations like AES GCM encryption or blind index hashing
 type SecretGenerator interface {
 
-	// Generate32ByteKey generates a 32 byte key, encodes it to base64, and uploads it to 1password with tne name provided
-	Generate32ByteKey(name string) error
+	// GenerateKey generates a random key of specificed byte length, encodes it to base64, and uploads it to 1password with tne name provided
+	GenerateKey(name string, length int) error
 }
 
 func NewSecretGenerator() SecretGenerator {
@@ -34,10 +34,20 @@ type secretGenerator struct {
 	logger *slog.Logger
 }
 
-func (sg *secretGenerator) Generate32ByteKey(name string) error {
+func (sg *secretGenerator) GenerateKey(name string, length int) error {
 
-	// generete cryptographically random 32 byte secret
-	secret := make([]byte, 32)
+	// length must be at least 32 bytes for secure algorithms such as AES GCM and hmac hashing
+	if length < 32 {
+		sg.logger.Warn(fmt.Sprintf("length is less than 32 bytes, which is the minimum for several secure algorithms, got %d", length))
+	}
+
+	// check if it is a power of 2 so we can use it for AES GCM or blind index hashing
+	if length&(length-1) != 0 {
+		return fmt.Errorf("length must be a power of 2, got %d", length)
+	}
+
+	// generete cryptographically random secret key of specified length
+	secret := make([]byte, length)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
 		panic(err.Error())
 	}

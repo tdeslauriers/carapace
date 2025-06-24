@@ -12,6 +12,7 @@ type Config struct {
 	Certs       Certs
 	Secret      string // name of secret to generate
 	KeyPair     bool
+	ByteLength int // length of secret to generate; need to set defaults if not set
 }
 
 // Certs is a struct for the exo cli command to consume.
