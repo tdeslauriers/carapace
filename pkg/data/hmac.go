@@ -32,3 +32,4 @@ func (i *hmacIndexer) ObtainBlindIndex(s string) (string, error) {
 
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
+
