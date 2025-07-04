@@ -51,7 +51,7 @@ func (p *Permission) Validate() error {
 	// validate id if it is set
 	if p.Id != "" {
 		if !validate.IsValidUuid(p.Id) {
-			return fmt.Errorf("invalid scope id in scope payload")
+			return fmt.Errorf("invalid permission id in permission payload")
 		}
 	}
 
@@ -72,13 +72,13 @@ func (p *Permission) Validate() error {
 
 	// check description length
 	if validate.TooShort(p.Description, 2) || validate.TooLong(p.Description, 256) {
-		return fmt.Errorf("invalid description in scope payload")
+		return fmt.Errorf("invalid description in permission payload")
 	}
 
 	// check slug if it is set
 	if p.Slug != "" {
 		if !validate.IsValidUuid(p.Slug) {
-			return fmt.Errorf("invalid slug in scope payload")
+			return fmt.Errorf("invalid slug in permission payload")
 		}
 	}
 
