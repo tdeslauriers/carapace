@@ -14,15 +14,15 @@ const (
 // Permission is a model struct for the permissions table in a resource
 // representing a fine grained permission local to that application.
 type Permission struct {
-	Csrf string `db:"csrf" json:"csrf"`
+	Csrf string `db:"csrf" json:"csrf,omitempty"`
 
-	Id          string          `db:"uuid" json:"uuid"`
+	Id          string          `db:"uuid" json:"uuid,omitempty"`
 	Name        string          `db:"name" json:"name"`
 	Service     string          `db:"service" json:"service"`
 	Description string          `db:"description" json:"description"`
-	CreatedAt   data.CustomTime `db:"created_at" json:"created_at"`
+	CreatedAt   data.CustomTime `db:"created_at" json:"created_at,omitempty"`
 	Active      bool            `db:"active" json:"active"`
-	Slug        string          `db:"slug" json:"slug"`
+	Slug        string          `db:"slug" json:"slug,omitempty"`
 }
 
 var allowedServices = map[string]struct{}{
