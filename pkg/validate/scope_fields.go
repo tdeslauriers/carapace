@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	
 	ScopeRegex string = `^[a-zA-Z0-9:\*]{7,64}$`
 	ScopeMin   int    = 7
 	ScopeMax   int    = 64
@@ -20,13 +19,11 @@ const (
 	ScopeNameMax   int    = 32
 )
 
-
-
 // IsValidScope checks if a scope is valid via regex criteria and access options.
 // should be r:service:* or w:service:* or d:service:*, etc.
 func IsValidScope(scope string) (bool, error) {
 
-	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(config.ComponentKey, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
 
 	rgx, err := regexp.Compile(ScopeRegex)
 	if err != nil {

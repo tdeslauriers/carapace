@@ -62,7 +62,8 @@ type Scope struct {
 // ValidateCmd performs regex checks on scope fields.
 func (s *Scope) ValidateCmd() error {
 
-	// uuid's and dates may not yet exist, so those must be checked separately
+	// uuid's and dates may not yet exist, so those should only be validated if they are set.
+	// additional checks are performed by services, so if uuid values are removed, it is not a problem.
 
 	if s.Uuid != "" {
 		if !validate.IsValidUuid(s.Uuid) {
