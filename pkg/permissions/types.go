@@ -2,6 +2,7 @@ package permissions
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
 	"github.com/tdeslauriers/carapace/pkg/validate"
@@ -17,8 +18,9 @@ type Permission struct {
 	Csrf string `db:"csrf" json:"csrf,omitempty"`
 
 	Id          string          `db:"uuid" json:"uuid,omitempty"`
+	Permission  string          `db:"permission" json:"permission"` // this is the permission string, not the name
 	Name        string          `db:"name" json:"name"`
-	Service     string          `db:"service" json:"service"`
+	ServiceName string          `db:"service_name" json:"service_name"`
 	Description string          `db:"description" json:"description"`
 	CreatedAt   data.CustomTime `db:"created_at" json:"created_at,omitempty"`
 	Active      bool            `db:"active" json:"active"`
@@ -50,24 +52,29 @@ func (p *Permission) Validate() error {
 
 	// validate id if it is set
 	if p.Id != "" {
-		if !validate.IsValidUuid(p.Id) {
+		if !validate.IsValidUuid(strings.TrimSpace(p.Id)) {
 			return fmt.Errorf("invalid permission id in permission payload")
 		}
 	}
 
+	// check permission string
+	if ok, err := validate.IsValidPermission(strings.TrimSpace(p.Permission)); !ok {
+		return fmt.Errorf("invalid permission in permission payload: %v", err)
+	}
+
+	// check permission name
+	if ok, err := validate.IsValidPermissionName(strings.TrimSpace(p.Name)); !ok {
+		return fmt.Errorf("invalid permission name in permission payload: %v", err)
+	}
+
 	// check service name
-	if ok, err := validate.IsValidServiceName(p.Service); !ok {
+	if ok, err := validate.IsValidServiceName(strings.TrimSpace(p.ServiceName)); !ok {
 		return fmt.Errorf("invalid service name in permission payload: %v", err)
 	}
 
 	// check if service is allowed
-	if !isServiceAllowed(p.Service) {
-		return fmt.Errorf("service %s is not a valid service name", p.Service)
-	}
-
-	// check permission name
-	if ok, err := validate.IsValidPermissionName(p.Name); !ok {
-		return fmt.Errorf("invalid permission name in permission payload: %v", err)
+	if !isServiceAllowed(strings.TrimSpace(p.ServiceName)) {
+		return fmt.Errorf("service %s is not a valid service name", p.ServiceName)
 	}
 
 	// check description length
@@ -77,7 +84,7 @@ func (p *Permission) Validate() error {
 
 	// check slug if it is set
 	if p.Slug != "" {
-		if !validate.IsValidUuid(p.Slug) {
+		if !validate.IsValidUuid(strings.TrimSpace(p.Slug)) {
 			return fmt.Errorf("invalid slug in permission payload")
 		}
 	}
