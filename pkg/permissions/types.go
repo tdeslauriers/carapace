@@ -18,9 +18,9 @@ type Permission struct {
 	Csrf string `db:"csrf" json:"csrf,omitempty"`
 
 	Id          string          `db:"uuid" json:"uuid,omitempty"`
-	Permission  string          `db:"permission" json:"permission"` // this is the permission string, not the name
-	Name        string          `db:"name" json:"name"`
 	ServiceName string          `db:"service_name" json:"service_name"`
+	Permission  string          `db:"permission" json:"permission"` // this is the permission string, eg CURATOR not the name
+	Name        string          `db:"name" json:"name"`
 	Description string          `db:"description" json:"description"`
 	CreatedAt   data.CustomTime `db:"created_at" json:"created_at,omitempty"`
 	Active      bool            `db:"active" json:"active"`
@@ -57,16 +57,6 @@ func (p *Permission) Validate() error {
 		}
 	}
 
-	// check permission string
-	if ok, err := validate.IsValidPermission(strings.TrimSpace(p.Permission)); !ok {
-		return fmt.Errorf("invalid permission in permission payload: %v", err)
-	}
-
-	// check permission name
-	if ok, err := validate.IsValidPermissionName(strings.TrimSpace(p.Name)); !ok {
-		return fmt.Errorf("invalid permission name in permission payload: %v", err)
-	}
-
 	// check service name
 	if ok, err := validate.IsValidServiceName(strings.TrimSpace(p.ServiceName)); !ok {
 		return fmt.Errorf("invalid service name in permission payload: %v", err)
@@ -80,6 +70,16 @@ func (p *Permission) Validate() error {
 	// check description length
 	if validate.TooShort(p.Description, 2) || validate.TooLong(p.Description, 256) {
 		return fmt.Errorf("invalid description in permission payload")
+	}
+
+	// check permission string
+	if ok, err := validate.IsValidPermission(strings.TrimSpace(p.Permission)); !ok {
+		return fmt.Errorf("invalid permission in permission payload: %v", err)
+	}
+
+	// check permission name
+	if ok, err := validate.IsValidPermissionName(strings.TrimSpace(p.Name)); !ok {
+		return fmt.Errorf("invalid permission name in permission payload: %v", err)
 	}
 
 	// check slug if it is set

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	PermissionNameRegex string = `^[a-zA-Z0-9]{2,32}$`
+	PermissionNameRegex string = `^[a-zA-Z0-9 ]{2,32}$`
 	PermissionNameMin   int    = 2
 	PermissionNameMax   int    = 32
 
@@ -28,7 +28,7 @@ func IsValidPermissionName(name string) (bool, error) {
 	}
 
 	if !rgx.MatchString(name) {
-		return false, fmt.Errorf(`scope name must be between %d and %d characters long, 
+		return false, fmt.Errorf(`permission name must be between %d and %d characters long, 
 				and may only contain upper and lower case letters, numbers, or spaces`, PermissionNameMin, PermissionNameMax)
 	}
 

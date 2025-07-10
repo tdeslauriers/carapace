@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	ServiceNameRegex string = `^[a-z0-9_-]{2,32}$`
+	ServiceNameRegex string = `^[a-z0-9]{2,32}$`
 	ServiceNameMin   int    = 2
 	ServiceNameMax   int    = 32
 )
@@ -26,7 +26,7 @@ func IsValidServiceName(service string) (bool, error) {
 
 	if !rgx.MatchString(service) {
 		return false, fmt.Errorf(`service name must be between %d and %d characters long, 
-			and may only contain upper and lower case letters, numbers, '-' or, '_'`, ServiceNameMin, ServiceNameMax)
+			and may only contain upper and lower case letters and/or numbers`, ServiceNameMin, ServiceNameMax)
 	}
 
 	return true, nil
