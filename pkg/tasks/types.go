@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
+	"github.com/tdeslauriers/carapace/pkg/permissions"
 	"github.com/tdeslauriers/carapace/pkg/profile"
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
@@ -14,17 +15,18 @@ import (
 // It can also be used for json, though the indexes will be omitted.
 // Balance is counted in cents to avoid Superman 3 style errors.
 type Allowance struct {
-	Id           string          `json:"id,omitempty" db:"uuid"`
-	Balance      uint64          `json:"balance" db:"balance"`
-	Username     string          `json:"username,omitempty" db:"username"`
-	UserIndex    string          `json:"user_index,omitempty" db:"user_index"`
-	Slug         string          `json:"slug,omitempty" db:"slug"`
-	SlugIndex    string          `json:"slug_index,omitempty" db:"slug_index"`
-	CreatedAt    data.CustomTime `json:"created_at" db:"created_at"`
-	UpdatedAt    data.CustomTime `json:"updated_at" db:"updated_at"`
-	IsArchived   bool            `json:"is_archived" db:"is_archived"`
-	IsActive     bool            `json:"is_active" db:"is_active"`
-	IsCalculated bool            `json:"is_calculated" db:"is_calculated"`
+	Id           string                         `json:"id,omitempty" db:"uuid"`
+	Balance      uint64                         `json:"balance" db:"balance"`
+	Username     string                         `json:"username,omitempty" db:"username"`
+	UserIndex    string                         `json:"user_index,omitempty" db:"user_index"`
+	Slug         string                         `json:"slug,omitempty" db:"slug"`
+	SlugIndex    string                         `json:"slug_index,omitempty" db:"slug_index"`
+	CreatedAt    data.CustomTime                `json:"created_at" db:"created_at"`
+	UpdatedAt    data.CustomTime                `json:"updated_at" db:"updated_at"`
+	IsArchived   bool                           `json:"is_archived" db:"is_archived"`
+	IsActive     bool                           `json:"is_active" db:"is_active"`
+	IsCalculated bool                           `json:"is_calculated" db:"is_calculated"`
+	Permissions  []permissions.PermissionRecord `json:"permissions,omitempty" `
 }
 
 func (a *Allowance) ValidateCmd() error {
