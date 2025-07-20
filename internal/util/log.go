@@ -8,6 +8,7 @@ const (
 	ComponentKeyGen      string = "key pair generator"
 	ComponentSecretGen   string = "secret generator"
 	ComponentOnePassword string = "1password cli"
+	ComponenetPermissions string = "permissions"
 
 	ServiceKey         string = "service"
 	ServiceOnePassword string = "1password"
