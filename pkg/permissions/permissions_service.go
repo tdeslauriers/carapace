@@ -14,7 +14,7 @@ import (
 	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
-type PermissionsService interface {
+type Service interface {
 	// GetAllPermissions retrieves all permissions in the database/persistence layer.
 	GetAllPermissions() (map[string]PermissionRecord, []PermissionRecord, error)
 
@@ -29,8 +29,8 @@ type PermissionsService interface {
 	UpdatePermission(p *PermissionRecord) error
 }
 
-// NewPermissionsService creates a new permissions service and provides a pointer to a concrete implementation.
-func NewPermissionsService(sql data.SqlRepository, i data.Indexer, c data.Cryptor) PermissionsService {
+// NewService creates a new permissions service and provides a pointer to a concrete implementation.
+func NewService(sql data.SqlRepository, i data.Indexer, c data.Cryptor) Service {
 	return &permissionsService{
 		sql:     sql,
 		indexer: i,
@@ -42,7 +42,7 @@ func NewPermissionsService(sql data.SqlRepository, i data.Indexer, c data.Crypto
 	}
 }
 
-var _ PermissionsService = (*permissionsService)(nil)
+var _ Service = (*permissionsService)(nil)
 
 // permissionsService implements the Service interface for managing permissions to gallery data models and images.
 type permissionsService struct {
