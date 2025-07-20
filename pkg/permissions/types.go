@@ -139,3 +139,31 @@ func (p *PermissionRecord) Validate() error {
 
 	return nil
 }
+
+// UpdatePermissionsCmd us a model used as a command to update the permissions associated with an entity.
+// Note, the entity could be a user, an image, an album, or any other resourse identifier,
+// eg, email address, image slug, album slug, etc.
+type UpdatePermissionsCmd struct {
+	Entity      string   `json:"entity"`
+	Permissions []string `json:"permissions"`
+}
+
+// Validate checks if the update permissions command is valid/well-formed
+func (cmd *UpdatePermissionsCmd) Validate() error {
+
+	// light-weight validation of the entity since it is a lookup and can be many
+	// things like a user email, image slug, album slug, etc.
+	if len(cmd.Entity) < 2 || len(cmd.Entity) > 64 {
+		return fmt.Errorf("invalid entity in update permissions command: must be between 2 and 64 characters")
+	}
+
+	// check permission slugs
+	// note: for now, these are uuids, but could be any string in the future
+	for _, permission := range cmd.Permissions {
+		if !validate.IsValidUuid(permission) {
+			return fmt.Errorf("invalid permission slug in update permissions command: %s", permission)
+		}
+	}
+
+	return nil
+}
