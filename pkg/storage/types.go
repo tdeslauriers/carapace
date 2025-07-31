@@ -19,4 +19,7 @@ type ObjectStorage interface {
 
 	// GetPreSignedPutUrl generates a pre-signed URL for uploading an object to the storage service.
 	GetPreSignedPutUrl(objectKey string) (*url.URL, error)
+
+	// MoveObject moves an object from one location to another within the storage service
+	MoveObject(src, dst string) error
 }

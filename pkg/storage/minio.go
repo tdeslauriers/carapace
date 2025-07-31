@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -74,4 +75,44 @@ func (m *minioStorage) GetPreSignedPutUrl(objectKey string) (*url.URL, error) {
 
 	// return the signed URL as a string
 	return signedUrl, nil
+}
+
+// MoveObject is a the concrete implementation of the ObjectStorage interface method
+// which moves an object from one location to another in the MinIO storage service.
+// Note: this is similiar to a linux mv command, which rather than moving the object, effectively renames it.
+// Impl: it copies the object to the new location/namespace and then removes the original object.
+func (m *minioStorage) MoveObject(src, dst string) error {
+
+	// check that the current object key and the new object key are not the same
+	if src == dst {
+		return nil // no need to move if the keys are the same
+	}
+
+	srcOpts := minio.CopySrcOptions{
+		Bucket: m.bucket,
+		Object: src,
+	}
+
+	dstOpts := minio.CopyDestOptions{
+		Bucket: m.bucket,
+		Object: dst,
+	}
+
+	// copy the object from the source to the destination
+	_, err := m.client.CopyObject(m.ctx, dstOpts, srcOpts)
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return fmt.Errorf("source object '%s' does not exist in object storage", src)
+		} else {
+			return fmt.Errorf("failed to copy object from '%s' to '%s': %v", src, dst, err)
+		}
+	}
+
+	// remove the original object after copying
+	err = m.client.RemoveObject(m.ctx, m.bucket, src, minio.RemoveObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to remove original object '%s' after copying to '%s': %v", src, dst, err)
+	}
+
+	return nil
 }
