@@ -55,7 +55,16 @@ type minioStorage struct {
 // generates a signed URL for accessing an object in the MinIO storage service.
 func (m *minioStorage) GetSignedUrl(objectKey string) (*url.URL, error) {
 
+	// check if the object key exists in the bucket
+	if _, err := m.client.StatObject(m.ctx, m.bucket, objectKey, minio.StatObjectOptions{}); err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return nil, fmt.Errorf("object '%s' does not exist in bucket '%s'", objectKey, m.bucket)
+		}
+		return nil, fmt.Errorf("failed to stat storage object '%s': %v", objectKey, err)
+	}
+
 	// fetches a signed URL for the specified object key with the defined expiry duration
+	// NOTE: this client method does not check if the object exists, it will return a signed URL regardless
 	signedUrl, err := m.client.PresignedGetObject(m.ctx, m.bucket, objectKey, m.expiry, nil)
 	if err != nil {
 		return nil, err
