@@ -49,7 +49,7 @@ type Record struct {
 	ResponseElements   map[string]any `json:"responseElements,omitempty"`
 	AwsRegion          string         `json:"awsRegion,omitempty"`
 	SourceIPAddress    string         `json:"sourceIPAddress,omitempty"`
-	UserIdentity       *UserIdentity  `json:"userIdentity,omitempty"`
+	UserIdentity       UserIdentity   `json:"userIdentity,omitempty"`
 	XMinioOriginRegion string         `json:"x-minio-origin-region,omitempty"`
 }
 
@@ -68,9 +68,9 @@ type S3Entity struct {
 
 // Bucket represents the S3 bucket involved in the event.
 type Bucket struct {
-	Name          string        `json:"name"`
-	OwnerIdentity *UserIdentity `json:"ownerIdentity,omitempty"`
-	ARN           string        `json:"arn,omitempty"`
+	Name          string       `json:"name"`
+	OwnerIdentity UserIdentity `json:"ownerIdentity,omitempty"`
+	ARN           string       `json:"arn,omitempty"`
 }
 
 // S3Object represents the S3 object involved in the event.
