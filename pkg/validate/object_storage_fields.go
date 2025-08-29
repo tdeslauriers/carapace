@@ -27,11 +27,11 @@ const (
 
 	BucketNameMinLength = 3
 	BucketNameMaxLength = 63
-	BucketNameRegex     = `^(?!^(xn--|[0-9]+$))(?!.*--)(?!.*\.$)(?!.*\.\.)(?!^-)(?!?!.*-$)[a-z0-9-\.]{3,63}$` // per AWS
+	BucketNameRegex     = `^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$` // per AWS
 
 	ArnMinLength = 20
 	ArnMaxLength = 2048
-	ArnRegex     = `^arn:(aws[a-zA-Z-]*)?:[a-z0-9-]+:[a-z0-9-]*:[0-9]*:[^\s]+$` // per AWS
+	ArnRegex     = `^arn:([a-z0-9-]+):([a-z0-9-]+):([a-z0-9-]*):([0-9]{0,12}):(.+)$` // per AWS
 
 	SchemaVersionMinLength = 1
 	SchemaVersionMaxLength = 64

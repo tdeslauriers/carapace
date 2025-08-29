@@ -141,11 +141,11 @@ func IsValidPassword(password string) error {
 
 func MatchesRegex(s, pattern string) bool {
 
-	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(config.ComponentKey, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
 
 	rgx, err := regexp.Compile(pattern)
 	if err != nil {
-		logger.Error("unable to compile regex pattern: %s: %v", pattern, err)
+		logger.Error(fmt.Sprintf("unable to compile regex pattern: %s: %v", pattern, err))
 	}
 
 	return rgx.MatchString(s)
@@ -296,5 +296,3 @@ func IsValidUuid(uuid string) bool {
 
 	return rgx.MatchString(uuid)
 }
-
-
