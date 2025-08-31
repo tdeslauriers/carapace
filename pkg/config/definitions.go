@@ -25,15 +25,18 @@ type Requires struct {
 	IndexSecret bool
 	AesSecret   bool
 
-	S2sSigningKey bool
 	// S2sVerifyingKey indicates that the service requires a verifying key for s2s JWTs
+	S2sSigningKey   bool
 	S2sVerifyingKey bool
 
 	// Identity indicates that the service requires making requests to the identity service
-	Identity       bool
-	UserSigningKey bool
 	// UserVerifyingKey indicates that the service requires a verifying key for user JWTs
+	Identity         bool
+	UserSigningKey   bool
 	UserVerifyingKey bool
+
+	// PatGenerator indicates that the service generates personal access tokens
+	PatGenerator bool
 
 	// OauthRedirect indicates that the service requires oauth client id and redirect url
 	OauthRedirect bool

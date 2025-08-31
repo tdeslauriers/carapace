@@ -63,11 +63,23 @@ func Load(def SvcDefinition) (*Config, error) {
 	}
 
 	// read in jwt env vars
-	if def.Requires.S2sSigningKey || def.Requires.S2sVerifyingKey || def.Requires.UserSigningKey || def.Requires.UserVerifyingKey {
+	if def.Requires.S2sSigningKey ||
+		def.Requires.S2sVerifyingKey ||
+		def.Requires.UserSigningKey ||
+		def.Requires.UserVerifyingKey {
 		err = config.JwtEnvVars(def)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// read in pat generator env vars
+	if def.Requires.PatGenerator {
+		envPatPepper, ok := os.LookupEnv(fmt.Sprintf("%s_PAT_PEPPER", strings.ToUpper(def.ServiceName)))
+		if !ok {
+			return nil, fmt.Errorf(fmt.Sprintf("%s_PAT_PEPPER not set", strings.ToUpper(def.ServiceName)))
+		}
+		config.Pat.Pepper = envPatPepper
 	}
 
 	// read in oauth redirect env vars

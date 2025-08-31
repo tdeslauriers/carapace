@@ -9,6 +9,7 @@ type Config struct {
 	Database        Database
 	ServiceAuth     ServiceAuth
 	UserAuth        UserAuth
+	Pat             Pat
 	Jwt             Jwt
 	OauthRedirect   OauthRedirect
 	Tasks           Tasks
@@ -55,6 +56,10 @@ type Tasks struct {
 
 type Gallery struct {
 	Url string
+}
+
+type Pat struct {
+	Pepper string
 }
 
 type Jwt struct {
