@@ -88,6 +88,15 @@ func IsAllowedEvent(eventName string) bool {
 	return allowedEvents[eventName]
 }
 
+func ValidateKey(key string) error {
+
+	if TooShort(key, KeyMinLength) || TooLong(key, KeyMaxLength) {
+		return fmt.Errorf("key must be between %d and %d characters in length", KeyMinLength, KeyMaxLength)
+	}
+
+	return nil
+}
+
 // ValidateEventName checks if the provided event name is valid.
 func ValidateEventName(eventName string) error {
 

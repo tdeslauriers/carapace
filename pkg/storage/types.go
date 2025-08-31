@@ -45,7 +45,7 @@ func (w *WebhookPutObject) Validate() error {
 
 	// validate key if it is set
 	if w.MinioKey != "" {
-		if err := validate.ValidateBucketName(w.MinioKey); err != nil {
+		if err := validate.ValidateKey(w.MinioKey); err != nil {
 			return fmt.Errorf("invalid key in webhook payload: %v", err)
 		}
 	}
