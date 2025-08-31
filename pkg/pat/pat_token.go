@@ -23,7 +23,7 @@ type PatTokener interface {
 }
 
 // newPatToken creates a new PatToken object with the provided secret/pepper byte-slice.
-func NewPatToken(secret []byte) PatTokener {
+func NewPatTokener(secret []byte) PatTokener {
 	return &patTokener{
 		pepper: secret,
 	}
