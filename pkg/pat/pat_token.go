@@ -20,6 +20,12 @@ type PatTokener interface {
 	// with the interfaces provided secret/pepper.  It returns the blind index as a hex,
 	// lowercase string and an error if any.
 	ObtainIndex(token []byte) (string, error)
+
+	// HashAndCompare takes in a PAT token byte-slice and a hashed blind index string,
+	// hashes the token using HMAC SHA-256 with the provided secret/pepper,
+	// and compares the resulting blind index with the provided blind index.
+	// It returns true if they match, false otherwise, and an error if any.
+	HashAndCompare(token []byte, blindIndex string) (bool, error)
 }
 
 // newPatToken creates a new PatToken object with the provided secret/pepper byte-slice.
