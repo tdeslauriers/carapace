@@ -167,3 +167,5 @@ func (cmd *UpdatePermissionsCmd) Validate() error {
 
 	return nil
 }
+
+
