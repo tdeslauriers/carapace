@@ -17,6 +17,10 @@ type Verifier interface {
 
 	// ValidateScopes checks if the scopes associated with a pat token contain at least one of the required scopes.
 	ValidateScopes(requiredScopes []string, token string) (bool, error)
+
+	// BuildAuthorized builds a AuthorizedService struct of a service and its id that have passed authorization
+	// checks from an set/slice of required scopes and a pat token string.
+	BuildAuthorized(requiredScopes []string, token string) (*AuthorizedService, error)
 }
 
 // NewVerifier creates a new Verifier interface with and returns and underlying concrete implementation.
@@ -147,8 +151,8 @@ func (v *verifier) BuildAuthorized(requiredScopes []string, token string) (*Auth
 	return v.buildAuthorized(requiredScopes, token)
 }
 
-// GetServiceToken is a helper method that builds a AuthorizedService struct of a service and its id that have passed authorization
-// checks from an set/slice of // scopes and a pat token string.
+// GetServiceToken is a helper method that builds a AuthorizedService struct of a service and its
+// id that have passed authorization checks from an set/slice of required scopes and a pat token string.
 func (v *verifier) buildAuthorized(requiredScopes []string, token string) (*AuthorizedService, error) {
 
 	// quick sanity check of token length
