@@ -3,6 +3,7 @@ package pat
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/tdeslauriers/carapace/internal/util"
 	"github.com/tdeslauriers/carapace/pkg/connect"
@@ -113,30 +114,25 @@ func (v *verifier) validateScopes(requiredScopes []string, token string) (bool, 
 	// this should be redundant since the service should return an error if the token is invalid
 	// for any reason, but goog practice to double check
 	// check if the token is active
-	if resp.PatActive == false {
+	if resp.Active == false {
 		return false, fmt.Errorf("pat token is not active")
-	}
-
-	// check if the token is revoked or expired
-	if resp.PatRevoked == true {
-		return false, fmt.Errorf("pat token has been revoked")
-	}
-
-	// check if the token is expired
-	if resp.PatExpired == true {
-		return false, fmt.Errorf("pat token has expired")
-	}
-
-	// check if there are any scopes associated with the token
-	if len(resp.Scopes) == 0 {
-		return false, fmt.Errorf("no scopes associated with pat token")
 	}
 
 	// TODO: add audiences check.  Not a big deal for now since PATs are not audience restricted
 	// but good practice to check if we start using audiences in the future
 
+	if len(resp.Scope) == 0 {
+		return false, fmt.Errorf("no scopes associated with pat token")
+	}
+
+	// split scope string into a slice
+	scopes := strings.Split(resp.Scope, " ")
+	if len(scopes) == 0 {
+		return false, fmt.Errorf("no scopes associated with pat token")
+	}
+
 	// check if the token scopes contain at least one of the required scopes
-	for _, scope := range resp.Scopes {
+	for _, scope := range scopes {
 		if _, ok := requiredMap[scope]; ok {
 			return true, nil
 		}
@@ -187,33 +183,29 @@ func (v *verifier) buildAuthorized(requiredScopes []string, token string) (*Auth
 	// this should be redundant since the service should return an error if the token is invalid
 	// for any reason, but goog practice to double check
 	// check if the token is active
-	if resp.PatActive == false {
+	if resp.Active == false {
 		return nil, fmt.Errorf("pat token is not active")
-	}
-
-	// check if the token is revoked or expired
-	if resp.PatRevoked == true {
-		return nil, fmt.Errorf("pat token has been revoked")
-	}
-
-	// check if the token is expired
-	if resp.PatExpired == true {
-		return nil, fmt.Errorf("pat token has expired")
-	}
-
-	// check if there are any scopes associated with the token
-	if len(resp.Scopes) == 0 {
-		return nil, fmt.Errorf("no scopes associated with pat token")
 	}
 
 	// TODO: add audiences check.  Not a big deal for now since PATs are not audience restricted
 	// but good practice to check if we start using audiences in the future
 
+	if len(resp.Scope) == 0 {
+		return nil, fmt.Errorf("no scopes associated with pat token")
+	}
+
+	// split scope string into a slice
+	scopes := strings.Split(resp.Scope, " ")
+	if len(scopes) == 0 {
+		return nil, fmt.Errorf("no scopes associated with pat token")
+	}
+
 	// check if the token scopes contain at least one of the required scopes
 	authorized := false
-	for _, scope := range resp.Scopes {
+	for _, scope := range scopes {
 		if _, ok := requiredMap[scope]; ok {
 			authorized = true
+			break
 		}
 	}
 
@@ -222,7 +214,8 @@ func (v *verifier) buildAuthorized(requiredScopes []string, token string) (*Auth
 	}
 
 	return &AuthorizedService{
-		ServiceId:   resp.ServiceId,
-		ServiceName: resp.ServiceName,
+		ServiceId:    resp.Sub,
+		ServiceName:  resp.ServiceName,
+		AuthorizedBy: resp.Iss,
 	}, nil
 }
