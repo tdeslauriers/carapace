@@ -2,14 +2,14 @@ package pat
 
 import "fmt"
 
-// InstrospectCmd is a model used as a command to submit a PAT token for introspection
-type InstrospectCmd struct {
+// IntrospectCmd is a model used as a command to submit a PAT token for introspection
+type IntrospectCmd struct {
 	Token string `json:"token"`
 }
 
 // Validate checks if the introspect command is valid/well-formed
 // It is a sanity check of the token length only.
-func (cmd *InstrospectCmd) Validate() error {
+func (cmd *IntrospectCmd) Validate() error {
 
 	// quick sanity check of token length
 	if len(cmd.Token) < 64 || len(cmd.Token) > 128 {
@@ -19,9 +19,9 @@ func (cmd *InstrospectCmd) Validate() error {
 	return nil
 }
 
-// InstrospectResponse is a model used as a response from a PAT token introspection
+// IntrospectResponse is a model used as a response from a PAT token introspection
 // it will contain a string slice of scopes associated with the PAT token
-type InstrospectResponse struct {
+type IntrospectResponse struct {
 	ServiceId   string   `json:"service_id"`
 	ServiceName string   `json:"service_name"`
 	PatActive   bool     `json:"pat_active"`

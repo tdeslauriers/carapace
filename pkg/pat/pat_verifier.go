@@ -13,7 +13,7 @@ import (
 type Verifier interface {
 
 	// GetPatScopes takes in a PAT token string and returns the associated scopes from the upstream auth service
-	GetPatScopes(token string) (*InstrospectResponse, error)
+	GetPatScopes(token string) (*IntrospectResponse, error)
 
 	// ValidateScopes checks if the scopes associated with a pat token contain at least one of the required scopes.
 	ValidateScopes(requiredScopes []string, token string) (bool, error)
@@ -51,13 +51,13 @@ type verifier struct {
 // GetScopes is the concrete implementation of the interface method which
 // takes in a PAT token string and returns the associated scopes from the upstream auth service
 // so that a service endpoint can validate if the token is real, unexpired, and has the required scopes/permissions.
-func (v *verifier) GetPatScopes(token string) (*InstrospectResponse, error) {
+func (v *verifier) GetPatScopes(token string) (*IntrospectResponse, error) {
 	return v.getScopes(token)
 }
 
 // getScopes is a helper method that calls the /introspect endpoint of the upstream auth service
 // to validate the provided PAT token and retrieve its associated scopes.
-func (v *verifier) getScopes(token string) (*InstrospectResponse, error) {
+func (v *verifier) getScopes(token string) (*IntrospectResponse, error) {
 
 	// quick sanity check of token length
 	if len(token) < 64 || len(token) > 128 {
@@ -70,8 +70,8 @@ func (v *verifier) getScopes(token string) (*InstrospectResponse, error) {
 		return nil, fmt.Errorf("failed to get service token for %s: %v", v.authSvcName, err)
 	}
 
-	var resp InstrospectResponse
-	if err := v.auth.PostToService("/instrospect", s2sToken, "", InstrospectCmd{Token: token}, &resp); err != nil {
+	var resp IntrospectResponse
+	if err := v.auth.PostToService("/introspect", s2sToken, "", IntrospectCmd{Token: token}, &resp); err != nil {
 		return nil, fmt.Errorf("failed to introspect pat token: %v", err)
 	}
 
