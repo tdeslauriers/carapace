@@ -142,7 +142,7 @@ func (r *Record) Validate() error {
 
 	// validate x-minio-origin-region if it is set
 	if r.XMinioOriginRegion != "" {
-		if err := validate.ValidateRegion(r.XMinioOriginRegion); err != nil {
+		if err := validate.ValidateXMinioOriginRegion(r.XMinioOriginRegion); err != nil {
 			return fmt.Errorf("invalid x-minio-origin-region in record: %v", err)
 		}
 	}
