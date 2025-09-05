@@ -51,6 +51,32 @@ type minioStorage struct {
 	expiry time.Duration
 }
 
+// WithObject is the concrete implementation of the ObjectStorage interface method
+// which retrieves an object (ie, a file) as a stream from the MinIO storage service
+// and allows the caller to inject an operation like reading exif data, etc.
+// NOTE: minio.Object is an open http stream
+func (m *minioStorage) WithObject(key string, fn func(r ReadSeekCloser) error) error {
+
+	// check the object exists in the bucket by stat'ing it
+	if _, err := m.client.StatObject(m.ctx, m.bucket, key, minio.StatObjectOptions{}); err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return fmt.Errorf("object '%s' does not exist in bucket '%s'", key, m.bucket)
+		}
+		return fmt.Errorf("failed to stat storage object '%s': %v", key, err)
+	}
+
+	// get the object from the bucket
+	obj, err := m.client.GetObject(m.ctx, m.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get storage object '%s': %v", key, err)
+	}
+
+	defer obj.Close()
+
+	// call the provided function with the object stream
+	return fn(obj)
+}
+
 // GetSignedUrl is the concrete impl of the interface method which
 // generates a signed URL for accessing an object in the MinIO storage service.
 func (m *minioStorage) GetSignedUrl(objectKey string) (*url.URL, error) {
@@ -88,7 +114,7 @@ func (m *minioStorage) GetPreSignedPutUrl(objectKey string) (*url.URL, error) {
 
 // MoveObject is a the concrete implementation of the ObjectStorage interface method
 // which moves an object from one location to another in the MinIO storage service.
-// Note: this is similiar to a linux mv command, which rather than moving the object, effectively renames it.
+// Note: outcome is similiar to a linux mv command, which rather than moving the object, effectively renames it.
 // Impl: it copies the object to the new location/namespace and then removes the original object.
 func (m *minioStorage) MoveObject(src, dst string) error {
 

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"io"
 	"net/url"
 
 	"github.com/tdeslauriers/carapace/pkg/validate"
@@ -27,6 +28,18 @@ type ObjectStorage interface {
 
 	// MoveObject moves an object from one location to another within the storage service
 	MoveObject(src, dst string) error
+
+	// WithObject retrieves an object from the storage service and provides a ReadSeekCloser interface
+	// so that operations like reading or seeking can be performed on the object stream.
+	WithObject(key string, fn func(r ReadSeekCloser) error) error
+}
+
+// ReadSeekCloser is an interface that combines io.Reader, io.Seeker, and io.Closer, it is
+// implemented by object storage clients when returning object data streams.
+type ReadSeekCloser interface {
+	io.Reader
+	io.Seeker
+	io.Closer
 }
 
 // WebhookPutObject represents the payload received from a MinIO webhook notification for object creation events.

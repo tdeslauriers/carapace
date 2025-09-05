@@ -21,7 +21,7 @@ func (cmd *IntrospectCmd) Validate() error {
 
 // IntrospectResponse is a model used as a response from a PAT token introspection
 // it will contain a string slice of scopes associated with the PAT token
-// ClientId and Exp are optional fields in the spec, not included at this time
+// ClientId and Exp are optional fields in the RFC 7662 spec, not included at this time
 type IntrospectResponse struct {
 	Active      bool   `json:"active"`                // all tokens returned here are active or inactive no matter what the reaason
 	Scope       string `json:"scope,omitempty"`       // string with a space delimited list of scopes

@@ -10,7 +10,7 @@ import (
 	onepassword "github.com/tdeslauriers/carapace/pkg/one_password"
 )
 
-const testImage = "2025/72be0c9b-6981-4a70-918b-715fba4280a3.jpg"
+const testImage = "2025/78507e75-83b1-477a-bff7-384ba77690a3.jpg"
 
 func TestGetSignedUrl(t *testing.T) {
 
@@ -36,6 +36,39 @@ func TestGetSignedUrl(t *testing.T) {
 	}
 
 	t.Logf("Signed URL: %s", signedUrl.String())
+}
+
+func TestWithObject(t *testing.T) {
+
+	config, tls, err := setUp()
+	if err != nil {
+		t.Fatalf("failed to set up test: %v", err)
+	}
+
+	minio, err := New(*config, tls, 10*time.Minute)
+	if err != nil {
+		t.Fatalf("failed to create minio client: %v", err)
+	}
+
+	err = minio.WithObject(testImage, func(r ReadSeekCloser) error {
+		if r == nil {
+			return fmt.Errorf("expected a non-nil ReadSeekCloser")
+		}
+		buf := make([]byte, 512)
+		n, err := r.Read(buf)
+		if err != nil {
+			return fmt.Errorf("failed to read from object stream: %v", err)
+		}
+		if n == 0 {
+			return fmt.Errorf("expected to read some bytes from object stream, got 0")
+		}
+		t.Logf("Read %d bytes from object stream", n)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("WithObject failed: %v", err)
+	}
+
 }
 
 func setUp() (*Config, *tls.Config, error) {
