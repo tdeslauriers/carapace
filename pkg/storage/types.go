@@ -32,6 +32,9 @@ type ObjectStorage interface {
 	// WithObject retrieves an object from the storage service and provides a ReadSeekCloser interface
 	// so that operations like reading or seeking can be performed on the object stream.
 	WithObject(key string, fn func(r ReadSeekCloser) error) error
+
+	// PutObject uploads an object to the MinIO storage service.
+	PutObject(key string, data []byte, contentType string) error
 }
 
 // ReadSeekCloser is an interface that combines io.Reader, io.Seeker, and io.Closer, it is
