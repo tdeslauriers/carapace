@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -147,6 +148,30 @@ func (m *minioStorage) MoveObject(src, dst string) error {
 	err = m.client.RemoveObject(m.ctx, m.bucket, src, minio.RemoveObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to remove original object '%s' after copying to '%s': %v", src, dst, err)
+	}
+
+	return nil
+}
+
+// func PutObject is a the concrete implementation of the ObjectStorage interface method
+// which uploads an object to the MinIO storage service.
+func (m *minioStorage) PutObject(key string, data []byte, contentType string) error {
+
+	opts := minio.PutObjectOptions{
+		ContentType: contentType,
+	}
+
+	// upload the object to the bucket
+	_, err := m.client.PutObject(
+		m.ctx,
+		m.bucket,
+		key,
+		bytes.NewReader(data),
+		int64(len(data)),
+		opts,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to put object '%s' to bucket '%s': %v", key, m.bucket, err)
 	}
 
 	return nil
