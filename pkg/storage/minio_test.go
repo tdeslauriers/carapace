@@ -10,7 +10,7 @@ import (
 	onepassword "github.com/tdeslauriers/carapace/pkg/one_password"
 )
 
-const testImage = "2025/78507e75-83b1-477a-bff7-384ba77690a3.jpg"
+const testImage = "uploads/a9a6e506-e7b4-457b-82e5-93a7152103f9.jpg"
 
 func TestGetSignedUrl(t *testing.T) {
 

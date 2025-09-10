@@ -5,12 +5,14 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/tdeslauriers/carapace/internal/util"
 )
 
 // New creates a new instance of the ObjectStorage interface.
@@ -39,6 +41,11 @@ func New(config Config, tls *tls.Config, expiry time.Duration) (ObjectStorage, e
 		client: minioClient,
 		bucket: config.Bucket,
 		expiry: expiry,
+
+		logger: slog.Default().
+			With(slog.String(util.ComponentKey, util.ComponentStorage)).
+			With(slog.String(util.ServiceKey, util.ServiceCarapace)).
+			With(slog.String(util.PackageKey, util.PackageStorage)),
 	}, nil
 }
 
@@ -50,6 +57,8 @@ type minioStorage struct {
 	client *minio.Client
 	bucket string
 	expiry time.Duration
+
+	logger *slog.Logger
 }
 
 // WithObject is the concrete implementation of the ObjectStorage interface method
@@ -66,10 +75,17 @@ func (m *minioStorage) WithObject(key string, fn func(r ReadSeekCloser) error) e
 		return fmt.Errorf("failed to stat storage object '%s': %v", key, err)
 	}
 
+	m.logger.Info(fmt.Sprintf("Fetching object '%s' from bucket '%s'", key, m.bucket))
+
 	// get the object from the bucket
 	obj, err := m.client.GetObject(m.ctx, m.bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get storage object '%s': %v", key, err)
+	}
+
+	m.logger.Info(fmt.Sprintf("Successfully fetched object '%s' from bucket '%s'", key, m.bucket))
+	if obj == nil {
+		return fmt.Errorf("received a nil object stream for key '%s'", key)
 	}
 
 	defer obj.Close()

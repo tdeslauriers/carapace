@@ -11,6 +11,7 @@ const (
 	ComponenetPermissions string = "permissions"
 	ComponentPatToken     string = "pat token"
 	ComponentPatVerifier  string = "pat verifier"
+	ComponentStorage      string = "storage"
 
 	ServiceKey         string = "service"
 	ServiceOnePassword string = "1password"
@@ -22,5 +23,3 @@ const (
 	PackageStorage  string = "storage"
 	PackageValidate string = "validate"
 )
-
-
