@@ -75,17 +75,10 @@ func (m *minioStorage) WithObject(key string, fn func(r ReadSeekCloser) error) e
 		return fmt.Errorf("failed to stat storage object '%s': %v", key, err)
 	}
 
-	m.logger.Info(fmt.Sprintf("Fetching object '%s' from bucket '%s'", key, m.bucket))
-
 	// get the object from the bucket
 	obj, err := m.client.GetObject(m.ctx, m.bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get storage object '%s': %v", key, err)
-	}
-
-	m.logger.Info(fmt.Sprintf("Successfully fetched object '%s' from bucket '%s'", key, m.bucket))
-	if obj == nil {
-		return fmt.Errorf("received a nil object stream for key '%s'", key)
 	}
 
 	defer obj.Close()
