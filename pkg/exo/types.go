@@ -11,8 +11,9 @@ type Config struct {
 	Env         string
 	Certs       Certs
 	Secret      string // name of secret to generate
+	BlindIndex  string // record field value to generate blind index for
 	KeyPair     bool
-	ByteLength int // length of secret to generate; need to set defaults if not set
+	ByteLength  int // length of secret to generate; need to set defaults if not set
 }
 
 // Certs is a struct for the exo cli command to consume.

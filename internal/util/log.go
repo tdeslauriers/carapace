@@ -7,6 +7,7 @@ const (
 	ComponentCert         string = "certificate builder"
 	ComponentKeyGen       string = "key pair generator"
 	ComponentSecretGen    string = "secret generator"
+	ComponentHmac        string = "hmac index builder"
 	ComponentOnePassword  string = "1password cli"
 	ComponenetPermissions string = "permissions"
 	ComponentPatToken     string = "pat token"

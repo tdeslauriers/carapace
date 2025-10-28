@@ -27,6 +27,7 @@ func New(config Config) Exoskeleton {
 		secretGen: data.NewSecretGenerator(),
 		certs:     sign.NewCertBuilder(),
 		keyGen:    sign.NewKeyGenerator(),
+		indexer:   data.NewIndexBuilder(),
 
 		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentExo)),
 	}
@@ -40,6 +41,7 @@ type exoskeleton struct {
 	secretGen data.SecretGenerator
 	certs     sign.CertBuilder
 	keyGen    sign.KeyGenerator
+	indexer   data.IndexBuilder
 
 	logger *slog.Logger
 }
@@ -63,6 +65,12 @@ func Parse() (*Config, error) {
 	byteLengthMsg := "length of secret to generate, defaults to 32 bytes if not set, generally"
 	byteLength := flag.Int("byte-length", 32, byteLengthMsg)
 	flag.IntVar(byteLength, "bl", 32, byteLengthMsg)
+
+	// build blind index for a record field using the secret in one password
+	// Note: this assumes the encrypted field has a blind index in the database schema
+	blindIndexMsg := "invokes blind index generation for a record field value using a secret stored in 1password"
+	blindIndex := flag.String("blind-index", "", blindIndexMsg)
+	flag.StringVar(blindIndex, "bi", "", blindIndexMsg)
 
 	// jwt signing key pair
 	keyPairMsg := "invokes ecdsa jwt signing key pair generation"
@@ -93,6 +101,7 @@ func Parse() (*Config, error) {
 		fmt.Fprintf(os.Stderr, "  -k,   --key-pair    %s\n", keyPairMsg)
 		fmt.Fprintf(os.Stderr, "  -sec, --secrets     %s\n", secretsMsg)
 		fmt.Fprintf(os.Stderr, "  -bl,  --byte-length %s\n", byteLengthMsg)
+		fmt.Fprintf(os.Stderr, "  -bi,  --blind-index %s\n", blindIndexMsg)
 		fmt.Fprintf(os.Stderr, "  -e,   --env         %s\n", envMsg)
 		fmt.Fprintf(os.Stderr, "  -s,   --service     %s\n", svcNameMsg)
 		fmt.Fprintf(os.Stderr, "  -f,   --file        %s\n", fileMsg)
@@ -110,6 +119,7 @@ func Parse() (*Config, error) {
 			Filename: *file,
 		},
 		Secret:     *secrets,
+		BlindIndex: *blindIndex,
 		KeyPair:    *keyPair,
 		ByteLength: *byteLength,
 	}, nil
@@ -131,6 +141,17 @@ func (cli *exoskeleton) Execute() error {
 		if err := cli.secretGenExecution(); err != nil {
 			return fmt.Errorf("error executing secret command: %v", err)
 		}
+	}
+
+	// blind index generation execution
+	if cli.config.BlindIndex != "" {
+		// checks for necessary cli args performed in blindIndexExecution
+		index, err := cli.blindIndexExecution()
+		if err != nil {
+			return fmt.Errorf("error executing blind index command: %v", err)
+		}
+		// print to console
+		fmt.Printf("%s\n", index)
 	}
 
 	// jwt key pair generation execution

@@ -133,7 +133,7 @@ func TestValidateBirthDay(t *testing.T) {
 func TestValidUuid(t *testing.T) {
 
 	uuids := []string{
-		"123e4567-e89b-12d3-a456-426614174000",
+		"93c10464-0a09-435c-a8fc-3b8a38525b8d",
 		"not-a-uuid",
 	}
 
