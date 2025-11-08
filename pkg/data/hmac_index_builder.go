@@ -25,7 +25,7 @@ func NewIndexBuilder() IndexBuilder {
 		logger: slog.Default().
 			With(slog.String(util.ComponentKey, util.ComponentHmac)).
 			With(slog.String(util.PackageKey, util.PackageStorage)).
-			With(slog.String(util.ServiceKey, util.ServiceCarapace)),
+			With(slog.String(util.FrameworkKey, util.FrameworkCarapace)),
 	}
 }
 

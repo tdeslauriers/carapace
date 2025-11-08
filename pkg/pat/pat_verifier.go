@@ -32,7 +32,7 @@ func NewVerifier(authSvcName string, c connect.S2sCaller, p provider.S2sTokenPro
 		tkn:         p,
 
 		logger: slog.Default().
-			With(slog.String(util.ServiceKey, util.ServiceCarapace)).
+			With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
 			With(slog.String(util.PackageKey, util.PackagePat)).
 			With(slog.String(util.ComponentKey, util.ComponentPatVerifier)),
 	}
