@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tdeslauriers/carapace/pkg/config"
+	"github.com/tdeslauriers/carapace/internal/util"
 	"github.com/tdeslauriers/carapace/pkg/data"
 )
 
@@ -34,8 +34,9 @@ func NewCleanup(db data.SqlRepository) Cleanup {
 		sb: db,
 
 		logger: slog.Default().
-			With(slog.String(config.ComponentKey, config.ComponentScedule)).
-			With(slog.String(config.ServiceKey, config.ServiceCarapace)),
+			With(slog.String(util.ComponentKey, util.ComponentCleanup)).
+			With(slog.String(util.PackageKey, util.PackageSchedule)).
+			With(slog.String(util.FrameworkKey, util.FrameworkCarapace)),
 	}
 }
 

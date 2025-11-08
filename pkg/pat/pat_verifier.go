@@ -1,6 +1,7 @@
 package pat
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,14 +15,14 @@ import (
 type Verifier interface {
 
 	// GetPatScopes takes in a PAT token string and returns the associated scopes from the upstream auth service
-	GetPatScopes(token string) (*IntrospectResponse, error)
+	GetPatScopes(ctx context.Context, token string) (IntrospectResponse, error)
 
 	// ValidateScopes checks if the scopes associated with a pat token contain at least one of the required scopes.
-	ValidateScopes(requiredScopes []string, token string) (bool, error)
+	ValidateScopes(ctx context.Context, requiredScopes []string, token string) (bool, error)
 
 	// BuildAuthorized builds a AuthorizedService struct of a service and its id that have passed authorization
 	// checks from an set/slice of required scopes and a pat token string.
-	BuildAuthorized(requiredScopes []string, token string) (*AuthorizedService, error)
+	BuildAuthorized(ctx context.Context, requiredScopes []string, token string) (AuthorizedService, error)
 }
 
 // NewVerifier creates a new Verifier interface with and returns and underlying concrete implementation.
@@ -52,42 +53,50 @@ type verifier struct {
 // GetScopes is the concrete implementation of the interface method which
 // takes in a PAT token string and returns the associated scopes from the upstream auth service
 // so that a service endpoint can validate if the token is real, unexpired, and has the required scopes/permissions.
-func (v *verifier) GetPatScopes(token string) (*IntrospectResponse, error) {
-	return v.getScopes(token)
+func (v *verifier) GetPatScopes(ctx context.Context, token string) (IntrospectResponse, error) {
+	return v.getScopes(ctx, token)
 }
 
 // getScopes is a helper method that calls the /introspect endpoint of the upstream auth service
 // to validate the provided PAT token and retrieve its associated scopes.
-func (v *verifier) getScopes(token string) (*IntrospectResponse, error) {
+func (v *verifier) getScopes(ctx context.Context, token string) (IntrospectResponse, error) {
 
 	// quick sanity check of token length
 	if len(token) < 64 || len(token) > 128 {
-		return nil, fmt.Errorf("invalid pat token length")
+		return IntrospectResponse{}, fmt.Errorf("invalid pat token length")
 	}
 
 	// get a service token to call the introspect endpoint
-	s2sToken, err := v.tkn.GetServiceToken(v.authSvcName)
+	s2sToken, err := v.tkn.GetServiceToken(ctx, v.authSvcName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get service token for %s: %v", v.authSvcName, err)
+		return IntrospectResponse{}, fmt.Errorf("failed to get service token for %s: %v", v.authSvcName, err)
 	}
 
-	var resp IntrospectResponse
-	if err := v.auth.PostToService("/introspect", s2sToken, "", IntrospectCmd{Token: token}, &resp); err != nil {
-		return nil, fmt.Errorf("failed to introspect pat token: %v", err)
+	var ir IntrospectResponse // initialize zero value of IntrospectResponse
+	ir, err = connect.PostToService[IntrospectCmd, IntrospectResponse](
+		v.auth,
+		ctx,
+		"/introspect",
+		s2sToken,
+		"",
+		IntrospectCmd{Token: token},
+	)
+	if err != nil {
+		return ir, fmt.Errorf("failed to introspect pat token: %v", err)
 	}
 
-	return &resp, nil
+	return ir, nil
 }
 
 // ValidateScopes is the concrete implementation of the interface method which
 // checks if the scopes associated with a pat token contain at least one of the required scopes.
-func (v *verifier) ValidateScopes(requiredScopes []string, token string) (bool, error) {
-	return v.validateScopes(requiredScopes, token)
+func (v *verifier) ValidateScopes(ctx context.Context, requiredScopes []string, token string) (bool, error) {
+	return v.validateScopes(ctx, requiredScopes, token)
 }
 
 // validateScopes is a helper method that checks if the scopes associated with a pat token
 // contain at least one of the required scopes.
-func (v *verifier) validateScopes(requiredScopes []string, token string) (bool, error) {
+func (v *verifier) validateScopes(ctx context.Context, requiredScopes []string, token string) (bool, error) {
 
 	// sanity check on token length
 	if len(token) < 64 || len(token) > 128 {
@@ -105,7 +114,7 @@ func (v *verifier) validateScopes(requiredScopes []string, token string) (bool, 
 	}
 
 	// get the scopes associated with the token
-	resp, err := v.getScopes(token)
+	resp, err := v.getScopes(ctx, token)
 	if err != nil {
 		return false, fmt.Errorf("failed to get scopes for pat token: %v", err)
 	}
@@ -143,30 +152,30 @@ func (v *verifier) validateScopes(requiredScopes []string, token string) (bool, 
 
 // BuildAuthorized builds a AuthorizedService struct of a service and its id that have passed authorization
 // checks from an set/slice of // scopes and a pat token string.
-func (v *verifier) BuildAuthorized(requiredScopes []string, token string) (*AuthorizedService, error) {
-	return v.buildAuthorized(requiredScopes, token)
+func (v *verifier) BuildAuthorized(ctx context.Context, requiredScopes []string, token string) (AuthorizedService, error) {
+	return v.buildAuthorized(ctx, requiredScopes, token)
 }
 
 // GetServiceToken is a helper method that builds a AuthorizedService struct of a service and its
 // id that have passed authorization checks from an set/slice of required scopes and a pat token string.
-func (v *verifier) buildAuthorized(requiredScopes []string, token string) (*AuthorizedService, error) {
+func (v *verifier) buildAuthorized(ctx context.Context, requiredScopes []string, token string) (AuthorizedService, error) {
 
 	// quick sanity check of token length
 	if len(token) < 64 || len(token) > 128 {
-		return nil, fmt.Errorf("invalid pat token length")
+		return AuthorizedService{}, fmt.Errorf("invalid pat token length")
 	}
 
 	// note: no need to validate required scopes because those are provided in code
 
 	// sanity check on token length
 	if len(token) < 64 || len(token) > 128 {
-		return nil, fmt.Errorf("invalid pat token length, must be between 64 and 128 characters")
+		return AuthorizedService{}, fmt.Errorf("invalid pat token length, must be between 64 and 128 characters")
 	}
 
 	// dont need to validate required scopes because those are provided in code
 	// make a map for faster lookup
 	if len(requiredScopes) == 0 {
-		return nil, fmt.Errorf("no required scopes provided for validation")
+		return AuthorizedService{}, fmt.Errorf("no required scopes provided for validation")
 	}
 	requiredMap := make(map[string]struct{}, len(requiredScopes))
 	for _, scope := range requiredScopes {
@@ -174,9 +183,9 @@ func (v *verifier) buildAuthorized(requiredScopes []string, token string) (*Auth
 	}
 
 	// get the scopes associated with the token
-	resp, err := v.getScopes(token)
+	resp, err := v.getScopes(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get scopes for pat token: %v", err)
+		return AuthorizedService{}, fmt.Errorf("failed to get scopes for pat token: %v", err)
 	}
 
 	// quick validation of response fields
@@ -184,20 +193,19 @@ func (v *verifier) buildAuthorized(requiredScopes []string, token string) (*Auth
 	// for any reason, but goog practice to double check
 	// check if the token is active
 	if resp.Active == false {
-		return nil, fmt.Errorf("pat token is not active")
+		return AuthorizedService{}, fmt.Errorf("pat token is not active")
 	}
 
 	// TODO: add audiences check.  Not a big deal for now since PATs are not audience restricted
 	// but good practice to check if we start using audiences in the future
-
 	if len(resp.Scope) == 0 {
-		return nil, fmt.Errorf("no scopes associated with pat token")
+		return AuthorizedService{}, fmt.Errorf("no scopes associated with pat token")
 	}
 
 	// split scope string into a slice
 	scopes := strings.Split(resp.Scope, " ")
 	if len(scopes) == 0 {
-		return nil, fmt.Errorf("no scopes associated with pat token")
+		return AuthorizedService{}, fmt.Errorf("no scopes associated with pat token")
 	}
 
 	// check if the token scopes contain at least one of the required scopes
@@ -210,10 +218,10 @@ func (v *verifier) buildAuthorized(requiredScopes []string, token string) (*Auth
 	}
 
 	if !authorized {
-		return nil, fmt.Errorf("pat token does not have any of the required scopes")
+		return AuthorizedService{}, fmt.Errorf("pat token does not have any of the required scopes")
 	}
 
-	return &AuthorizedService{
+	return AuthorizedService{
 		ServiceId:    resp.Sub,
 		ServiceName:  resp.ServiceName,
 		AuthorizedBy: resp.Iss,
