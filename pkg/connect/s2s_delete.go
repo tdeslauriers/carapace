@@ -1,7 +1,6 @@
 package connect
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,15 +12,17 @@ import (
 	"time"
 )
 
-// PostToService makes a POST request to a downstream service's endpoint with
-// s2s authentication and retry logic including exponetial backoff + jitter.
-func PostToService[TCmd any, TResp any](
+// DeleteFromService makes a DELETE request to a downstream service's endpoint with
+// s2s authentication and retry logic including exponential backoff + jitter.
+// DELETE is typically used to remove an existing resource (idempotent operation).
+// Following REST conventions, the resource to delete is identified by the URL path,
+// not a request body. Most DELETE requests return no response body (204 No Content).
+func DeleteFromService[TResp any](
 	caller S2sCaller,
 	ctx context.Context,
 	endpoint,
 	s2sToken,
 	authToken string,
-	cmd TCmd,
 ) (TResp, error) {
 
 	// initialize zero value of generic type TResp
@@ -33,7 +34,7 @@ func PostToService[TCmd any, TResp any](
 	// extract telemetry from context if exists
 	telemetry, ok := GetTelemetryFromContext(ctx)
 	if !ok {
-		caller.logger.Warn("failed to extract telemetry from context of s2s PostToService call")
+		caller.logger.Warn("failed to extract telemetry from context of s2s DeleteFromService call")
 	}
 
 	// add universal fields to baseLogger
@@ -57,27 +58,14 @@ func PostToService[TCmd any, TResp any](
 		// add attempt counter to logger
 		attemptLogger := baseLogger.With(slog.Int("retry.attempt", attempt))
 
-		// marshal command data
-		jsonData, err := json.Marshal(cmd)
-		if err != nil {
-
-			return data, &ErrorHttp{
-				StatusCode: http.StatusInternalServerError,
-				Message:    fmt.Sprintf("failed to marshal data to json: %v", err),
-			}
-		}
-
-		// set up request
-		request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		// set up request (no body for DELETE)
+		request, err := http.NewRequest("DELETE", url, nil)
 		if err != nil {
 			return data, &ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
-				Message:    fmt.Sprintf("failed to create POST request: %v", err),
+				Message:    fmt.Sprintf("failed to create DELETE request: %v", err),
 			}
 		}
-
-		// set content type header to application/json
-		request.Header.Set("Content-Type", "application/json")
 
 		// set traceparent header from context if exists
 		if telemetry != nil {
@@ -94,6 +82,8 @@ func PostToService[TCmd any, TResp any](
 			request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 		}
 
+		attemptLogger.Info("attempting DELETE request")
+
 		// TlsClient makes http request
 		response, err := caller.TlsClient.Do(request)
 		if err != nil {
@@ -107,7 +97,7 @@ func PostToService[TCmd any, TResp any](
 						attemptLogger.Error("request timed out",
 							slog.String("err", err.Error()),
 							slog.Duration("retry.backoff", backoff),
-							slog.Bool("will_retry", willRetry(response.StatusCode, attempt, caller.RetryConfig.MaxRetries)),
+							slog.Bool("will_retry", willRetry(0, attempt, caller.RetryConfig.MaxRetries)),
 						)
 						time.Sleep(backoff)
 						continue // jump out of the loop to next iteration
@@ -125,7 +115,7 @@ func PostToService[TCmd any, TResp any](
 
 				// jump out of retry loop and return error
 				return data, &ErrorHttp{
-					StatusCode: http.StatusInternalServerError,
+					StatusCode: http.StatusServiceUnavailable,
 					Message:    fmt.Sprintf("service unavailable: %v", err),
 				}
 			}
@@ -135,21 +125,22 @@ func PostToService[TCmd any, TResp any](
 				slog.String("err", err.Error()))
 
 			return data, &ErrorHttp{
-				StatusCode: http.StatusInternalServerError,
+				StatusCode: http.StatusServiceUnavailable,
 				Message:    fmt.Sprintf("service unavailable: %v", err),
 			}
 		}
 
-		// validate Content-Type is application/json
-		// 201 and 204 may not have a response body -> check status code 201 and 204
-		if response.StatusCode != http.StatusCreated && response.StatusCode != http.StatusNoContent {
+		// validate Content-Type is application/json (if response body exists)
+		// 200, 202, and 204 may not have a response body
+		if response.StatusCode != http.StatusOK &&
+			response.StatusCode != http.StatusAccepted &&
+			response.StatusCode != http.StatusNoContent {
 			contentType := response.Header.Get("Content-Type")
-			if !strings.HasPrefix(contentType, "application/json") {
-
+			if contentType != "" && !strings.HasPrefix(contentType, "application/json") {
 				response.Body.Close() // close response body before returning
 				return data, &ErrorHttp{
 					StatusCode: http.StatusUnsupportedMediaType,
-					Message:    fmt.Sprintf("POST request returned unexpected content type: got %v want application/json", contentType),
+					Message:    fmt.Sprintf("DELETE request returned unexpected content type: got %v want application/json", contentType),
 				}
 			}
 		}
@@ -158,7 +149,6 @@ func PostToService[TCmd any, TResp any](
 		body, err := io.ReadAll(response.Body)
 		response.Body.Close()
 		if err != nil {
-
 			// jump out of retry loop and return error
 			return data, &ErrorHttp{
 				StatusCode: http.StatusInternalServerError,
@@ -170,7 +160,9 @@ func PostToService[TCmd any, TResp any](
 		switch {
 		case response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices:
 			// 2xx -> success
-			// 201 and 204 -> may not have a response body
+			// 200 OK (with optional response body)
+			// 202 Accepted (deletion queued)
+			// 204 No Content (most common - no response body)
 			if len(body) > 0 {
 				if err := json.Unmarshal(body, &data); err != nil {
 					return data, &ErrorHttp{
@@ -179,20 +171,32 @@ func PostToService[TCmd any, TResp any](
 					}
 				}
 			}
+
+			attemptLogger.Info("DELETE request succeeded",
+				slog.Int("status_code", response.StatusCode),
+			)
+
 			// success -> jump out of retry and return
 			return data, nil
 
 		case response.StatusCode == http.StatusTooManyRequests ||
 			(response.StatusCode > 500 && response.StatusCode <= 599):
 			// 5xx -> retry w/ backoff
-			// // Note: 500 itself is not retried because likely an upstream error with the server where a
+			// Note: 500 itself is not retried because likely an upstream error with the server where a
 			// retry will not help
 			var e ErrorHttp
-			if err := json.Unmarshal(body, &e); err != nil {
-				// jump out of retry loop and return error
-				return data, &ErrorHttp{
-					StatusCode: http.StatusInternalServerError,
-					Message:    fmt.Sprintf("failed to unmarshal response body json: %v", err),
+			if len(body) > 0 {
+				if err := json.Unmarshal(body, &e); err != nil {
+					// jump out of retry loop and return error
+					return data, &ErrorHttp{
+						StatusCode: http.StatusInternalServerError,
+						Message:    fmt.Sprintf("failed to unmarshal response body json: %v", err),
+					}
+				}
+			} else {
+				e = ErrorHttp{
+					StatusCode: response.StatusCode,
+					Message:    fmt.Sprintf("HTTP %d", response.StatusCode),
 				}
 			}
 			lastErr = &e // set last error for final return if needed
@@ -200,7 +204,7 @@ func PostToService[TCmd any, TResp any](
 			if attempt < caller.RetryConfig.MaxRetries-1 {
 				// apply backoff/jitter to 5xx
 				backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
-				attemptLogger.Error(fmt.Sprintf("attempt %d - POST request to %s service's endpoint %s failed: (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff),
+				attemptLogger.Error("retryable error, will retry",
 					slog.Int("status_code", e.StatusCode),
 					slog.String("err", e.Message),
 					slog.Duration("retry.backoff", backoff),
@@ -210,7 +214,7 @@ func PostToService[TCmd any, TResp any](
 				continue // jump out of the loop to next iteration
 			}
 
-			attemptLogger.Error(("retries exhausted"),
+			attemptLogger.Error("retries exhausted",
 				slog.Int("status_code", e.StatusCode),
 				slog.String("err", e.Message),
 			)
@@ -223,12 +227,25 @@ func PostToService[TCmd any, TResp any](
 		default:
 			// 4xx Errors (and 500) errors -> non-retryable
 			var e ErrorHttp
-			if err := json.Unmarshal(body, &e); err != nil {
-				return data, &ErrorHttp{
-					StatusCode: http.StatusInternalServerError,
-					Message:    fmt.Sprintf("failed to unmarshal response body json: %v", err),
+			if len(body) > 0 {
+				if err := json.Unmarshal(body, &e); err != nil {
+					return data, &ErrorHttp{
+						StatusCode: http.StatusInternalServerError,
+						Message:    fmt.Sprintf("failed to unmarshal response body json: %v", err),
+					}
+				}
+			} else {
+				e = ErrorHttp{
+					StatusCode: response.StatusCode,
+					Message:    fmt.Sprintf("HTTP %d", response.StatusCode),
 				}
 			}
+
+			attemptLogger.Error("non-retryable error",
+				slog.Int("status_code", e.StatusCode),
+				slog.String("err", e.Message),
+			)
+
 			// jump out of retry loop and return error
 			return data, &e
 		}
@@ -236,7 +253,7 @@ func PostToService[TCmd any, TResp any](
 
 	// should never reach here, but just in case
 	return data, &ErrorHttp{
-		StatusCode: http.StatusInternalServerError,
+		StatusCode: http.StatusServiceUnavailable,
 		Message:    fmt.Sprintf("retries exhausted: %v", lastErr),
 	}
 }

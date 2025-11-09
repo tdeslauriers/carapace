@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"regexp"
 
-	"github.com/tdeslauriers/carapace/pkg/config"
+	"github.com/tdeslauriers/carapace/internal/util"
 )
 
 const (
@@ -20,11 +20,14 @@ const (
 
 func IsValidPermissionName(name string) (bool, error) {
 
-	logger := slog.Default().With(slog.String(config.ComponentKey, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().
+		With(slog.String(util.ComponentKey, util.ComponenetPermissions)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+		With(slog.String(util.PackageKey, util.PackageValidate))
 
 	rgx, err := regexp.Compile(PermissionNameRegex)
 	if err != nil {
-		logger.Error("failed to compile scope name regex")
+		logger.Error("failed to compile permission name regex", slog.String("err", err.Error()))
 	}
 
 	if !rgx.MatchString(name) {
@@ -37,11 +40,14 @@ func IsValidPermissionName(name string) (bool, error) {
 
 func IsValidPermission(permission string) (bool, error) {
 
-	logger := slog.Default().With(slog.String(config.ComponentKey, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().
+		With(slog.String(util.ComponentKey, util.ComponenetPermissions)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+		With(slog.String(util.PackageKey, util.PackageValidate))
 
 	rgx, err := regexp.Compile(PermissionRegex)
 	if err != nil {
-		logger.Error("failed to compile permission regex")
+		logger.Error("failed to compile permission regex", slog.String("err", err.Error()))
 	}
 
 	if !rgx.MatchString(permission) {
