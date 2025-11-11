@@ -26,6 +26,25 @@ type Telemetry struct {
 	StartTime   time.Time   `json:"start_time,omitempty"`  // refers to the time the request was received
 }
 
+// NewTelemetry creates a new Telemetry struct from an http request,
+// AND also generates a new Traceparent to send to service calls.
+// NOTE: this function is intended for gateway services that do not expect a
+// traceparent header from the client.  Internal services should use ObtainTelemetry instead,
+// which will attempt to parse the traceparent header and generate a new one if it is not present or invalid.
+func NewTelemetry(r *http.Request) *Telemetry {
+	return &Telemetry{
+		Traceparent: *GenerateTraceParent(),
+		Protocol:    r.Proto,
+		Method:      r.Method,
+		Path:        r.URL.Path,
+		RemoteAddr:  getClientIP(r),
+		UserAgent:   r.UserAgent(),
+		Host:        r.Host,
+		Referrer:    r.Referer(),
+		StartTime:   time.Now(),
+	}
+}
+
 // TelemetryFields adds telemetry fields to the logger from the Telemetry struct in context
 func (t *Telemetry) TelemetryFields() []any {
 
