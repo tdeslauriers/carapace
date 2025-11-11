@@ -117,7 +117,7 @@ func PatchToService[TCmd any, TResp any](
 
 					return data, &ErrorHttp{
 						StatusCode: http.StatusServiceUnavailable,
-						Message:    fmt.Sprintf("retries exhausted: timeout"),
+						Message:    "retries exhausted: timeout",
 					}
 				}
 
