@@ -50,6 +50,7 @@ func (t *Telemetry) TelemetryFields() []any {
 
 	fields := []any{
 		slog.String("trace_id", t.Traceparent.TraceId),
+		slog.String("parent_span_id", t.Traceparent.ParentSpanId),
 		slog.String("span_id", t.Traceparent.ParentSpanId),
 		slog.String("method", t.Method),
 		slog.String("path", t.Path),
@@ -181,8 +182,9 @@ func GenerateTraceParent() *Traceparent {
 	return &Traceparent{
 		Version: TraceparentVersion,
 		TraceId: traceId,
-		SpanId:  spanId,
-		Flags:   "00", // default to not sampled
+		// ParentSpanId is empty because this is the root span of the trace
+		SpanId: spanId,
+		Flags:  "00", // default to not sampled
 	}
 }
 
