@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tdeslauriers/carapace/pkg/config"
+	"github.com/tdeslauriers/carapace/internal/util"
 )
 
 const (
@@ -141,7 +141,9 @@ func IsValidPassword(password string) error {
 
 func MatchesRegex(s, pattern string) bool {
 
-	logger := slog.Default().With(slog.String(config.ComponentKey, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(util.ComponentKey, util.ComponentScopes)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+		With(slog.String(util.PackageKey, util.PackageValidate))
 
 	rgx, err := regexp.Compile(pattern)
 	if err != nil {
@@ -253,7 +255,9 @@ func contains(password, sequence string) bool {
 
 func TooShort(field interface{}, min int) bool {
 
-	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(util.ComponentKey, util.ComponentScopes)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+		With(slog.String(util.PackageKey, util.PackageValidate))
 
 	switch f := field.(type) {
 	case string:
@@ -268,7 +272,9 @@ func TooShort(field interface{}, min int) bool {
 
 func TooLong(field interface{}, max int) bool {
 
-	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(util.ComponentKey, util.ComponentScopes)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+		With(slog.String(util.PackageKey, util.PackageValidate))
 
 	switch f := field.(type) {
 	case string:
@@ -283,7 +289,9 @@ func TooLong(field interface{}, max int) bool {
 
 func IsValidUuid(uuid string) bool {
 
-	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().With(slog.String(util.ComponentKey, util.ComponentScopes)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+		With(slog.String(util.PackageKey, util.PackageValidate))
 
 	if TooShort(uuid, 36) || TooLong(uuid, 36) {
 		return false

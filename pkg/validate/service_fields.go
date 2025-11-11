@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"regexp"
 
-	"github.com/tdeslauriers/carapace/pkg/config"
+	"github.com/tdeslauriers/carapace/internal/util"
 )
 
 const (
@@ -17,7 +17,10 @@ const (
 // IsValidServiceName checks if a service name is valid via regex criteria.
 func IsValidServiceName(service string) (bool, error) {
 
-	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().
+		With(slog.String(util.ComponentKey, util.ComponentScopes)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+		With(slog.String(util.PackageKey, util.PackageValidate))
 
 	rgx, err := regexp.Compile(ServiceNameRegex)
 	if err != nil {

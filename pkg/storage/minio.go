@@ -44,7 +44,7 @@ func New(config Config, tls *tls.Config, expiry time.Duration) (ObjectStorage, e
 
 		logger: slog.Default().
 			With(slog.String(util.ComponentKey, util.ComponentStorage)).
-			With(slog.String(util.ServiceKey, util.ServiceCarapace)).
+			With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
 			With(slog.String(util.PackageKey, util.PackageStorage)),
 	}, nil
 }

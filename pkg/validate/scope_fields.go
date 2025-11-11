@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tdeslauriers/carapace/pkg/config"
+	"github.com/tdeslauriers/carapace/internal/util"
 )
 
 const (
@@ -23,7 +23,10 @@ const (
 // should be r:service:* or w:service:* or d:service:*, etc.
 func IsValidScope(scope string) (bool, error) {
 
-	logger := slog.Default().With(slog.String(config.ComponentKey, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().
+		With(slog.String(util.ComponentKey, util.ComponentScopes)).
+		With(slog.String(util.PackageKey, util.PackageValidate)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace))
 
 	rgx, err := regexp.Compile(ScopeRegex)
 	if err != nil {
@@ -58,7 +61,10 @@ func IsValidScope(scope string) (bool, error) {
 
 func IsValidScopeName(name string) (bool, error) {
 
-	logger := slog.Default().With(slog.String(config.ComponentJwt, config.ComponentValidate), slog.String(config.ServiceKey, config.ServiceCarapace))
+	logger := slog.Default().
+		With(slog.String(util.ComponentKey, util.ComponentScopes)).
+		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+		With(slog.String(util.PackageKey, util.PackageValidate))
 
 	rgx, err := regexp.Compile(ScopeNameRegex)
 	if err != nil {

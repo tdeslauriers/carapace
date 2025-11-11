@@ -14,6 +14,7 @@ const (
 	ComponentPatToken      string = "pat token"
 	ComponentPatVerifier   string = "pat verifier"
 	ComponentS2sCaller     string = "s2s caller"
+	ComponentScopes        string = "scopes"
 	ComponentStorage       string = "storage"
 	ComponentTokenProvider string = "token provider"
 
