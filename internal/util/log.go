@@ -25,6 +25,7 @@ const (
 	ServiceOnePassword string = "1password"
 
 	PackageKey      string = "package"
+	PackageConnect  string = "connect"
 	PackageMain     string = "main"
 	PackagePat      string = "pat"
 	PackageSession  string = "session"

@@ -76,6 +76,7 @@ func NewS2sCaller(url, name string, client TlsClient, retry RetryConfiguration) 
 		RetryConfig: retry,
 
 		logger: slog.Default().
+			With(slog.String(util.PackageKey, util.PackageConnect)).
 			With(slog.String(util.ComponentKey, util.ComponentS2sCaller)).
 			With(slog.String(util.ServiceKey, util.FrameworkCarapace)),
 	}

@@ -26,7 +26,7 @@ type Verifier interface {
 }
 
 // NewVerifier creates a new Verifier interface with and returns and underlying concrete implementation.
-func NewVerifier(authSvcName string, c connect.S2sCaller, p provider.S2sTokenProvider) Verifier {
+func NewVerifier(authSvcName string, c *connect.S2sCaller, p provider.S2sTokenProvider) Verifier {
 	return &verifier{
 		authSvcName: authSvcName,
 		auth:        c,
@@ -44,7 +44,7 @@ var _ Verifier = (*verifier)(nil)
 // verifier is the concrete implementation of the Verifier interface.
 type verifier struct {
 	authSvcName string                    // ie, iam vs s2s authentication service
-	auth        connect.S2sCaller         // could be s2s or iam so leaving prop name generic
+	auth        *connect.S2sCaller        // could be s2s or iam so leaving prop name generic
 	tkn         provider.S2sTokenProvider // need an s2s token to call the /introspect endpoint
 
 	logger *slog.Logger
@@ -123,7 +123,7 @@ func (v *verifier) validateScopes(ctx context.Context, requiredScopes []string, 
 	// this should be redundant since the service should return an error if the token is invalid
 	// for any reason, but goog practice to double check
 	// check if the token is active
-	if resp.Active == false {
+	if !resp.Active {
 		return false, fmt.Errorf("pat token is not active")
 	}
 
@@ -192,7 +192,7 @@ func (v *verifier) buildAuthorized(ctx context.Context, requiredScopes []string,
 	// this should be redundant since the service should return an error if the token is invalid
 	// for any reason, but goog practice to double check
 	// check if the token is active
-	if resp.Active == false {
+	if !resp.Active {
 		return AuthorizedService{}, fmt.Errorf("pat token is not active")
 	}
 
