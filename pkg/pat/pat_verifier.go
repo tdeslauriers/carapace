@@ -74,8 +74,8 @@ func (v *verifier) getScopes(ctx context.Context, token string) (IntrospectRespo
 
 	var ir IntrospectResponse // initialize zero value of IntrospectResponse
 	ir, err = connect.PostToService[IntrospectCmd, IntrospectResponse](
-		v.auth,
 		ctx,
+		v.auth,
 		"/introspect",
 		s2sToken,
 		"",

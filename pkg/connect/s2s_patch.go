@@ -18,8 +18,8 @@ import (
 // PATCH is typically used for partial updates to existing resources (idempotent operation).
 // Unlike PUT which replaces the entire resource, PATCH only updates specified fields.
 func PatchToService[TCmd any, TResp any](
-	caller S2sCaller,
 	ctx context.Context,
+	caller S2sCaller,
 	endpoint,
 	s2sToken,
 	authToken string,

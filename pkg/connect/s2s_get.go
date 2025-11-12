@@ -15,8 +15,8 @@ import (
 // GetServiceData makes a GET (data) request to a downstream service's endpoint with
 // s2s authentication and retry logic including exponetial backoff + jitter.
 func GetServiceData[T any](
-	caller *S2sCaller,
 	ctx context.Context,
+	caller *S2sCaller,
 	endpoint string,
 	s2sToken string,
 	authToken string,

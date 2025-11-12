@@ -18,8 +18,8 @@ import (
 // Following REST conventions, the resource to delete is identified by the URL path,
 // not a request body. Most DELETE requests return no response body (204 No Content).
 func DeleteFromService[TResp any](
-	caller S2sCaller,
 	ctx context.Context,
+	caller S2sCaller,
 	endpoint,
 	s2sToken,
 	authToken string,

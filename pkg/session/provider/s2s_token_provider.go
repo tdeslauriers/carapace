@@ -180,8 +180,8 @@ func (p *s2sTokenProvider) s2sLogin(ctx context.Context, service string) (S2sAut
 
 	var s2sAuthz S2sAuthorization
 	s2sAuthz, err := connect.PostToService[types.S2sLoginCmd, S2sAuthorization](
-		p.s2s,
 		ctx,
+		p.s2s,
 		"/login",
 		"",
 		"",
@@ -264,8 +264,8 @@ func (p *s2sTokenProvider) refreshS2sToken(ctx context.Context, refreshToken, se
 	}
 	var s2sAuthz S2sAuthorization
 	s2sAuthz, err = connect.PostToService[types.S2sRefreshCmd, S2sAuthorization](
-		p.s2s,
 		ctx,
+		p.s2s,
 		"/refresh",
 		"",
 		"",

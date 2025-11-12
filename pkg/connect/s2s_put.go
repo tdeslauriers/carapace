@@ -17,8 +17,8 @@ import (
 // s2s authentication and retry logic including exponential backoff + jitter.
 // PUT is typically used for updating existing resources (idempotent operation).
 func PutToService[TCmd any, TResp any](
-	caller S2sCaller,
 	ctx context.Context,
+	caller S2sCaller,
 	endpoint,
 	s2sToken,
 	authToken string,

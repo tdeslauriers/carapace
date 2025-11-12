@@ -16,8 +16,8 @@ import (
 // PostToService makes a POST request to a downstream service's endpoint with
 // s2s authentication and retry logic including exponetial backoff + jitter.
 func PostToService[TCmd any, TResp any](
-	caller *S2sCaller,
 	ctx context.Context,
+	caller *S2sCaller,
 	endpoint,
 	s2sToken,
 	authToken string,
