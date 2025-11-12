@@ -52,6 +52,7 @@ func (t *Telemetry) TelemetryFields() []any {
 		slog.String("trace_id", t.Traceparent.TraceId),
 		slog.String("parent_span_id", t.Traceparent.ParentSpanId),
 		slog.String("span_id", t.Traceparent.ParentSpanId),
+		slog.String("protocol", t.Protocol),
 		slog.String("method", t.Method),
 		slog.String("path", t.Path),
 		slog.String("remote_addr", t.RemoteAddr),
@@ -253,13 +254,15 @@ func getClientIP(r *http.Request) string {
 
 // set up context key type to avoid collisions
 type telemetryKey string
+type telemetryLoggerKey string
 
-const TelemetryContextKey telemetryKey = "telemetry"
+const TelemetryKey telemetryKey = "telemetry"
+const TelemetryLoggerKey telemetryLoggerKey = "telemetry_logger"
 
 // AddTelemetryToContext adds the Telemetry struct to the request context
 func AddTelemetryToContext(request *http.Request, telemetry *Telemetry) *http.Request {
 
-	ctx := context.WithValue(request.Context(), TelemetryContextKey, telemetry)
+	ctx := context.WithValue(request.Context(), TelemetryKey, telemetry)
 
 	return request.WithContext(ctx)
 }
@@ -267,7 +270,7 @@ func AddTelemetryToContext(request *http.Request, telemetry *Telemetry) *http.Re
 // GetTelemetryFromContext retrieves the Telemetry struct from the request context
 func GetTelemetryFromContext(ctx context.Context) (*Telemetry, bool) {
 
-	telemetry, ok := ctx.Value(TelemetryContextKey).(*Telemetry)
+	telemetry, ok := ctx.Value(TelemetryKey).(*Telemetry)
 
 	return telemetry, ok
 }
