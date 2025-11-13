@@ -137,7 +137,7 @@ func ParseTraceparent(r *http.Request) (*Traceparent, error) {
 	// parse the traceparent header
 	parts := strings.Split(traceparent, "-")
 	if len(parts) != 4 {
-		return nil, fmt.Errorf("invalid format: expected 4 parts, got %d", len(parts))
+		return nil, fmt.Errorf("invalid traceparent header format: expected 4 parts, got %d", len(parts))
 	}
 
 	version := parts[0]
@@ -147,22 +147,22 @@ func ParseTraceparent(r *http.Request) (*Traceparent, error) {
 
 	// validate the version number
 	if version == "" || len(version) != 2 {
-		return nil, fmt.Errorf("traceparent version is missing")
+		return nil, fmt.Errorf("missing or invalid version in traceparent header")
 	}
 
 	// validate the trace id
 	if !validate.IsValidTraceId(traceId) {
-		return nil, fmt.Errorf("invalid trace id in traceparent header")
+		return nil, fmt.Errorf("missing or invalid trace id in traceparent header")
 	}
 
 	// validate the parent id
 	if !validate.IsValidSpanId(parentId) {
-		return nil, fmt.Errorf("invalid span id in traceparent header")
+		return nil, fmt.Errorf("missing or invalid span id in traceparent header")
 	}
 
 	// validate the flags
 	if flags == "" || len(flags) != 2 {
-		return nil, fmt.Errorf("traceparent flags are missing")
+		return nil, fmt.Errorf("missing or invalid flags in traceparent header")
 	}
 
 	return &Traceparent{
@@ -204,7 +204,7 @@ func ObtainTelemetry(request *http.Request, logger *slog.Logger) *Telemetry {
 		tp = GenerateTraceParent()
 
 		// log out with whatever context exists and add the new telemetry fields
-		logger.Warn("failed to parse traceparent header, generating new telemetry",
+		logger.Warn("failed to parse traceparent header: %v, generating new traceparent",
 			slog.String("err", err.Error()),
 			slog.String("new_trace_id", tp.TraceId),
 			slog.String("new_span_id", tp.SpanId),

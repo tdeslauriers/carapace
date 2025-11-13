@@ -19,7 +19,7 @@ import (
 // Unlike PUT which replaces the entire resource, PATCH only updates specified fields.
 func PatchToService[TCmd any, TResp any](
 	ctx context.Context,
-	caller S2sCaller,
+	caller *S2sCaller,
 	endpoint,
 	s2sToken,
 	authToken string,

@@ -18,7 +18,7 @@ import (
 // PUT is typically used for updating existing resources (idempotent operation).
 func PutToService[TCmd any, TResp any](
 	ctx context.Context,
-	caller S2sCaller,
+	caller *S2sCaller,
 	endpoint,
 	s2sToken,
 	authToken string,
