@@ -34,13 +34,13 @@ type Telemetry struct {
 func NewTelemetry(r *http.Request) *Telemetry {
 	return &Telemetry{
 		Traceparent: *GenerateTraceParent(),
-		Protocol:    r.Proto,
-		Method:      r.Method,
-		Path:        r.URL.Path,
-		RemoteAddr:  getClientIP(r),
-		UserAgent:   r.UserAgent(),
-		Host:        r.Host,
-		Referrer:    r.Referer(),
+		Protocol:    validate.SanitizeProtocol(r.Proto),
+		Method:      validate.SanitizeMethod(r.Method),
+		Path:        validate.SanitizePath(r.URL.Path),
+		RemoteAddr:  validate.SanitizeIp(getClientIp(r)),
+		UserAgent:   validate.SanitizeUserAgent(r.UserAgent()),
+		Host:        validate.SanitizeHost(r.Host),
+		Referrer:    validate.SanitizeReferrer(r.Referer()),
 		StartTime:   time.Now(),
 	}
 }
@@ -50,23 +50,39 @@ func (t *Telemetry) TelemetryFields() []any {
 
 	fields := []any{
 		slog.String("trace_id", t.Traceparent.TraceId),
-		slog.String("parent_span_id", t.Traceparent.ParentSpanId),
 		slog.String("span_id", t.Traceparent.ParentSpanId),
-		slog.String("protocol", t.Protocol),
-		slog.String("method", t.Method),
-		slog.String("path", t.Path),
-		slog.String("remote_addr", t.RemoteAddr),
-		slog.String("user_agent", t.UserAgent),
-		slog.String("host", t.Host),
-		slog.String("referrer", t.Referrer),
+		// other fields will only be present if the origin of the request is
+		// a web call, vs a scheduled job.
 	}
 
+	// Add parent span id if it exists
 	if t.Traceparent.ParentSpanId != "" {
 		fields = append(fields, slog.String("parent_span_id", t.Traceparent.ParentSpanId))
 	}
 
+	// Add web call fields if they exist
 	if t.Protocol != "" {
 		fields = append(fields, slog.String("protocol", t.Protocol))
+	}
+
+	if t.Method != "" {
+		fields = append(fields, slog.String("method", t.Method))
+	}
+
+	if t.Path != "" {
+		fields = append(fields, slog.String("path", t.Path))
+	}
+
+	if t.RemoteAddr != "" {
+		fields = append(fields, slog.String("remote_addr", t.RemoteAddr))
+	}
+
+	if t.UserAgent != "" {
+		fields = append(fields, slog.String("user_agent", t.UserAgent))
+	}
+
+	if t.Host != "" {
+		fields = append(fields, slog.String("host", t.Host))
 	}
 
 	if t.Referrer != "" {
@@ -208,31 +224,31 @@ func ObtainTelemetry(request *http.Request, logger *slog.Logger) *Telemetry {
 			slog.String("err", err.Error()),
 			slog.String("new_trace_id", tp.TraceId),
 			slog.String("new_span_id", tp.SpanId),
-			slog.String("protocol", request.Proto),
-			slog.String("method", request.Method),
-			slog.String("url", request.URL.String()),
-			slog.String("remote_addr", getClientIP(request)),
-			slog.String("user_agent", request.UserAgent()),
-			slog.String("host", request.Host),
+			slog.String("protocol", validate.SanitizeProtocol(request.Proto)),
+			slog.String("method", validate.SanitizeMethod(request.Method)),
+			slog.String("url", validate.SanitizePath(request.URL.Path)),
+			slog.String("remote_addr", validate.SanitizeIp(getClientIp(request))),
+			slog.String("user_agent", validate.SanitizeUserAgent(request.UserAgent())),
+			slog.String("host", validate.SanitizeHost(request.Host)),
 			slog.String("referrer", request.Referer()),
 		)
 	}
 	return &Telemetry{
 		Traceparent: *tp,
-		Protocol:    request.Proto,
-		Method:      request.Method,
-		Path:        request.URL.Path,
-		RemoteAddr:  getClientIP(request),
-		UserAgent:   request.UserAgent(),
-		Host:        request.Host,
-		Referrer:    request.Referer(),
+		Protocol:    validate.SanitizeProtocol(request.Proto),
+		Method:      validate.SanitizeMethod(request.Method),
+		Path:        validate.SanitizePath(request.URL.Path),
+		RemoteAddr:  validate.SanitizeIp(getClientIp(request)),
+		UserAgent:   validate.SanitizeUserAgent(request.UserAgent()),
+		Host:        validate.SanitizeHost(request.Host),
+		Referrer:    validate.SanitizeReferrer(request.Referer()),
 		StartTime:   time.Now(),
 	}
 }
 
-// getClientIP is a helper function which extracts the client IP address from
+// getClientIp is a helper function which extracts the client IP address from
 // the http request headers or remote address
-func getClientIP(r *http.Request) string {
+func getClientIp(r *http.Request) string {
 
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		if idx := strings.Index(xff, ","); idx != -1 {
