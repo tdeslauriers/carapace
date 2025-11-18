@@ -31,7 +31,15 @@ type Telemetry struct {
 // NOTE: this function is intended for gateway services that do not expect a
 // traceparent header from the client.  Internal services should use ObtainTelemetry instead,
 // which will attempt to parse the traceparent header and generate a new one if it is not present or invalid.
-func NewTelemetry(r *http.Request) *Telemetry {
+func NewTelemetry(r *http.Request, logger *slog.Logger) *Telemetry {
+
+	// check if logger is nil and set to default if so
+	if logger == nil {
+		logger = slog.Default()
+	}
+
+	logger.Info("creating new telemetry for incoming request")
+
 	return &Telemetry{
 		Traceparent: *GenerateTraceParent(),
 		Protocol:    validate.SanitizeProtocol(r.Proto),
