@@ -38,18 +38,40 @@ func NewTelemetry(r *http.Request, logger *slog.Logger) *Telemetry {
 		logger = slog.Default()
 	}
 
-	logger.Info("creating new telemetry for incoming request")
+	traceParent := GenerateTraceParent()
+	protocol := validate.SanitizeProtocol(r.Proto)
+	method := validate.SanitizeMethod(r.Method)
+	path := validate.SanitizePath(r.URL.Path)
+	remoteAddr := validate.SanitizeIp(getClientIp(r))
+	userAgent := validate.SanitizeUserAgent(r.UserAgent())
+	host := validate.SanitizeHost(r.Host)
+	referrer := validate.SanitizeReferrer(r.Referer())
+	startTime := time.Now()
+
+	logger.Info("creating new telemetry for incoming request",
+		slog.String("trace_id", traceParent.TraceId),
+		slog.String("span_id", traceParent.SpanId),
+		slog.String("protocol", protocol),
+		slog.String("method", method),
+		slog.String("protocol", protocol),
+		slog.String("method", method),
+		slog.String("path", path),
+		slog.String("remote_addr", remoteAddr),
+		slog.String("user_agent", userAgent),
+		slog.String("host", host),
+		slog.String("referrer", startTime.Format(time.RFC3339)),
+	)
 
 	return &Telemetry{
-		Traceparent: *GenerateTraceParent(),
-		Protocol:    validate.SanitizeProtocol(r.Proto),
-		Method:      validate.SanitizeMethod(r.Method),
-		Path:        validate.SanitizePath(r.URL.Path),
-		RemoteAddr:  validate.SanitizeIp(getClientIp(r)),
-		UserAgent:   validate.SanitizeUserAgent(r.UserAgent()),
-		Host:        validate.SanitizeHost(r.Host),
-		Referrer:    validate.SanitizeReferrer(r.Referer()),
-		StartTime:   time.Now(),
+		Traceparent: *traceParent,
+		Protocol:    protocol,
+		Method:      method,
+		Path:        path,
+		RemoteAddr:  remoteAddr,
+		UserAgent:   userAgent,
+		Host:        host,
+		Referrer:    referrer,
+		StartTime:   startTime,
 	}
 }
 
@@ -58,7 +80,7 @@ func (t *Telemetry) TelemetryFields() []any {
 
 	fields := []any{
 		slog.String("trace_id", t.Traceparent.TraceId),
-		slog.String("span_id", t.Traceparent.ParentSpanId),
+		slog.String("span_id", t.Traceparent.SpanId),
 		// other fields will only be present if the origin of the request is
 		// a web call, vs a scheduled job.
 	}
