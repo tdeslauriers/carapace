@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
@@ -16,7 +17,7 @@ type Refresh interface {
 // RefreshService is an interface for services that handle refresh token retrieval and persistence.
 type RefreshService[T Refresh] interface {
 	// GetRefreshToken retrieves a refresh token by token string
-	GetRefreshToken(token string) (*T, error)
+	GetRefreshToken(ctx context.Context, token string) (*T, error)
 
 	// PersistRefresh persists a refresh token to the database or cache
 	PersistRefresh(refresh T) error
