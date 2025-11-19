@@ -81,7 +81,7 @@ func PostToService[TCmd any, TResp any](
 
 		// set traceparent header from context if exists
 		if telemetry != nil {
-			request.Header.Set("traceparent", telemetry.Traceparent.BuildTraceparent())
+			request.Header.Set("traceparent", telemetry.Traceparent.BuildTraceparent(attemptLogger))
 		}
 
 		// set service token service-authorization header

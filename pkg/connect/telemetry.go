@@ -138,7 +138,34 @@ type Traceparent struct {
 
 // BuildTraceparent builds a W3C traceparent header value from the Telemetry fields.
 // It will check if the values exist, but if they do, it assumes they are valid.
-func (t *Traceparent) BuildTraceparent() string {
+func (t *Traceparent) BuildTraceparent(logger *slog.Logger) string {
+
+	log := logger
+
+	// check for missing fields and generate new ones if necessary but this should not happen
+	if t.Version == "" {
+		t.Version = TraceparentVersion
+		log = log.With(slog.String("new_version", t.Version))
+	}
+
+	if t.TraceId == "" {
+		t.TraceId = GenerateTraceId()
+		log = log.With(slog.String("new_trace_id", t.TraceId))
+	}
+
+	if t.SpanId == "" {
+		t.SpanId = GenerateSpanId()
+		log = log.With(slog.String("new_span_id", t.SpanId))
+	}
+
+	if t.Flags == "" {
+		t.Flags = "00"
+		log = log.With(slog.String("new_flags", t.Flags))
+	}
+
+	if t.TraceId == "" || t.SpanId == "" || t.Version == "" || t.Flags == "" {
+		log.Warn("missing required fields to build traceparent header: generating new traceparent header")
+	}
 
 	return fmt.Sprintf("%s-%s-%s-%s", t.Version, t.TraceId, t.SpanId, t.Flags)
 }
