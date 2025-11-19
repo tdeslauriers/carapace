@@ -250,7 +250,7 @@ func ObtainTelemetry(request *http.Request, logger *slog.Logger) *Telemetry {
 		tp = GenerateTraceParent()
 
 		// log out with whatever context exists and add the new telemetry fields
-		logger.Warn("failed to parse traceparent header: %v, generating new traceparent",
+		logger.Warn("failed to parse traceparent header: generating new traceparent",
 			slog.String("err", err.Error()),
 			slog.String("new_trace_id", tp.TraceId),
 			slog.String("new_span_id", tp.SpanId),
