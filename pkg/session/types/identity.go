@@ -27,22 +27,22 @@ type UserAccountClientXref struct {
 	CreatedAt string `db:"created_at" json:"created_at"`
 }
 
-// UserAccount is a model struct for user account table data.
-type UserAccount struct {
-	Uuid           string `db:"uuid" json:"uuid,omitempty"`
-	Username       string `db:"username" json:"username"`
-	UserIndex      string `db:"user_index" json:"user_index,omitempty"`
-	Password       string `db:"password" json:"password,omitempty"`
-	Firstname      string `db:"firstname" json:"firstname"`
-	Lastname       string `db:"lastname" json:"lastname"`
-	Birthdate      string `db:"birth_date" json:"birth_date,omitempty"` // string because field encrypted in db
-	Slug           string `db:"slug" json:"slug,omitempty"`
-	SlugIndex      string `db:"slug_index" json:"slug_index,omitempty"`
-	CreatedAt      string `db:"created_at" json:"created_at"`
-	Enabled        bool   `db:"enabled"  json:"enabled,omitempty"`
-	AccountExpired bool   `db:"acccount_expired" json:"account_expired,omitempty"`
-	AccountLocked  bool   `db:"account_locked" json:"account_locked,omitempty"`
-}
+// // UserAccount is a model struct for user account table data.
+// type UserAccount struct {
+// 	Uuid           string `db:"uuid" json:"uuid,omitempty"`
+// 	Username       string `db:"username" json:"username"`
+// 	UserIndex      string `db:"user_index" json:"user_index,omitempty"`
+// 	Password       string `db:"password" json:"password,omitempty"`
+// 	Firstname      string `db:"firstname" json:"firstname"`
+// 	Lastname       string `db:"lastname" json:"lastname"`
+// 	Birthdate      string `db:"birth_date" json:"birth_date,omitempty"` // string because field encrypted in db
+// 	Slug           string `db:"slug" json:"slug,omitempty"`
+// 	SlugIndex      string `db:"slug_index" json:"slug_index,omitempty"`
+// 	CreatedAt      string `db:"created_at" json:"created_at"`
+// 	Enabled        bool   `db:"enabled"  json:"enabled,omitempty"`
+// 	AccountExpired bool   `db:"acccount_expired" json:"account_expired,omitempty"`
+// 	AccountLocked  bool   `db:"account_locked" json:"account_locked,omitempty"`
+// }
 
 // // Scope is a model for the scope table data, NOT jwt string object in the jwt package.
 // // Do not add fields from other contexts/concerns like csrf.
