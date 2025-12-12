@@ -29,7 +29,7 @@ func IsValidServiceName(service string) (bool, error) {
 
 	if !rgx.MatchString(service) {
 		return false, fmt.Errorf(`service name must be between %d and %d characters long, 
-			and may only contain upper and lower case letters and/or numbers`, ServiceNameMin, ServiceNameMax)
+			and may only contain lower case letters and/or numbers`, ServiceNameMin, ServiceNameMax)
 	}
 
 	return true, nil

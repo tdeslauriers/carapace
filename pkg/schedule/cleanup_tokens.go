@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/tdeslauriers/carapace/internal/util"
-	"github.com/tdeslauriers/carapace/pkg/data"
 )
 
 // Cleanup is an interface for cleaning up expired tokens in a services local persistence/database.
@@ -29,9 +29,9 @@ type Cleanup interface {
 	ExpiredAuthcode()
 }
 
-func NewCleanup(db data.SqlRepository) Cleanup {
+func NewCleanup(db *sql.DB) Cleanup {
 	return &cleanup{
-		sb: db,
+		db: NewRepository(db),
 
 		logger: slog.Default().
 			With(slog.String(util.ComponentKey, util.ComponentCleanup)).
@@ -43,7 +43,7 @@ func NewCleanup(db data.SqlRepository) Cleanup {
 var _ Cleanup = (*cleanup)(nil)
 
 type cleanup struct {
-	sb data.SqlRepository
+	db Repository
 
 	logger *slog.Logger
 }
@@ -78,8 +78,7 @@ func (c *cleanup) ExpiredRefresh(hours int) {
 
 			// execute deletion of expired refresh tokens
 			// EXPIRIES ARE IN UTC, SO USE UTC TIME
-			qry := `DELETE FROM refresh WHERE created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()`
-			if err := c.sb.DeleteRecord(qry, hours); err != nil {
+			if err := c.db.DeleteExpiredRefresh(hours); err != nil {
 				c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
 			} else {
 				c.logger.Info("expired refresh tokens cleaned up")
@@ -120,15 +119,8 @@ func (c *cleanup) ExpiredAccess() {
 			// need to delete xref records first to avoid constraint violation
 			// Note: access tokens are short lived, so query aimed at the expired refresh tokens attached to them.
 			// EXPIRIES ARE IN UTC, SO USE UTC TIME
-			qry := `SELECT 
-					ua.id,
-					ua.uxsession_uuid,
-					ua.accesstoken_uuid
-				FROM uxsession_accesstoken ua
-					LEFT OUTER JOIN accesstoken a ON ua.accesstoken_uuid = a.uuid
-				WHERE a.refresh_expires < UTC_TIMESTAMP()`
-			var xrefs []SessionAccessXref
-			if err := c.sb.SelectRecords(qry, &xrefs); err != nil {
+			xrefs, err := c.db.FindExpiredRefreshXrefs()
+			if err != nil {
 				c.logger.Error("failed to select expired uxsession_accesstoken xrefs", "error", err.Error())
 				return
 			}
@@ -145,8 +137,7 @@ func (c *cleanup) ExpiredAccess() {
 					go func(id int, wg *sync.WaitGroup) {
 						defer wg.Done()
 
-						qry = `DELETE FROM uxsession_accesstoken WHERE id = ?`
-						if err := c.sb.DeleteRecord(qry, id); err != nil {
+						if err := c.db.DeleteSessionAccessTknXref(id); err != nil {
 							c.logger.Error(fmt.Sprintf("failed to delete uxsession_accesstoken xref id %d for expired accesstoken id/jti %s", id, xref.AccesstokenId), "err", err.Error())
 						}
 					}(xref.Id, &wg)
@@ -156,8 +147,7 @@ func (c *cleanup) ExpiredAccess() {
 			}
 
 			// EXPIRIES ARE IN UTC, SO USE UTC TIME
-			qry = `DELETE FROM accesstoken WHERE refresh_expires < UTC_TIMESTAMP()`
-			if err := c.sb.DeleteRecord(qry); err != nil {
+			if err := c.db.DeleteExpiredAccessToken(); err != nil {
 				c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
 			}
 
@@ -195,8 +185,7 @@ func (c *cleanup) ExpiredS2s() {
 			<-timer.C // Wait until it's time to run
 
 			// EXPIRIES ARE IN UTC, SO USE UTC TIME
-			qry := `DELETE FROM servicetoken WHERE refresh_expires < UTC_TIMESTAMP()`
-			if err := c.sb.DeleteRecord(qry); err != nil {
+			if err := c.db.DeleteExpiredSvcTkns(); err != nil {
 				c.logger.Error("failed to delete expired refresh tokens", "error", err.Error())
 			}
 
@@ -238,16 +227,10 @@ func (c *cleanup) ExpiredSession(hours int) {
 			// Note: sessions and oauthflow records are created at different times, so using the session created_at time to determine expiry
 			// because it doesnt matter if the oauthflow is expired since it cannot be used without a valid session.
 			var wg sync.WaitGroup
+
 			// oauth xrefs
-			qry := `SELECT 
-					uo.id,
-					uo.uxsession_uuid,
-					uo.oauthflow_uuid
-				FROM uxsession_oauthflow uo
-					LEFT OUTER JOIN uxsession u ON uo.uxsession_uuid = u.uuid
-				WHERE u.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()`
-			var xrefsOauth []SessionOauthXref
-			if err := c.sb.SelectRecords(qry, &xrefsOauth, hours); err != nil {
+			xrefsOauth, err := c.db.FindExpiredOauthXrefs(hours)
+			if err != nil {
 				c.logger.Error("failed to select expired uxsession_oauthflow xrefs", "error", err.Error())
 				return
 			}
@@ -263,8 +246,7 @@ func (c *cleanup) ExpiredSession(hours int) {
 					go func(id int, wg *sync.WaitGroup) {
 						defer wg.Done()
 
-						qry = `DELETE FROM uxsession_oauthflow WHERE id = ?`
-						if err := c.sb.DeleteRecord(qry, id); err != nil {
+						if err := c.db.DeleteSessionOauthXref(id); err != nil {
 							c.logger.Error(fmt.Sprintf("failed to delete uxsession_oauthflow xref id %d for expired oauthflow id %s", id, xref.OauthflowId), "err", err.Error())
 						}
 					}(xref.Id, &wg)
@@ -272,15 +254,8 @@ func (c *cleanup) ExpiredSession(hours int) {
 			}
 
 			// access token xrefs
-			qry = `SELECT
-					ua.id,
-					ua.uxsession_uuid,
-					ua.accesstoken_uuid
-				FROM uxsession_accesstoken ua
-					LEFT OUTER JOIN uxsession u ON ua.uxsession_uuid = u.uuid
-				WHERE u.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()`
-			var xrefsAuth []SessionAccessXref
-			if err := c.sb.SelectRecords(qry, &xrefsAuth, hours); err != nil {
+			xrefsAuth, err := c.db.FindExpiredAccessTknXrefs(hours)
+			if err != nil {
 				c.logger.Error("failed to select expired uxsession_accesstoken xrefs", "error", err.Error())
 				return
 			}
@@ -296,8 +271,7 @@ func (c *cleanup) ExpiredSession(hours int) {
 					go func(id int, wg *sync.WaitGroup) {
 						defer wg.Done()
 
-						qry = `DELETE FROM uxsession_accesstoken WHERE id = ?`
-						if err := c.sb.DeleteRecord(qry, id); err != nil {
+						if err := c.db.DeleteSessionAccessTknXref(id); err != nil {
 							c.logger.Error(fmt.Sprintf("failed to delete uxsession_accesstoken xref id %d for expired accesstoken id %s", id, xref.AccesstokenId), "err", err.Error())
 						}
 					}(xref.Id, &wg)
@@ -309,12 +283,8 @@ func (c *cleanup) ExpiredSession(hours int) {
 
 			// wait group not needed here because the oauthflow records are no longer tied to any other records
 			go func(hours int) {
-				qry = `DELETE o
-					FROM oauthflow o
-						LEFT OUTER JOIN uxsession_oauthflow uo ON o.uuid = uo.oauthflow_uuid
-					WHERE o.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()
-						AND uo.oauthflow_uuid IS NULL`
-				if err := c.sb.DeleteRecord(qry, hours); err != nil {
+
+				if err := c.db.DeleteOauthFlow(hours); err != nil {
 					c.logger.Error("failed to delete expired oauthflow values", "error", err.Error())
 				}
 				c.logger.Info("expired and unattached oauthflow records cleaned up")
@@ -325,12 +295,8 @@ func (c *cleanup) ExpiredSession(hours int) {
 			// this will include both authenicated and unauthenticated sessions (so will be much larger than len(xrefs))
 			// need to make sure xrefs to accesstokens table have been cleared also
 			go func(hours int) {
-				qry = `DELETE u
-					FROM uxsession u
-						LEFT OUTER JOIN uxsession_accesstoken ua ON u.uuid = ua.uxsession_uuid
-					WHERE u.created_at + INTERVAL ? HOUR < UTC_TIMESTAMP()
-						AND ua.uxsession_uuid IS NULL`
-				if err := c.sb.DeleteRecord(qry, hours); err != nil {
+
+				if err := c.db.DeleteExpiredSession(hours); err != nil {
 					c.logger.Error("failed to delete expired user sessions", "error", err.Error())
 				}
 				c.logger.Info("expired user sessions cleaned up")
@@ -368,19 +334,14 @@ func (c *cleanup) ExpiredAuthcode() {
 			timer := time.NewTimer(duration)
 			<-timer.C // Wait until it's time to run
 
-			// EXPIRIES ARE IN UTC, SO USE UTC TIME
-			qry := `DELETE aa
-					FROM authcode_account aa 
-						LEFT OUTER JOIN authcode a ON aa.authcode_uuid = a.uuid
-					WHERE a.created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
-			if err := c.sb.DeleteRecord(qry); err != nil {
+			if err := c.db.DeleteAuthCodeXrefs(); err != nil {
 				c.logger.Error("failed to delete expired authcode account xref records", "error", err.Error())
 				return
 			}
 
 			// EXPIRIES ARE IN UTC, SO USE UTC TIME
-			qry = `DELETE FROM authcode WHERE created_at + INTERVAL 10 MINUTE < UTC_TIMESTAMP()`
-			if err := c.sb.DeleteRecord(qry); err != nil {
+
+			if err := c.db.DeleteAuthCode(); err != nil {
 				c.logger.Error("failed to delete expired authcodes", "error", err.Error())
 				return
 			}

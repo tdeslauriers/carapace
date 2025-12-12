@@ -133,7 +133,7 @@ func ValidateBucketName(bucketName string) error {
 	}
 
 	if !MatchesRegex(bucketName, BucketNameRegex) {
-		return fmt.Errorf("bucket name must only contain lowercase letters (a-z), numbers (0-9), dots (.), and hyphens (-). It cannot start or end with a hyphen or dot, nor have consecutive dots or hyphens.")
+		return fmt.Errorf("bucket name must only contain lowercase letters (a-z), numbers (0-9), dots (.), and hyphens (-). It cannot start or end with a hyphen or dot, nor have consecutive dots or hyphens")
 	}
 
 	return nil
