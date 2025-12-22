@@ -30,14 +30,15 @@ type Service interface {
 }
 
 // NewService creates a new permissions service and provides a pointer to a concrete implementation.
-func NewService(sql data.SqlRepository, i data.Indexer, c data.Cryptor) Service {
+func NewService(sql *sql.DB, i data.Indexer, c data.Cryptor) Service {
 	return &permissionsService{
-		sql:     sql,
+		sql:     NewPermissionsRepository(sql),
 		indexer: i,
 		cryptor: NewPermissionCryptor(c),
 
 		logger: slog.Default().
-			With(slog.String(util.ServiceKey, "carapace")).
+			With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
+			With(slog.String(util.PackageKey, util.PackagePermissions)).
 			With(slog.String(util.ComponentKey, util.ComponenetPermissions)),
 	}
 }
@@ -46,7 +47,7 @@ var _ Service = (*permissionsService)(nil)
 
 // permissionsService implements the Service interface for managing permissions to gallery data models and images.
 type permissionsService struct {
-	sql     data.SqlRepository
+	sql     PermissionsRepository
 	indexer data.Indexer
 	cryptor PermissionCryptor
 
@@ -56,20 +57,9 @@ type permissionsService struct {
 // GetAllPermissions implements the Service interface method to retrieve all permissions from the database/persistence layer.
 func (s *permissionsService) GetAllPermissions() (map[string]PermissionRecord, []PermissionRecord, error) {
 
-	qry := `
-		SELECT
-			uuid,
-			service_name,
-			permission,
-			name,
-			description,
-			created_at,
-			active,
-			slug,
-			slug_index
-		FROM permission`
-	var ps []PermissionRecord
-	if err := s.sql.SelectRecords(qry, &ps); err != nil {
+	// retrieve all permissions from the database
+	ps, err := s.sql.FindAll()
+	if err != nil {
 		s.logger.Error("Failed to retrieve permissions", slog.Any("error", err))
 		return nil, nil, err
 	}
@@ -149,32 +139,13 @@ func (s *permissionsService) GetPermissionBySlug(slug string) (*PermissionRecord
 	}
 
 	// query to retrieve the permission by slug index
-	qry := `
-		SELECT
-			uuid,
-			service_name,
-			permission,
-			name,
-			description,
-			created_at,
-			active,
-			slug,
-			slug_index
-		FROM permission
-		WHERE slug_index = ?`
-	var p PermissionRecord
-	if err := s.sql.SelectRecord(qry, &p, index); err != nil {
-		if err == sql.ErrNoRows {
-			s.logger.Error(fmt.Sprintf("No permission found for slug '%s'", slug))
-			return nil, fmt.Errorf("no permission found for slug '%s'", slug)
-		} else {
-			s.logger.Error(fmt.Sprintf("Failed to retrieve permission by slug '%s': %v", slug, err))
-			return nil, fmt.Errorf("failed to retrieve permission by slug '%s': %v", slug, err)
-		}
+	p, err := s.sql.FindBySlugIndex(index)
+	if err != nil {
+		return nil, err
 	}
 
 	// prepare the permission by decrypting sensitive fields and removing unnecessary fields
-	prepared, err := s.cryptor.DecryptPermission(p)
+	prepared, err := s.cryptor.DecryptPermission(*p)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("failed to prepare permission '%s': %v", slug, err))
 		return nil, fmt.Errorf("failed to prepare permission 'slug %s': %v", slug, err)
@@ -229,23 +200,9 @@ func (s *permissionsService) CreatePermission(p *PermissionRecord) (*PermissionR
 	}
 
 	// insert the permission record into the database
-	qry := `
-		INSERT INTO permission (
-			uuid,
-			service_name,
-			permission,
-			name,
-			description,
-			created_at,
-			active,
-			slug,
-			slug_index
-		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?, ?
-		)`
-	if err := s.sql.InsertRecord(qry, *encrypted); err != nil {
+	if err := s.sql.InsertPermission(*encrypted); err != nil {
 		s.logger.Error("failed to insert permission record into database", slog.Any("error", err))
-		return nil, fmt.Errorf("failed to insert permission record into database: %v", err)
+		return nil, err
 	}
 
 	s.logger.Info(fmt.Sprintf("created permission '%s' in the database", encrypted.Id))
@@ -282,15 +239,13 @@ func (s *permissionsService) UpdatePermission(p *PermissionRecord) error {
 	}
 
 	// update the permission record in the database
-	qry := `
-		UPDATE permission SET
-			permission = ?,
-			name = ?,
-			description = ?,
-			active = ?,
-			slug = ?
-		WHERE slug_index = ?`
-	if err := s.sql.UpdateRecord(qry, encrypted.Permission, encrypted.Name, encrypted.Description, encrypted.Active, encrypted.Slug, index); err != nil {
+	if err := s.sql.UpdatePermission(PermissionRecord{
+		Permission:  encrypted.Permission,  // to update
+		Name:        encrypted.Name,        // to update
+		Description: encrypted.Description, // to update
+		Active:      encrypted.Active,      // to update
+		SlugIndex:   index,                 // WHERE clause
+	}); err != nil {
 		s.logger.Error(fmt.Sprintf("failed to update permission '%s - %s' in the database: %v", p.Id, p.Name, err))
 		return fmt.Errorf("failed to update permission '%s' in the database: %v", p.Name, err)
 	}

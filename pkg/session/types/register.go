@@ -1,109 +1,102 @@
 package types
 
-import (
-	"errors"
-	"fmt"
+// // UserRegisterCmd is a struct to hold incoming user registration values to a /register endpoint.
+// type UserRegisterCmd struct {
+// 	Username  string `json:"username"` // email address
+// 	Password  string `json:"password,omitempty"`
+// 	Confirm   string `json:"confirm_password,omitempty"`
+// 	Firstname string `json:"firstname"`
+// 	Lastname  string `json:"lastname"`
 
-	"github.com/tdeslauriers/carapace/pkg/validate"
-)
+// 	// Birthdate is an optional user input field,
+// 	// as such, it is not included in field level validation.
+// 	// Note: It is required by certain services:
+// 	// TODO: build service functionality to add when required.
+// 	Birthdate string `json:"birthdate,omitempty"`
 
-// UserRegisterCmd is a struct to hold incoming user registration values to a /register endpoint.
-type UserRegisterCmd struct {
-	Username  string `json:"username"` // email address
-	Password  string `json:"password,omitempty"`
-	Confirm   string `json:"confirm_password,omitempty"`
-	Firstname string `json:"firstname"`
-	Lastname  string `json:"lastname"`
+// 	// ClientId is not consumed by all endpoints in all use cases,
+// 	// as such, it is not included in field level validation.
+// 	ClientId string `json:"client_id,omitempty"`
 
-	// Birthdate is an optional user input field,
-	// as such, it is not included in field level validation.
-	// Note: It is required by certain services:
-	// TODO: build service functionality to add when required.
-	Birthdate string `json:"birthdate,omitempty"`
+// 	// Session is not consumed by all endpoints in all use cases,
+// 	// as such, it is not included in field level validation.
+// 	Session string `json:"session,omitempty"`
 
-	// ClientId is not consumed by all endpoints in all use cases,
-	// as such, it is not included in field level validation.
-	ClientId string `json:"client_id,omitempty"`
+// 	// Csrf is not consumed by all endpoints in all use cases,
+// 	// as such, it is not included in field level validation.
+// 	Csrf string `json:"csrf,omitempty"`
+// }
 
-	// Session is not consumed by all endpoints in all use cases,
-	// as such, it is not included in field level validation.
-	Session string `json:"session,omitempty"`
+// // ValidateCmd performs regex checks on user register cmd fields.
+// // Note: ClientId, Session, Csrf, and Birthdate are not validated here
+// // because they are not required fields in all use cases.
+// func (cmd *UserRegisterCmd) ValidateCmd() error {
 
-	// Csrf is not consumed by all endpoints in all use cases,
-	// as such, it is not included in field level validation.
-	Csrf string `json:"csrf,omitempty"`
-}
+// 	if err := validate.IsValidEmail(cmd.Username); err != nil {
+// 		return fmt.Errorf("invalid username: %v", err)
+// 	}
 
-// ValidateCmd performs regex checks on user register cmd fields.
-// Note: ClientId, Session, Csrf, and Birthdate are not validated here
-// because they are not required fields in all use cases.
-func (cmd *UserRegisterCmd) ValidateCmd() error {
+// 	if err := validate.IsValidName(cmd.Firstname); err != nil {
+// 		return fmt.Errorf("invalid firstname: %v", err)
+// 	}
 
-	if err := validate.IsValidEmail(cmd.Username); err != nil {
-		return fmt.Errorf("invalid username: %v", err)
-	}
+// 	if err := validate.IsValidName(cmd.Lastname); err != nil {
+// 		return fmt.Errorf("invalid lastname: %v", err)
+// 	}
 
-	if err := validate.IsValidName(cmd.Firstname); err != nil {
-		return fmt.Errorf("invalid firstname: %v", err)
-	}
+// 	if err := validate.IsValidBirthday(cmd.Birthdate); err != nil {
+// 		return fmt.Errorf("invalid birthdate: %v", err)
+// 	}
 
-	if err := validate.IsValidName(cmd.Lastname); err != nil {
-		return fmt.Errorf("invalid lastname: %v", err)
-	}
+// 	if cmd.Password != cmd.Confirm {
+// 		return errors.New("password does not match confirm password")
+// 	}
 
-	if err := validate.IsValidBirthday(cmd.Birthdate); err != nil {
-		return fmt.Errorf("invalid birthdate: %v", err)
-	}
+// 	if err := validate.IsValidPassword(cmd.Password); err != nil {
+// 		return fmt.Errorf("invalid password: %v", err)
+// 	}
 
-	if cmd.Password != cmd.Confirm {
-		return errors.New("password does not match confirm password")
-	}
+// 	return nil
+// }
 
-	if err := validate.IsValidPassword(cmd.Password); err != nil {
-		return fmt.Errorf("invalid password: %v", err)
-	}
+// type S2sRegisterCmd struct {
+// 	Uuid           string `db:"uuid" json:"client_id,omitempty"`
+// 	Password       string `db:"password" json:"client_secret,omitempty"`
+// 	Confirm        string `json:"confirm_password,omitempty"`
+// 	Name           string `db:"name" json:"name"`
+// 	Owner          string `db:"owner" json:"owner"`
+// 	CreatedAt      string `db:"created_at" json:"created_at,omitempty"`
+// 	Enabled        bool   `db:"enabled"  json:"enabled"`
+// 	AccountExpired bool   `db:"acccount_expired" json:"account_expired"`
+// 	AccountLocked  bool   `db:"account_locked" json:"account_locked"`
+// 	Slug           string `db:"slug" json:"slug,omitempty"`
+// }
 
-	return nil
-}
+// func (cmd *S2sRegisterCmd) ValidateCmd() error {
 
-type S2sRegisterCmd struct {
-	Uuid           string `db:"uuid" json:"client_id,omitempty"`
-	Password       string `db:"password" json:"client_secret,omitempty"`
-	Confirm        string `json:"confirm_password,omitempty"`
-	Name           string `db:"name" json:"name"`
-	Owner          string `db:"owner" json:"owner"`
-	CreatedAt      string `db:"created_at" json:"created_at,omitempty"`
-	Enabled        bool   `db:"enabled"  json:"enabled"`
-	AccountExpired bool   `db:"acccount_expired" json:"account_expired"`
-	AccountLocked  bool   `db:"account_locked" json:"account_locked"`
-	Slug           string `db:"slug" json:"slug,omitempty"`
-}
+// 	if cmd.Uuid != "" && !validate.IsValidUuid(cmd.Uuid) {
+// 		return fmt.Errorf("invalid or not well formatted client id")
+// 	}
 
-func (cmd *S2sRegisterCmd) ValidateCmd() error {
+// 	if valid, err := validate.IsValidServiceName(cmd.Name); !valid {
+// 		return fmt.Errorf("invalid client name: %v", err)
+// 	}
 
-	if cmd.Uuid != "" && !validate.IsValidUuid(cmd.Uuid) {
-		return fmt.Errorf("invalid or not well formatted client id")
-	}
+// 	if err := validate.IsValidName(cmd.Owner); err != nil {
+// 		return fmt.Errorf("invalid client owner: %v", err)
+// 	}
 
-	if valid, err := validate.IsValidServiceName(cmd.Name); !valid {
-		return fmt.Errorf("invalid client name: %v", err)
-	}
+// 	if cmd.Slug != "" && !validate.IsValidUuid(cmd.Slug) {
+// 		return fmt.Errorf("invalid or not well formatted client slug")
+// 	}
 
-	if err := validate.IsValidName(cmd.Owner); err != nil {
-		return fmt.Errorf("invalid client owner: %v", err)
-	}
+// 	if err := validate.IsValidPassword(cmd.Password); err != nil {
+// 		return fmt.Errorf("invalid client password: %v", err)
+// 	}
 
-	if cmd.Slug != "" && !validate.IsValidUuid(cmd.Slug) {
-		return fmt.Errorf("invalid or not well formatted client slug")
-	}
+// 	if cmd.Password != cmd.Confirm {
+// 		return errors.New("password does not match confirm password")
+// 	}
 
-	if err := validate.IsValidPassword(cmd.Password); err != nil {
-		return fmt.Errorf("invalid client password: %v", err)
-	}
-
-	if cmd.Password != cmd.Confirm {
-		return errors.New("password does not match confirm password")
-	}
-
-	return nil
-}
+// 	return nil
+// }
