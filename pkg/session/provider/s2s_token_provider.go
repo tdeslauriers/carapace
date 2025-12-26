@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"time"
@@ -19,11 +20,18 @@ type S2sTokenProvider interface {
 	GetServiceToken(ctx context.Context, serviceName string) (string, error)
 }
 
-func NewS2sTokenProvider(caller *connect.S2sCaller, creds S2sCredentials, db data.SqlRepository, ciph data.Cryptor) S2sTokenProvider {
+// NewS2sTokenProvider creates a new instance of S2sTokenProvider and provides a pointer to a concrete implementation.
+func NewS2sTokenProvider(
+	caller *connect.S2sCaller,
+	creds S2sCredentials,
+	db *sql.DB,
+	ciph data.Cryptor,
+) S2sTokenProvider {
+
 	return &s2sTokenProvider{
 		s2s:     caller,
 		creds:   creds,
-		db:      db,
+		db:      NewRepository(db),
 		cryptor: ciph,
 
 		logger: slog.Default().
@@ -39,7 +47,7 @@ var _ S2sTokenProvider = (*s2sTokenProvider)(nil)
 type s2sTokenProvider struct {
 	s2s     *connect.S2sCaller
 	creds   S2sCredentials
-	db      data.SqlRepository
+	db      Repository
 	cryptor data.Cryptor
 
 	logger *slog.Logger
@@ -89,8 +97,8 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 			} else {
 				// opportunistically delete expired service token
 				go func(id string) {
-					qry := "DELETE FROM servicetoken WHERE uuid = ?"
-					if err := p.db.DeleteRecord(qry, id); err != nil {
+
+					if err := p.db.DeleteTokenById(id); err != nil {
 						logger.Error(fmt.Sprintf("failed to delete expired service token for %s: jti %s", serviceName, id),
 							slog.String("err", err.Error()),
 						)
@@ -129,8 +137,8 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 			// opportunistically delete claimed refresh token/expired service token record
 			// since claimed refresh token will have been deleted by s2s auth service after use.
 			go func(id string) {
-				qry := "DELETE FROM servicetoken WHERE uuid = ?"
-				if err := p.db.DeleteRecord(qry, id); err != nil {
+
+				if err := p.db.DeleteTokenById(id); err != nil {
 					logger.Error(fmt.Sprintf("failed to delete claimed refresh token for %s: jti %s", serviceName, id),
 						slog.String("err", err.Error()),
 					)
@@ -210,16 +218,7 @@ func (p *s2sTokenProvider) persistS2sToken(authz S2sAuthorization) error {
 	}
 	authz.RefreshToken = encRefreshToken
 
-	qry := `
-			INSERT INTO servicetoken (
-				uuid, 
-				service_name, 
-				service_token, 
-				service_expires, 
-				refresh_token, 
-				refresh_expires) 
-			VALUES (?, ?, ?, ?, ?, ?)`
-	if err := p.db.InsertRecord(qry, authz); err != nil {
+	if err := p.db.InsertToken(authz); err != nil {
 		return fmt.Errorf("failed to persist service token (jti %s) for %s: %v", authz.Jti, authz.ServiceName, err)
 	}
 
@@ -229,19 +228,8 @@ func (p *s2sTokenProvider) persistS2sToken(authz S2sAuthorization) error {
 // retrieveS2sTokens gets active service tokens from local store
 func (p *s2sTokenProvider) retrieveS2sTokens(service string) ([]S2sAuthorization, error) {
 
-	var tokens []S2sAuthorization
-	qry := `
-			SELECT 
-				uuid, 
-				service_name,
-				service_token, 
-				service_expires, 
-				refresh_token, 
-				refresh_expires 
-			FROM servicetoken
-			WHERE refresh_expires > UTC_TIMESTAMP()
-				AND service_name = ?`
-	if err := p.db.SelectRecords(qry, &tokens, service); err != nil {
+	tokens, err := p.db.FindAllTokens(service)
+	if err != nil {
 		return tokens, fmt.Errorf("failed to select service token records for %s: %v", service, err)
 	}
 
