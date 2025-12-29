@@ -71,7 +71,7 @@ func (r *repository) InsertToken(token S2sAuthorization) error {
 func (r *repository) DeleteTokenById(uuid string) error {
 
 	qry := `
-		DELETE FROM service_token
+		DELETE FROM servicetoken
 		WHERE uuid = ?`
 
 	return data.DeleteRecord(r.db, qry, uuid)
