@@ -9,8 +9,9 @@ import (
 // Repository defines the interface for s2s token provider database operations.
 type Repository interface {
 
-	// FindAllTokens retrieves all active service tokens from the database for a specified service name.
-	FindAllTokens(serviceName string) ([]S2sAuthorization, error)
+	// FindActiveTokens retrieves all active service tokens from the database for a specified service name.
+	// Active is defined by tokens tied to an unexpired refresh
+	FindActiveTokens(serviceName string) ([]S2sAuthorization, error)
 
 	// InsertToken inserts a new service token record into the database.
 	InsertToken(token S2sAuthorization) error
@@ -33,8 +34,9 @@ type repository struct {
 	db *sql.DB
 }
 
-// FindAllTokens retrieves all active service tokens from the database.
-func (r *repository) FindAllTokens(serviceName string) ([]S2sAuthorization, error) {
+// FindActiveTokens retrieves all active service tokens from the database.
+// Active is defined by tokens tied to an unexpired refresh
+func (r *repository) FindActiveTokens(serviceName string) ([]S2sAuthorization, error) {
 
 	qry := `
 		SELECT 
