@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"sync"
 )
 
 func GenerateAesGcmKey() []byte {
@@ -22,8 +23,26 @@ func GenerateAesGcmKey() []byte {
 // Cryptor is an interface for encrypting and decrypting service data
 type Cryptor interface {
 
+	// Encrypt encrypts a single field and sends the ciphertext or error to the ciphertext channel
+	EncryptField(
+		fieldname string,
+		plaintext string,
+		ciphertextCh chan string,
+		errCh chan error,
+		wg *sync.WaitGroup,
+	)
+
 	// EncryptServiceData encrypts data and returns encrypted value as a base64 encoded string
 	EncryptServiceData([]byte) (string, error)
+
+	// DecryptField decrypts a single field and sends the plaintext or error to the plaintext channel
+	DecryptField(
+		fieldname string,
+		ciphertext string,
+		plaintextCh chan string,
+		errCh chan error,
+		wg *sync.WaitGroup,
+	)
 
 	// DecryptServiceData decrypts ciphertext (encrypted + encoded in base64) data to a clear byte array
 	DecryptServiceData(string) ([]byte, error)
@@ -42,9 +61,42 @@ type serviceAesGcmKey struct {
 	secret []byte // Env Var
 }
 
+// Encrypt is a helper function that encrypts a sensitive field.
+func (key *serviceAesGcmKey) EncryptField(
+	fieldname string,
+	plaintext string,
+	ciphertextCh chan string,
+	errCh chan error,
+	wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+
+	if plaintext == "" {
+		errCh <- fmt.Errorf("failed to encrypt '%s' field because it is empty", fieldname)
+		return
+	}
+
+	// encrypt the plaintext
+	ciphertext, err := key.encryptServiceData([]byte(plaintext))
+	if err != nil {
+		errCh <- err
+		return
+	}
+
+	// send the ciphertext to the channel
+	ciphertextCh <- ciphertext
+}
+
 // EncryptServiceData is the concrete implementation of the Cryptor interface function
 // Note: takes in a byte array (for versatility) and returns a base64 encoded string
 func (key *serviceAesGcmKey) EncryptServiceData(clear []byte) (string, error) {
+
+	return key.encryptServiceData(clear)
+}
+
+// EncryptServiceData is the concrete implementation of the Cryptor interface function
+// Note: takes in a byte array (for versatility) and returns a base64 encoded string
+func (key *serviceAesGcmKey) encryptServiceData(clear []byte) (string, error) {
 
 	if len(key.secret) != 32 {
 		panic("AES key must be exactly 32 bytes long")
@@ -70,8 +122,40 @@ func (key *serviceAesGcmKey) EncryptServiceData(clear []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 
-// EncryptServiceData is the concrete implementation of the Cryptor interface function
+// DecryptField decrypts a single field and sends the plaintext or error to the respective channel
+func (key *serviceAesGcmKey) DecryptField(
+	fieldname string,
+	ciphertext string,
+	plaintextCh chan string,
+	errCh chan error,
+	wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+
+	if ciphertext == "" {
+		errCh <- fmt.Errorf("failed to decrypt '%s' field because it is empty", fieldname)
+		return
+	}
+
+	// decrypt the ciphertext
+	plaintext, err := key.decryptServiceData(ciphertext)
+	if err != nil {
+		errCh <- err
+		return
+	}
+
+	// send the plaintext to the channel
+	plaintextCh <- string(plaintext)
+}
+
+// DecryptServiceData is the concrete implementation of the Cryptor interface function
 func (key *serviceAesGcmKey) DecryptServiceData(ciphertext string) ([]byte, error) {
+
+	return key.decryptServiceData(ciphertext)
+}
+
+// decryptServiceData is the concrete implementation of the Cryptor interface function
+func (key *serviceAesGcmKey) decryptServiceData(ciphertext string) ([]byte, error) {
 
 	if len(key.secret) != 32 {
 		panic("AES key must be exactly 32 bytes long")
