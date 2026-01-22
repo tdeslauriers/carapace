@@ -42,13 +42,13 @@ func (kg *keyGenerator) GenerateEcdsaSigningKey(service, env string) error {
 
 	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("failed to generate ecdsa key: %v", err))
+		return fmt.Errorf("failed to generate ecdsa key: %v", err)
 	}
 	pulicKey := &privateKey.PublicKey
 
 	privBytes, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("failed to marshal EC (ecdsa) private key: %v", err))
+		return fmt.Errorf("failed to marshal EC (ecdsa) private key: %v", err)
 	}
 	privPem :=
 		pem.EncodeToMemory(&pem.Block{
@@ -58,7 +58,7 @@ func (kg *keyGenerator) GenerateEcdsaSigningKey(service, env string) error {
 
 	pubBytes, err := x509.MarshalPKIXPublicKey(pulicKey)
 	if err != nil {
-		return fmt.Errorf(fmt.Sprintf("failed to marshal PKIX (ecdsa) public key: %v", err))
+		return fmt.Errorf("failed to marshal PKIX (ecdsa) public key: %v", err)
 	}
 	pubPem :=
 		pem.EncodeToMemory(&pem.Block{
@@ -85,7 +85,7 @@ func (kg *keyGenerator) GenerateEcdsaSigningKey(service, env string) error {
 	}
 
 	if err := kg.op.UpsertItem(item); err != nil {
-		return fmt.Errorf(fmt.Sprintf("failed to upsert ecdsa key pair to 1password: %v", err))
+		return fmt.Errorf("failed to upsert ecdsa key pair to 1password: %v", err)
 	}
 
 	kg.logger.Info(fmt.Sprintf("successfully upserted jwt signing ecdsa key pair %s in 1password", item.Title))

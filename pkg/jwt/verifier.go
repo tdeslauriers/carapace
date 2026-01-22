@@ -111,10 +111,10 @@ func (v *verifier) BuildAuthorized(allowedScopes []string, token string) (*Token
 
 // hasValidAudiences is a helper method which checks if the jwt token has the correct audience.
 // It does not validate the signature of the token.
-func (v *verifier) hasValidAudences(jwt *Token) bool {
+func (v *verifier) hasValidAudences(jot *Token) bool {
 
-	if len(jwt.Claims.Audience) > 0 {
-		for _, aud := range jwt.Claims.Audience {
+	if len(jot.Claims.Audience) > 0 {
+		for _, aud := range jot.Claims.Audience {
 			if aud == v.ServiceName {
 				return true
 			}
@@ -126,15 +126,15 @@ func (v *verifier) hasValidAudences(jwt *Token) bool {
 
 // hasValidScopes is a helper method which checks if the jwt token has the correct scopes.
 // It does not validate the signature of the token.
-func (v *verifier) hasValidScopes(allowedScopes []string, jwt *Token) bool {
+func (v *verifier) hasValidScopes(allowedScopes []string, jot *Token) bool {
 
 	// make sure token has scopes
-	if jwt.Claims.Scopes == "" {
+	if jot.Claims.Scopes == "" {
 		return false
 	}
 
 	// parse scopes string to slice
-	scopes := strings.Split(jwt.Claims.Scopes, " ")
+	scopes := strings.Split(jot.Claims.Scopes, " ")
 
 	// set jwt scopes to map
 	jwtScopes := make(map[string]bool)
