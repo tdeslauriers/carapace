@@ -86,16 +86,19 @@ func SanitizeIp(ip string) string {
 
 	// truncate
 	if len(ip) > 45 { // max ipv6 length is 39, plus some buffer
+
 		ip = ip[:45]
 	}
 
 	// remove port if present
 	if host, _, err := net.SplitHostPort(ip); err == nil {
+
 		ip = host
 	}
 
-	// Validate it's actually an IP
+	// validate it's actually an IP
 	if net.ParseIP(ip) == nil {
+
 		return "invalid"
 	}
 
