@@ -139,7 +139,6 @@ func (config *Config) readCerts(def SvcDefinition) error {
 	if !ok {
 		return fmt.Errorf("%sSERVER_CERT not set", serviceName)
 	}
-
 	config.Certs.ServerCert = &envServerCert
 
 	// server key
@@ -147,7 +146,6 @@ func (config *Config) readCerts(def SvcDefinition) error {
 	if !ok {
 		return fmt.Errorf("%sSERVER_KEY not set", serviceName)
 	}
-
 	config.Certs.ServerKey = &envServerKey
 
 	// client
@@ -158,7 +156,6 @@ func (config *Config) readCerts(def SvcDefinition) error {
 		if !ok {
 			return fmt.Errorf("%sCLIENT_CERT not set", serviceName)
 		}
-
 		config.Certs.ClientCert = &envClientCert
 
 		// client key
@@ -166,7 +163,6 @@ func (config *Config) readCerts(def SvcDefinition) error {
 		if !ok {
 			return fmt.Errorf("%sCLIENT_KEY not set", serviceName)
 		}
-
 		config.Certs.ClientKey = &envClientKey
 	}
 
@@ -178,7 +174,6 @@ func (config *Config) readCerts(def SvcDefinition) error {
 		if !ok {
 			return fmt.Errorf("%sDB_CLIENT_CERT not set", serviceName)
 		}
-
 		config.Certs.DbClientCert = &envDbClientCert
 
 		// db client key
@@ -213,7 +208,6 @@ func (config *Config) readCerts(def SvcDefinition) error {
 		if !ok {
 			return fmt.Errorf("%sDB_CA_CERT not set", serviceName)
 		}
-
 		config.Certs.DbCaCert = &envDbCaCert
 	}
 

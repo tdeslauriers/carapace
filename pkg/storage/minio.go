@@ -29,7 +29,7 @@ func New(config Config, tls *tls.Config, expiry time.Duration) (ObjectStorage, e
 	// initialize MinIO client with the provided configuration
 	minioClient, err := minio.New(config.Url, &minio.Options{
 		Creds:     credentials.NewStaticV4(config.AccessKey, config.SecretKey, ""),
-		Secure:    true,
+		Secure:    false, // NOTE: SETTING THIS TO FALSE FOR TLS TEMPORARILY TO BYPASS CERT ISSUES
 		Transport: client.Transport,
 	})
 	if err != nil {
