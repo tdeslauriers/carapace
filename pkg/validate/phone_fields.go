@@ -1,47 +1,59 @@
 package validate
 
 import (
-	"fmt"
+	"errors"
 	"regexp"
+	"strings"
 )
 
-const (
-	CountryCodeRegex = `^[1-9]\d{0,2}$`
-	PhoneNumberRegex = `^\d{4,15}$`
-	ExtensionRegex   = `^\d{1,6}$`
-)
-
+// Compile regexes once for better performance
 var (
-	ccReg  = regexp.MustCompile(CountryCodeRegex)
-	pnReg  = regexp.MustCompile(PhoneNumberRegex)
-	extReg = regexp.MustCompile(ExtensionRegex)
+	countryCodeRegex = regexp.MustCompile(`^[1-9]\d{0,2}$`)
+	phoneNumberRegex = regexp.MustCompile(`^\d{4,15}$`)
+	extensionRegex   = regexp.MustCompile(`^\d{1,6}$`)
 )
 
-// IsValidCountryCode validates a country code is well formatted
-func IsValidCountryCode(code string) error {
+// ValidateCountryCode validates a country code is well formatted
+func ValidateCountryCode(code string) error {
+	code = strings.TrimSpace(code)
 
-	if !ccReg.MatchString(code) {
-		return fmt.Errorf("country code must be numeric and between 1 and 3 digits")
+	if code == "" {
+		return errors.New("country code is required")
+	}
+
+	if !countryCodeRegex.MatchString(code) {
+		return errors.New("country code must be numeric and between 1 and 3 digits")
 	}
 
 	return nil
 }
 
-// IsValidPhoneNumber validates a phone number is well formatted
-func IsValidPhoneNumber(number string) error {
+// ValidatePhoneNumber validates a phone number is well formatted
+func ValidatePhoneNumber(number string) error {
+	number = strings.TrimSpace(number)
 
-	if !pnReg.MatchString(number) {
-		return fmt.Errorf("phone number must be numeric and between 4 and 15 digits")
+	if number == "" {
+		return errors.New("phone number is required")
+	}
+
+	if !phoneNumberRegex.MatchString(number) {
+		return errors.New("phone number must be numeric and between 4 and 15 digits")
 	}
 
 	return nil
 }
 
-// IsValidExtension validates a phone extension is well formatted
-func IsValidExtension(extension string) error {
+// ValidateExtension validates a phone extension is well formatted
+func ValidateExtension(extension string) error {
+	extension = strings.TrimSpace(extension)
 
-	if !extReg.MatchString(extension) {
-		return fmt.Errorf("extension must be numeric and between 1 and 6 digits")
+	// Extension is optional
+	if extension == "" {
+		return nil
+	}
+
+	if !extensionRegex.MatchString(extension) {
+		return errors.New("extension must be numeric and between 1 and 6 digits")
 	}
 
 	return nil
