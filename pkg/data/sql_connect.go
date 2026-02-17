@@ -19,7 +19,7 @@ type DbUrl struct {
 
 // Build constructs the database connection URL string.
 func (url *DbUrl) Build() string {
-	return fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", url.Username, url.Password, url.Addr, url.Name)
+	return fmt.Sprintf("%s:%s@tcp(%s)/%s", url.Username, url.Password, url.Addr, url.Name)
 }
 
 // SqlDbConnector defines the interface for SQL database connection
@@ -58,7 +58,7 @@ func (c *mariaDbConnector) Connect() (*sql.DB, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("mysql", c.ConnectionUrl+"?tls=custom")
+	db, err := sql.Open("mysql", c.ConnectionUrl+"?tls=custom&parseTime=true")
 	if err != nil {
 		return nil, err
 	}
