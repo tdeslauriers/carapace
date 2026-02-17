@@ -39,14 +39,27 @@ func NewTelemetry(r *http.Request, logger *slog.Logger) *Telemetry {
 	}
 
 	traceParent := GenerateTraceParent()
-	protocol := validate.SanitizeProtocol(r.Proto)
-	method := validate.SanitizeMethod(r.Method)
-	path := validate.SanitizePath(r.URL.Path)
-	remoteAddr := validate.SanitizeIp(getClientIp(r))
-	userAgent := validate.SanitizeUserAgent(r.UserAgent())
-	host := validate.SanitizeHost(r.Host)
-	referrer := validate.SanitizeReferrer(r.Referer())
 	startTime := time.Now()
+
+	var (
+		protocol   string
+		method     string
+		path       string
+		remoteAddr string
+		userAgent  string
+		host       string
+		referrer   string
+	)
+
+	if r != nil {
+		protocol = validate.SanitizeProtocol(r.Proto)
+		method = validate.SanitizeMethod(r.Method)
+		path = validate.SanitizePath(r.URL.Path)
+		remoteAddr = validate.SanitizeIp(getClientIp(r))
+		userAgent = validate.SanitizeUserAgent(r.UserAgent())
+		host = validate.SanitizeHost(r.Host)
+		referrer = validate.SanitizeReferrer(r.Referer())
+	}
 
 	logger.Info("creating new telemetry for incoming request",
 		slog.String("trace_id", traceParent.TraceId),
