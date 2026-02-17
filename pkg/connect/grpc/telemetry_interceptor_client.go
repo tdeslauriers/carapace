@@ -11,7 +11,7 @@ import (
 
 // UnaryClientInterceptorWithTelemetry is a grpc unary client interceptor that propagates telemetry
 func UnaryClientWithTelemetry(logger *slog.Logger) grpc.UnaryClientInterceptor {
-	
+
 	return func(
 		ctx context.Context,
 		method string,

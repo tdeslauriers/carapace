@@ -29,7 +29,8 @@ type signer struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
-// createSignature takes the BaseString (msg) comprised of the base64 encoded json header + . + claims of the jwt token
+// createSignature takes the BaseString (msg) comprised of 
+// the base64 encoded json header + . + claims of the jwt token
 // creates a cryptographic signature for the jwt token and adds it to the jwt Token struct
 func (signer *signer) createSignature(msg string, jwt *Token) error {
 

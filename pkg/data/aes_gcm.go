@@ -119,6 +119,7 @@ func (key *serviceAesGcmKey) encryptServiceData(clear []byte) (string, error) {
 
 	// nonce is prepended to the encrypted value so it can be extracted on decryption
 	encrypted := gcm.Seal(nonce, nonce, clear, nil)
+
 	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 

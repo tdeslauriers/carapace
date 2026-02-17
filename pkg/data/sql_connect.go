@@ -19,7 +19,7 @@ type DbUrl struct {
 
 // Build constructs the database connection URL string.
 func (url *DbUrl) Build() string {
-	return fmt.Sprintf("%s:%s@tcp(%s)/%s", url.Username, url.Password, url.Addr, url.Name)
+	return fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", url.Username, url.Password, url.Addr, url.Name)
 }
 
 // SqlDbConnector defines the interface for SQL database connection
