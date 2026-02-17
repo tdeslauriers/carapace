@@ -44,7 +44,7 @@ func UnaryClientWithTelemetry(logger *slog.Logger) grpc.UnaryClientInterceptor {
 
 			// need to add create new telemetry
 			telemetry := NewGrpcTelemetry(ctx, method, logger)
-			ctx := context.WithValue(ctx, connect.TelemetryKey, telemetry)
+			ctx = context.WithValue(ctx, connect.TelemetryKey, telemetry)
 			ctx = AddTraceparentToOutgoingContext(ctx, &telemetry.Traceparent, logger)
 		}
 
