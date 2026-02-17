@@ -41,7 +41,7 @@ func NewGrpcTelemetry(ctx context.Context, method string, logger *slog.Logger) *
 	authority := getGrpcAuthority(ctx)
 	startTime := time.Now().UTC()
 
-	logger.Info("creating new grpc telemetry for incoming request",
+	logger.Info("creating new grpc telemetry for request",
 		slog.String("trace_id", traceParent.TraceId),
 		slog.String("span_id", traceParent.SpanId),
 		slog.String("method", method),

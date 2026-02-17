@@ -41,8 +41,11 @@ func UnaryClientWithTelemetry(logger *slog.Logger) grpc.UnaryClientInterceptor {
 			logger.Warn("no telemetry found in context for outgoing grpc call, generating new traceparent",
 				slog.String("method", method),
 			)
-			newTp := connect.GenerateTraceParent()
-			ctx = AddTraceparentToOutgoingContext(ctx, newTp, logger)
+
+			// need to add create new telemetry
+			telemetry := NewGrpcTelemetry(ctx, method, logger)
+			ctx := context.WithValue(ctx, connect.TelemetryKey, telemetry)
+			ctx = AddTraceparentToOutgoingContext(ctx, &telemetry.Traceparent, logger)
 		}
 
 		// Make the call
