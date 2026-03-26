@@ -121,6 +121,14 @@ func Load(def SvcDefinition) (*Config, error) {
 		}
 	}
 
+	// read in profiles service env vars
+	if def.Requires.Profiles {
+		err = config.profilesServiceEnvVars(def)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return config, nil
 }
 
@@ -373,13 +381,30 @@ func (config *Config) JwtEnvVars(def SvcDefinition) error {
 	return nil
 }
 
+// profilesServiceEnvVars is a helper function that reads in the environment variables for the profiles service
+func (config *Config) profilesServiceEnvVars(def SvcDefinition) error {
+
+	var serviceName string
+	if def.ServiceName != "" {
+		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
+	}
+
+	envProfilesUrl, ok := os.LookupEnv(fmt.Sprintf("%sPROFILES_URL", serviceName))
+	if !ok {
+		return fmt.Errorf("%sPROFILES_URL not set", serviceName)
+	}
+
+	config.Profiles.Url = envProfilesUrl
+
+	return nil
+}
+
 // tasksServiceEnvVars is a helper function that reads in the environment variables for the tasks service
 func (config *Config) tasksServiceEnvVars(def SvcDefinition) error {
 
 	var serviceName string
 	if def.ServiceName != "" {
 		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
-
 	}
 
 	envTasksUrl, ok := os.LookupEnv(fmt.Sprintf("%sTASKS_URL", serviceName))
@@ -398,7 +423,6 @@ func (config *Config) galleryServiceEnvVars(def SvcDefinition) error {
 	var serviceName string
 	if def.ServiceName != "" {
 		serviceName = fmt.Sprintf("%s_", strings.ToUpper(def.ServiceName))
-
 	}
 
 	envGalleryUrl, ok := os.LookupEnv(fmt.Sprintf("%sGALLERY_URL", serviceName))

@@ -49,4 +49,7 @@ type Requires struct {
 
 	// ObjectStorage indicates that the service requires object storage configuration
 	ObjectStorage bool
+
+	// Profiles indicates that the service requires making requests to the profiles service
+	Profiles bool
 }

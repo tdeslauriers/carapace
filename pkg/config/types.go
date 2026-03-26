@@ -15,6 +15,7 @@ type Config struct {
 	Tasks           Tasks
 	Gallery         Gallery
 	ObjectStorage   ObjectStorage
+	Profiles        Profiles
 }
 
 type Certs struct {
@@ -50,10 +51,12 @@ type UserAuth struct {
 	Url string
 }
 
+// Tasks is the model that holds tasks service configuration data to inform service setup.
 type Tasks struct {
 	Url string
 }
 
+// Gallery is the model that holds gallery service configuration data to inform service setup.
 type Gallery struct {
 	Url string
 }
@@ -70,14 +73,21 @@ type Jwt struct {
 	UserVerifyingKey string
 }
 
+// OauthRedirect is the model that holds oauth redirect configuration data to inform service setup.
 type OauthRedirect struct {
 	CallbackUrl      string
 	CallbackClientId string
 }
 
+// ObjectStorage is the model that holds object storage configuration data to inform service setup.
 type ObjectStorage struct {
 	Url       string
 	Bucket    string // assumes one bucket per service, like one db per service
 	AccessKey string // username, effectively
 	SecretKey string // password, effectively
+}
+
+// Profiles is the model that holds profiles service configuration data to inform service setup.
+type Profiles struct {
+	Url string
 }
