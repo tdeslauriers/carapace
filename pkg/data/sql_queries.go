@@ -31,7 +31,7 @@ func SelectRecords[T any](db Selector, query string, args ...interface{}) ([]T, 
 		}
 
 		if err := rows.Scan(fields...); err != nil {
-			return nil, fmt.Errorf("failed to scan row into record: %v", err)
+			return nil, err
 		}
 
 		results = append(results, record)
@@ -58,7 +58,7 @@ func SelectOneRecord[T any](db Selector, query string, args ...interface{}) (T, 
 	}
 
 	if err := row.Scan(fields...); err != nil {
-		return record, fmt.Errorf("failed to scan row into record: %v", err)
+		return record, err
 	}
 
 	return record, nil
@@ -133,7 +133,7 @@ func UpdateRecord(db Execer, query string, args ...interface{}) error {
 	// execute the statement with the provided arguments
 	_, err = stmt.Exec(args...)
 	if err != nil {
-		return fmt.Errorf("failed to execute update query: %v", err)
+		return err
 	}
 
 	return nil
@@ -152,7 +152,7 @@ func DeleteRecord(db Execer, query string, args ...interface{}) error {
 	// execute
 	_, err = stmt.Exec(args...)
 	if err != nil {
-		return fmt.Errorf("failed to execute delete query: %v", err)
+		return err
 	}
 
 	return nil
