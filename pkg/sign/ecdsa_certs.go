@@ -74,7 +74,6 @@ func (cb *certBuilder) GenerateEcdsaCert(fields CertFields) error {
 	} else {
 
 		// fetch the CA cert from 1password
-
 		caCertPem, err := cb.op.GetDocument(fmt.Sprintf("%s_cert", fields.CaCertName), fields.OpVault)
 		if err != nil {
 			return fmt.Errorf("failed to get %s_cert.pem from 1password: %v", fields.CaCertName, err)

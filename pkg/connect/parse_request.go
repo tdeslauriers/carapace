@@ -40,9 +40,12 @@ func GetSessionToken(r *http.Request) (string, error) {
 		return "", fmt.Errorf("session not found in request 'Authorization' header")
 	}
 
-	if !validate.IsValidUuid(sessionToken) {
+	// trim
+	trimmed := strings.TrimSpace(sessionToken)
+
+	if !validate.IsValidUuid(trimmed) {
 		return "", fmt.Errorf("invalid or not well formatted session token")
 	}
 
-	return sessionToken, nil
+	return trimmed, nil
 }
