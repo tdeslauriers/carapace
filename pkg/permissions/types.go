@@ -45,20 +45,20 @@ func (p *Permission) Validate() error {
 
 	// validate csrf token if it is set
 	if p.Csrf != "" {
-		if !validate.IsValidUuid(p.Csrf) {
+		if validate.ValidateUuid(p.Csrf) != nil {
 			return fmt.Errorf("invalid csrf token in permission payload")
 		}
 	}
 
 	// validate id if it is set
 	if p.Id != "" {
-		if !validate.IsValidUuid(strings.TrimSpace(p.Id)) {
+		if validate.ValidateUuid(strings.TrimSpace(p.Id)) != nil {
 			return fmt.Errorf("invalid permission id in permission payload")
 		}
 	}
 
 	// check service name
-	if ok, err := validate.IsValidServiceName(strings.TrimSpace(p.ServiceName)); !ok {
+	if err := validate.ValidateServiceName(strings.TrimSpace(p.ServiceName)); err != nil {
 		return fmt.Errorf("invalid service name in permission payload: %v", err)
 	}
 
@@ -73,18 +73,18 @@ func (p *Permission) Validate() error {
 	}
 
 	// check permission string
-	if ok, err := validate.IsValidPermission(strings.TrimSpace(p.Permission)); !ok {
+	if err := validate.ValidatePermission(strings.TrimSpace(p.Permission)); err != nil {
 		return fmt.Errorf("invalid permission in permission payload: %v", err)
 	}
 
 	// check permission name
-	if ok, err := validate.IsValidPermissionName(strings.TrimSpace(p.Name)); !ok {
+	if err := validate.ValidatePermissionName(strings.TrimSpace(p.Name)); err != nil {
 		return fmt.Errorf("invalid permission name in permission payload: %v", err)
 	}
 
 	// check slug if it is set
 	if p.Slug != "" {
-		if !validate.IsValidUuid(strings.TrimSpace(p.Slug)) {
+		if validate.ValidateUuid(strings.TrimSpace(p.Slug)) != nil {
 			return fmt.Errorf("invalid slug in permission payload")
 		}
 	}
@@ -110,18 +110,18 @@ func (p *PermissionRecord) Validate() error {
 
 	// validate id if it is set
 	if p.Id != "" {
-		if !validate.IsValidUuid(strings.TrimSpace(p.Id)) {
+		if validate.ValidateUuid(strings.TrimSpace(p.Id)) != nil {
 			return fmt.Errorf("invalid permission id in permission payload")
 		}
 	}
 
 	// check service name
-	if ok, err := validate.IsValidServiceName(strings.TrimSpace(p.ServiceName)); !ok {
+	if err := validate.ValidateServiceName(strings.TrimSpace(p.ServiceName)); err != nil {
 		return fmt.Errorf("invalid service name in permission payload: %v", err)
 	}
 
 	// check permission name
-	if ok, err := validate.IsValidPermissionName(strings.TrimSpace(p.Name)); !ok {
+	if err := validate.ValidatePermissionName(strings.TrimSpace(p.Name)); err != nil {
 		return fmt.Errorf("invalid permission name in permission payload: %v", err)
 	}
 
@@ -132,7 +132,7 @@ func (p *PermissionRecord) Validate() error {
 
 	// check slug if it is set
 	if p.Slug != "" {
-		if !validate.IsValidUuid(strings.TrimSpace(p.Slug)) {
+		if validate.ValidateUuid(strings.TrimSpace(p.Slug)) != nil {
 			return fmt.Errorf("invalid slug in permission payload")
 		}
 	}
@@ -160,7 +160,7 @@ func (cmd *UpdatePermissionsCmd) Validate() error {
 	// check permission slugs
 	// note: for now, these are uuids, but could be any string in the future
 	for _, permission := range cmd.Permissions {
-		if !validate.IsValidUuid(permission) {
+		if validate.ValidateUuid(permission) != nil {
 			return fmt.Errorf("invalid permission slug in update permissions command: %s", permission)
 		}
 	}

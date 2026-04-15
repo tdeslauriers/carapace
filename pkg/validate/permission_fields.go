@@ -2,58 +2,45 @@ package validate
 
 import (
 	"fmt"
-	"log/slog"
 	"regexp"
-
-	"github.com/tdeslauriers/carapace/internal/util"
+	"strings"
 )
 
 const (
-	PermissionNameRegex string = `^[a-zA-Z0-9 ]{2,32}$`
+	// PermissionNameRegex validates character content only; length is enforced by PermissionNameMin/PermissionNameMax.
+	PermissionNameRegex string = `^[a-zA-Z0-9 ]+$`
 	PermissionNameMin   int    = 2
 	PermissionNameMax   int    = 32
 
-	PermissionRegex string = `^[A-Z0-9_]{2,64}$`
+	// PermissionRegex validates character content only; length is enforced by PermissionMin/PermissionMax.
+	PermissionRegex string = `^[A-Z0-9_]+$`
 	PermissionMin   int    = 2
 	PermissionMax   int    = 64
 )
 
-func IsValidPermissionName(name string) (bool, error) {
+var (
+	permissionNameRegex = regexp.MustCompile(PermissionNameRegex)
+	permissionRegex     = regexp.MustCompile(PermissionRegex)
+)
 
-	logger := slog.Default().
-		With(slog.String(util.ComponentKey, util.ComponenetPermissions)).
-		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
-		With(slog.String(util.PackageKey, util.PackageValidate))
-
-	rgx, err := regexp.Compile(PermissionNameRegex)
-	if err != nil {
-		logger.Error("failed to compile permission name regex", slog.String("err", err.Error()))
+func ValidatePermissionName(name string) error {
+	name = strings.TrimSpace(name)
+	if TooShort(name, PermissionNameMin) || TooLong(name, PermissionNameMax) {
+		return fmt.Errorf("permission name must be between %d and %d characters", PermissionNameMin, PermissionNameMax)
 	}
-
-	if !rgx.MatchString(name) {
-		return false, fmt.Errorf(`permission name must be between %d and %d characters long, 
-				and may only contain upper and lower case letters, numbers, or spaces`, PermissionNameMin, PermissionNameMax)
+	if !permissionNameRegex.MatchString(name) {
+		return fmt.Errorf("permission name may only contain letters, numbers, or spaces")
 	}
-
-	return true, nil
+	return nil
 }
 
-func IsValidPermission(permission string) (bool, error) {
-
-	logger := slog.Default().
-		With(slog.String(util.ComponentKey, util.ComponenetPermissions)).
-		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
-		With(slog.String(util.PackageKey, util.PackageValidate))
-
-	rgx, err := regexp.Compile(PermissionRegex)
-	if err != nil {
-		logger.Error("failed to compile permission regex", slog.String("err", err.Error()))
+func ValidatePermission(permission string) error {
+	permission = strings.TrimSpace(permission)
+	if TooShort(permission, PermissionMin) || TooLong(permission, PermissionMax) {
+		return fmt.Errorf("permission must be between %d and %d characters", PermissionMin, PermissionMax)
 	}
-
-	if !rgx.MatchString(permission) {
-		return false, fmt.Errorf(`permission must be between %d and %d characters long, 
-				and may only contain upper case letters, numbers, or underscores`, PermissionMin, PermissionMax)
+	if !permissionRegex.MatchString(permission) {
+		return fmt.Errorf("permission may only contain upper case letters, numbers, or underscores")
 	}
-
-	return true, nil
+	return nil
 }

@@ -126,7 +126,7 @@ func (s *permissionsService) GetPermissionBySlug(slug string) (*PermissionRecord
 
 	// validate slug
 	// redundant check, but good practice
-	if valid := validate.IsValidUuid(slug); !valid {
+	if err := validate.ValidateUuid(slug); err != nil {
 		s.logger.Error("Invalid slug provided", slog.String("slug", slug))
 		return nil, fmt.Errorf("invalid slug: %s", slug)
 	}

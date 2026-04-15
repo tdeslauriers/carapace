@@ -2,35 +2,29 @@ package validate
 
 import (
 	"fmt"
-	"log/slog"
 	"regexp"
-
-	"github.com/tdeslauriers/carapace/internal/util"
+	"strings"
 )
 
 const (
-	ServiceNameRegex string = `^[a-z0-9]{2,32}$`
+	// ServiceNameRegex validates character content only; length is enforced by ServiceNameMin/ServiceNameMax.
+	ServiceNameRegex string = `^[a-z0-9]+$`
 	ServiceNameMin   int    = 2
 	ServiceNameMax   int    = 32
 )
 
-// IsValidServiceName checks if a service name is valid via regex criteria.
-func IsValidServiceName(service string) (bool, error) {
+var (
+	serviceNameRegex = regexp.MustCompile(ServiceNameRegex)
+)
 
-	logger := slog.Default().
-		With(slog.String(util.ComponentKey, util.ComponentScopes)).
-		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
-		With(slog.String(util.PackageKey, util.PackageValidate))
-
-	rgx, err := regexp.Compile(ServiceNameRegex)
-	if err != nil {
-		logger.Error("unable to compile service name regex")
+// ValidateServiceName checks if a service name is valid via regex criteria.
+func ValidateServiceName(service string) error {
+	service = strings.TrimSpace(service)
+	if TooShort(service, ServiceNameMin) || TooLong(service, ServiceNameMax) {
+		return fmt.Errorf("service name must be between %d and %d characters", ServiceNameMin, ServiceNameMax)
 	}
-
-	if !rgx.MatchString(service) {
-		return false, fmt.Errorf(`service name must be between %d and %d characters long, 
-			and may only contain lower case letters and/or numbers`, ServiceNameMin, ServiceNameMax)
+	if !serviceNameRegex.MatchString(service) {
+		return fmt.Errorf("service name may only contain lower case letters and/or numbers")
 	}
-
-	return true, nil
+	return nil
 }

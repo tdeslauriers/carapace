@@ -1,17 +1,11 @@
 package validate
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"reflect"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
-
-	"github.com/tdeslauriers/carapace/internal/util"
 )
 
 const (
@@ -35,10 +29,22 @@ const (
 	UuidPattern string = `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`
 )
 
-// includes alphabet
-var KeyboardSequences = []string{"`1234567890-=", `~!@#$\%^&*()_+`, "qwertyuiop[]\\", "qwertyuiop{}|", "asdfghjkl;'", "asdfghjkl:\"", "zxcvbnm,./", "zxcvbnm<>?", "1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/-['=]", "!qaz@wsx#edc$rfv%tgb^yhn&ujm*ik,(ol.)p:?_{\"+}", "=[;.-pl,0okm9ijn8uhb7ygv6tfc5rdx4esz3wa2q1]", `}"?+{:>_pl<)okm(ijn*uhb&ygv^tfc\%rdx$esz#wa@q!`, "abcdefghijklmnopqrstuvwxyz"}
+var (
+	emailRegex       = regexp.MustCompile(EmailRegex)
+	nameRegex        = regexp.MustCompile(NameRegex)
+	upperCaseRegex   = regexp.MustCompile(UpperCase)
+	lowerCaseRegex   = regexp.MustCompile(LowerCase)
+	numberRegex      = regexp.MustCompile(Number)
+	specialCharRegex = regexp.MustCompile(SpecialChar)
+	uuidRegex        = regexp.MustCompile(UuidPattern)
 
-func IsValidEmail(email string) error {
+	// includes alphabet
+	KeyboardSequences = []string{"`1234567890-=", `~!@#$\%^&*()_+`, "qwertyuiop[]\\", "qwertyuiop{}|", "asdfghjkl;'", "asdfghjkl:\"", "zxcvbnm,./", "zxcvbnm<>?", "1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/-['=]", "!qaz@wsx#edc$rfv%tgb^yhn&ujm*ik,(ol.)p:?_{\"+}", "=[;.-pl,0okm9ijn8uhb7ygv6tfc5rdx4esz3wa2q1]", `}"?+{:>_pl<)okm(ijn*uhb&ygv^tfc\%rdx$esz#wa@q!`, "abcdefghijklmnopqrstuvwxyz"}
+)
+
+func ValidateEmail(email string) error {
+
+	email = strings.TrimSpace(email)
 
 	// technically, min length of email is 3, but must be 6 to pass regex
 	// max length of email can be 254 chars
@@ -46,28 +52,32 @@ func IsValidEmail(email string) error {
 		return fmt.Errorf("email must be between %d and %d characters in length", EmailMin, EmailMax)
 	}
 
-	if !MatchesRegex(email, EmailRegex) {
+	if !emailRegex.MatchString(email) {
 		return fmt.Errorf("email address must be valid format, eg., name@domain.com")
 	}
 
 	return nil
 }
 
-func IsValidName(name string) error {
+func ValidateName(name string) error {
+
+	name = strings.TrimSpace(name)
 
 	if TooShort(name, NameMin) || TooLong(name, NameMax) {
 		return fmt.Errorf("name should be between %d and %d characters in length", NameMin, NameMax)
 	}
 
-	if !MatchesRegex(name, NameRegex) {
+	if !nameRegex.MatchString(name) {
 		return errors.New("name includes illegal characters")
 	}
 
 	return nil
 }
 
-// does not handle empty string, aka a required field, only checks format
-func IsValidBirthday(dob string) error {
+// ValidateBirthday does not handle empty string, aka a required field — it only checks format.
+// An empty string is treated as "not provided" and passes without error.
+func ValidateBirthday(dob string) error {
+	dob = strings.TrimSpace(dob)
 
 	// handle empty string
 	if len(dob) == 0 {
@@ -93,36 +103,34 @@ func IsValidBirthday(dob string) error {
 		age--
 	}
 
-	if age >= 120 {
+	// allows exactly 120 years old
+	if age > 120 {
 		return fmt.Errorf("date of birth cannot be greater than 120 years ago")
 	}
 
 	return nil
 }
 
-func IsValidPassword(password string) error {
-
-	if len(password) > 0 {
-		password = strings.TrimSpace(password)
-	}
+func ValidatePassword(password string) error {
+	password = strings.TrimSpace(password)
 
 	if TooShort(password, PasswordMin) || TooLong(password, PasswordMax) {
 		return fmt.Errorf("password should be between %d and %d characters in length", PasswordMin, PasswordMax)
 	}
 
-	if !MatchesRegex(password, UpperCase) {
+	if !upperCaseRegex.MatchString(password) {
 		return errors.New("password must include at least 1 uppercase letter")
 	}
 
-	if !MatchesRegex(password, LowerCase) {
+	if !lowerCaseRegex.MatchString(password) {
 		return errors.New("password must include at least 1 lowercase letter")
 	}
 
-	if !MatchesRegex(password, Number) {
+	if !numberRegex.MatchString(password) {
 		return errors.New("password must include at least 1 number")
 	}
 
-	if !MatchesRegex(password, SpecialChar) {
+	if !specialCharRegex.MatchString(password) {
 		return errors.New("password must include at least 1 special character")
 	}
 
@@ -137,20 +145,6 @@ func IsValidPassword(password string) error {
 	}
 
 	return nil
-}
-
-func MatchesRegex(s, pattern string) bool {
-
-	logger := slog.Default().With(slog.String(util.ComponentKey, util.ComponentScopes)).
-		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
-		With(slog.String(util.PackageKey, util.PackageValidate))
-
-	rgx, err := regexp.Compile(pattern)
-	if err != nil {
-		logger.Error(fmt.Sprintf("unable to compile regex pattern: %s: %v", pattern, err))
-	}
-
-	return rgx.MatchString(s)
 }
 
 func RepeatChar(password string) error {
@@ -172,45 +166,14 @@ func RepeatChar(password string) error {
 	return nil
 }
 
+// ContainsKeyboardSequence checks the password sequentially against all known keyboard sequences.
+// A plain loop is correct and fast enough for 13 sequences — goroutines added overhead without benefit.
 func ContainsKeyboardSequence(password string) error {
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel() // avoid leaking go routines
-
-	results := make(chan bool, 1)
-	var wg sync.WaitGroup
-
 	for _, seq := range KeyboardSequences {
-		wg.Add(1)
-		go func(sequence string) {
-			defer wg.Done()
-
-			found := IsKeyboardSequence(password, sequence)
-
-			select {
-			case results <- found:
-				// cancel all routines if true returned to channel
-				if found {
-					cancel()
-				}
-			case <-ctx.Done():
-				// context cancelled, exit
-				return
-			}
-		}(seq)
-	}
-
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	for result := range results {
-		if result {
-			return fmt.Errorf("conatains keyboard sequences longer than %d characters, eg., 'qwerty'", KeyboardSequenceMax)
+		if IsKeyboardSequence(password, seq) {
+			return fmt.Errorf("contains keyboard sequences longer than %d characters, eg., 'qwerty'", KeyboardSequenceMax)
 		}
 	}
-
 	return nil
 }
 
@@ -253,54 +216,21 @@ func contains(password, sequence string) bool {
 	return strings.Contains(password, sequence)
 }
 
-func TooShort(field interface{}, min int) bool {
-
-	logger := slog.Default().With(slog.String(util.ComponentKey, util.ComponentScopes)).
-		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
-		With(slog.String(util.PackageKey, util.PackageValidate))
-
-	switch f := field.(type) {
-	case string:
-		return len(strings.TrimSpace(f)) < min
-	case []byte:
-		return len(f) < min
-	default:
-		logger.Error(fmt.Sprintf("Min length check only takes string or byte slice: %v", reflect.TypeOf(field)))
-		return false
-	}
+func TooShort(s string, min int) bool {
+	return len(strings.TrimSpace(s)) < min
 }
 
-func TooLong(field interface{}, max int) bool {
-
-	logger := slog.Default().With(slog.String(util.ComponentKey, util.ComponentScopes)).
-		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
-		With(slog.String(util.PackageKey, util.PackageValidate))
-
-	switch f := field.(type) {
-	case string:
-		return len(strings.TrimSpace(f)) > max
-	case []byte:
-		return len(f) > max
-	default:
-		logger.Error(fmt.Sprintf("Max length check only takes string or byte slice: %v", reflect.TypeOf(field)))
-		return false
-	}
+func TooLong(s string, max int) bool {
+	return len(strings.TrimSpace(s)) > max
 }
 
-func IsValidUuid(uuid string) bool {
-
-	logger := slog.Default().With(slog.String(util.ComponentKey, util.ComponentScopes)).
-		With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
-		With(slog.String(util.PackageKey, util.PackageValidate))
-
+func ValidateUuid(uuid string) error {
+	uuid = strings.TrimSpace(uuid)
 	if TooShort(uuid, 36) || TooLong(uuid, 36) {
-		return false
+		return fmt.Errorf("UUID must be exactly 36 characters in length")
 	}
-
-	rgx, err := regexp.Compile(UuidPattern)
-	if err != nil {
-		logger.Error("unable to compile uuid regex")
+	if !uuidRegex.MatchString(uuid) {
+		return fmt.Errorf("UUID must be in valid format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 	}
-
-	return rgx.MatchString(uuid)
+	return nil
 }

@@ -22,7 +22,7 @@ func GetValidSlug(r *http.Request) (string, error) {
 		return "", fmt.Errorf("no slug found in request")
 	}
 
-	if !validate.IsValidUuid(slug) {
+	if validate.ValidateUuid(slug) != nil {
 		return "", fmt.Errorf("invalid or not well formatted slug")
 	}
 
@@ -43,7 +43,7 @@ func GetSessionToken(r *http.Request) (string, error) {
 	// trim
 	trimmed := strings.TrimSpace(sessionToken)
 
-	if !validate.IsValidUuid(trimmed) {
+	if validate.ValidateUuid(trimmed) != nil {
 		return "", fmt.Errorf("invalid or not well formatted session token")
 	}
 

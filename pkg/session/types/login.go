@@ -19,11 +19,11 @@ type S2sLoginCmd struct {
 // This is just a basic check to make sure the values are within the expected range.
 func (cmd *S2sLoginCmd) ValidateCmd() error {
 	// field input restrictions
-	if !validate.IsValidUuid(cmd.ClientId) {
+	if validate.ValidateUuid(cmd.ClientId) != nil {
 		return fmt.Errorf("invalid client id")
 	}
 
-	if ok, err := validate.IsValidServiceName(cmd.ServiceName); !ok {
+	if err := validate.ValidateServiceName(cmd.ServiceName); err != nil {
 		return fmt.Errorf("invalid service in s2s login payload: %v", err)
 	}
 

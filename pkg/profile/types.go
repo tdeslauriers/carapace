@@ -92,13 +92,13 @@ func (r *ResetCmd) ValidateCmd() error {
 
 	// validate csrf
 	// Note: csrf is not sent to the identity or s2s service, only the gateway
-	if r.Csrf != "" && !validate.IsValidUuid(r.Csrf) {
+	if r.Csrf != "" && validate.ValidateUuid(r.Csrf) != nil {
 		return fmt.Errorf("invalid csrf")
 	}
 
 	// validate resource id if present
 	// Note: resource id is not sent to the identity, only the s2s service
-	if r.ResourceId != "" && !validate.IsValidUuid(r.ResourceId) {
+	if r.ResourceId != "" && validate.ValidateUuid(r.ResourceId) != nil {
 		return fmt.Errorf("invalid resource id")
 	}
 
@@ -108,7 +108,7 @@ func (r *ResetCmd) ValidateCmd() error {
 	}
 
 	// true input validation since this will be the incoming password in the identity service
-	if err := validate.IsValidPassword(r.NewPassword); err != nil {
+	if err := validate.ValidatePassword(r.NewPassword); err != nil {
 		return fmt.Errorf("invalid new password: %v", err)
 	}
 

@@ -237,13 +237,13 @@ func ParseTraceparent(r *http.Request) (*Traceparent, error) {
 	}
 
 	// validate the trace id
-	if !validate.IsValidTraceId(traceId) {
-		return nil, fmt.Errorf("missing or invalid trace id in traceparent header")
+	if err := validate.ValidateTraceId(traceId); err != nil {
+		return nil, fmt.Errorf("missing or invalid trace id in traceparent header: %v", err)
 	}
 
 	// validate the parent id
-	if !validate.IsValidSpanId(parentId) {
-		return nil, fmt.Errorf("missing or invalid span id in traceparent header")
+	if err := validate.ValidateSpanId(parentId); err != nil {
+		return nil, fmt.Errorf("missing or invalid span id in traceparent header: %v", err)
 	}
 
 	// validate the flags

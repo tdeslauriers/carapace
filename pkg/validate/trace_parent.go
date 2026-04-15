@@ -1,24 +1,37 @@
 package validate
 
+import (
+	"fmt"
+	"strings"
+)
+
 const (
 	TraceIdLength = 32 // 128 bits in hex according to W3C Trace Context specification
 	SpanIdLength  = 16 // 64 bits in hex according to W3C Trace Context specification
 )
 
-// IsValidTraceId checks if a string is a valid W3C Trace Id (32 hex characters).
-func IsValidTraceId(traceId string) bool {
+// ValidateTraceId checks if a string is a valid W3C Trace Id (32 hex characters).
+func ValidateTraceId(traceId string) error {
+	traceId = strings.TrimSpace(traceId)
 	if len(traceId) != TraceIdLength {
-		return false
+		return fmt.Errorf("trace id must be exactly %d hex characters", TraceIdLength)
 	}
-	return isValidHex(traceId)
+	if !isValidHex(traceId) {
+		return fmt.Errorf("trace id must contain only hexadecimal characters (0-9, a-f, A-F)")
+	}
+	return nil
 }
 
-// IsValidSpanId checks if a string is a valid W3C Span Id (16 hex characters).
-func IsValidSpanId(spanId string) bool {
+// ValidateSpanId checks if a string is a valid W3C Span Id (16 hex characters).
+func ValidateSpanId(spanId string) error {
+	spanId = strings.TrimSpace(spanId)
 	if len(spanId) != SpanIdLength {
-		return false
+		return fmt.Errorf("span id must be exactly %d hex characters", SpanIdLength)
 	}
-	return isValidHex(spanId)
+	if !isValidHex(spanId) {
+		return fmt.Errorf("span id must contain only hexadecimal characters (0-9, a-f, A-F)")
+	}
+	return nil
 }
 
 // IsValidHex checks if a string is a valid hexadecimal string.
