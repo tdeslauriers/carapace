@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -21,20 +22,20 @@ type Config struct {
 type ObjectStorage interface {
 
 	// GetSignedUrl generates a signed URL for accessing an object in the storage service.
-	GetSignedUrl(objectKey string) (*url.URL, error)
+	GetSignedUrl(ctx context.Context, objectKey string) (*url.URL, error)
 
 	// GetPreSignedPutUrl generates a pre-signed URL for uploading an object to the storage service.
-	GetPreSignedPutUrl(objectKey string) (*url.URL, error)
+	GetPreSignedPutUrl(ctx context.Context, objectKey string) (*url.URL, error)
 
 	// MoveObject moves an object from one location to another within the storage service
-	MoveObject(src, dst string) error
+	MoveObject(ctx context.Context, src, dst string) error
 
 	// WithObject retrieves an object from the storage service and provides a ReadSeekCloser interface
 	// so that operations like reading or seeking can be performed on the object stream.
-	WithObject(key string, fn func(r ReadSeekCloser) error) error
+	WithObject(ctx context.Context, key string, fn func(r ReadSeekCloser) error) error
 
 	// PutObject uploads an object to the MinIO storage service.
-	PutObject(key string, data []byte, contentType string) error
+	PutObject(ctx context.Context, key string, data []byte, contentType string) error
 }
 
 // ReadSeekCloser is an interface that combines io.Reader, io.Seeker, and io.Closer, it is

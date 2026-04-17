@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // fields that are part of s3 event notifications and common in S3/MinIO payloads
@@ -110,8 +111,26 @@ func IsAllowedEvent(eventName string) bool {
 
 func ValidateKey(key string) error {
 	key = strings.TrimSpace(key)
+
 	if TooShort(key, KeyMinLength) || TooLong(key, KeyMaxLength) {
 		return fmt.Errorf("key must be between %d and %d characters in length", KeyMinLength, KeyMaxLength)
+	}
+
+	// null bytes break some storage backends and log systems
+	if strings.ContainsRune(key, '\x00') {
+		return fmt.Errorf("key must not contain null bytes")
+	}
+
+	// prevent path traversal: a key like "../../etc/passwd" could resolve
+	// outside the intended namespace in downstream filesystem operations
+	if strings.Contains(key, "..") {
+		return fmt.Errorf("key must not contain path traversal sequences")
+	}
+
+	// keys must be valid UTF-8; malformed sequences can cause encoding bugs
+	// in downstream systems that assume UTF-8
+	if !utf8.ValidString(key) {
+		return fmt.Errorf("key must be valid UTF-8")
 	}
 
 	return nil

@@ -13,6 +13,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/tdeslauriers/carapace/internal/util"
+	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
 // New creates a new instance of the ObjectStorage interface.
@@ -37,7 +38,6 @@ func New(config Config, tls *tls.Config, expiry time.Duration) (ObjectStorage, e
 	}
 
 	return &minioStorage{
-		ctx:    context.Background(),
 		client: minioClient,
 		bucket: config.Bucket,
 		expiry: expiry,
@@ -53,7 +53,6 @@ var _ ObjectStorage = (*minioStorage)(nil)
 
 // minioClient is a concrete implementation of the ObjectStorage interface for MinIO.
 type minioStorage struct {
-	ctx    context.Context
 	client *minio.Client
 	bucket string
 	expiry time.Duration
@@ -65,10 +64,14 @@ type minioStorage struct {
 // which retrieves an object (ie, a file) as a stream from the MinIO storage service
 // and allows the caller to inject an operation like reading exif data, etc.
 // NOTE: minio.Object is an open http stream
-func (m *minioStorage) WithObject(key string, fn func(r ReadSeekCloser) error) error {
+func (m *minioStorage) WithObject(ctx context.Context, key string, fn func(r ReadSeekCloser) error) error {
+
+	if err := validate.ValidateKey(key); err != nil {
+		return fmt.Errorf("invalid object key: %v", err)
+	}
 
 	// check the object exists in the bucket by stat'ing it
-	if _, err := m.client.StatObject(m.ctx, m.bucket, key, minio.StatObjectOptions{}); err != nil {
+	if _, err := m.client.StatObject(ctx, m.bucket, key, minio.StatObjectOptions{}); err != nil {
 		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
 			return fmt.Errorf("object '%s' does not exist in bucket '%s'", key, m.bucket)
 		}
@@ -76,7 +79,7 @@ func (m *minioStorage) WithObject(key string, fn func(r ReadSeekCloser) error) e
 	}
 
 	// get the object from the bucket
-	obj, err := m.client.GetObject(m.ctx, m.bucket, key, minio.GetObjectOptions{})
+	obj, err := m.client.GetObject(ctx, m.bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get storage object '%s': %v", key, err)
 	}
@@ -89,10 +92,14 @@ func (m *minioStorage) WithObject(key string, fn func(r ReadSeekCloser) error) e
 
 // GetSignedUrl is the concrete impl of the interface method which
 // generates a signed URL for accessing an object in the MinIO storage service.
-func (m *minioStorage) GetSignedUrl(objectKey string) (*url.URL, error) {
+func (m *minioStorage) GetSignedUrl(ctx context.Context, objectKey string) (*url.URL, error) {
+
+	if err := validate.ValidateKey(objectKey); err != nil {
+		return nil, fmt.Errorf("invalid object key: %v", err)
+	}
 
 	// check if the object key exists in the bucket
-	if _, err := m.client.StatObject(m.ctx, m.bucket, objectKey, minio.StatObjectOptions{}); err != nil {
+	if _, err := m.client.StatObject(ctx, m.bucket, objectKey, minio.StatObjectOptions{}); err != nil {
 		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
 			return nil, fmt.Errorf("object '%s' does not exist in bucket '%s'", objectKey, m.bucket)
 		}
@@ -101,7 +108,7 @@ func (m *minioStorage) GetSignedUrl(objectKey string) (*url.URL, error) {
 
 	// fetches a signed URL for the specified object key with the defined expiry duration
 	// NOTE: this client method does not check if the object exists, it will return a signed URL regardless
-	signedUrl, err := m.client.PresignedGetObject(m.ctx, m.bucket, objectKey, m.expiry, nil)
+	signedUrl, err := m.client.PresignedGetObject(ctx, m.bucket, objectKey, m.expiry, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -110,10 +117,17 @@ func (m *minioStorage) GetSignedUrl(objectKey string) (*url.URL, error) {
 	return signedUrl, nil
 }
 
-func (m *minioStorage) GetPreSignedPutUrl(objectKey string) (*url.URL, error) {
+// GetPreSignedPutUrl is the concrete impl of the interface method which
+// generates a pre-signed URL for uploading an object to the MinIO storage service.
+func (m *minioStorage) GetPreSignedPutUrl(ctx context.Context, objectKey string) (*url.URL, error) {
+
+	// validate the object key before attempting to generate a signed URL
+	if err := validate.ValidateKey(objectKey); err != nil {
+		return nil, fmt.Errorf("invalid object key: %v", err)
+	}
 
 	// fetches a signed URL for the specified object key with the defined expiry duration
-	signedUrl, err := m.client.PresignedPutObject(m.ctx, m.bucket, objectKey, m.expiry)
+	signedUrl, err := m.client.PresignedPutObject(ctx, m.bucket, objectKey, m.expiry)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +140,15 @@ func (m *minioStorage) GetPreSignedPutUrl(objectKey string) (*url.URL, error) {
 // which moves an object from one location to another in the MinIO storage service.
 // Note: outcome is similiar to a linux mv command, which rather than moving the object, effectively renames it.
 // Impl: it copies the object to the new location/namespace and then removes the original object.
-func (m *minioStorage) MoveObject(src, dst string) error {
+func (m *minioStorage) MoveObject(ctx context.Context, src, dst string) error {
+
+	if err := validate.ValidateKey(src); err != nil {
+		return fmt.Errorf("invalid source object key: %v", err)
+	}
+
+	if err := validate.ValidateKey(dst); err != nil {
+		return fmt.Errorf("invalid destination object key: %v", err)
+	}
 
 	// check that the current object key and the new object key are not the same
 	if src == dst {
@@ -144,19 +166,19 @@ func (m *minioStorage) MoveObject(src, dst string) error {
 	}
 
 	// copy the object from the source to the destination
-	_, err := m.client.CopyObject(m.ctx, dstOpts, srcOpts)
+	_, err := m.client.CopyObject(ctx, dstOpts, srcOpts)
 	if err != nil {
 		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
 			return fmt.Errorf("source object '%s' does not exist in object storage", src)
-		} else {
-			return fmt.Errorf("failed to copy object from '%s' to '%s': %v", src, dst, err)
 		}
+
+		return fmt.Errorf("failed to copy object from '%s' to '%s': %v", src, dst, err)
 	}
 
 	// remove the original object after copying
-	err = m.client.RemoveObject(m.ctx, m.bucket, src, minio.RemoveObjectOptions{})
+	err = m.client.RemoveObject(ctx, m.bucket, src, minio.RemoveObjectOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to remove original object '%s' after copying to '%s': %v", src, dst, err)
+		return fmt.Errorf("failed to remove original object '%s' after succcessfully copying it to '%s': %v", src, dst, err)
 	}
 
 	return nil
@@ -164,7 +186,7 @@ func (m *minioStorage) MoveObject(src, dst string) error {
 
 // func PutObject is a the concrete implementation of the ObjectStorage interface method
 // which uploads an object to the MinIO storage service.
-func (m *minioStorage) PutObject(key string, data []byte, contentType string) error {
+func (m *minioStorage) PutObject(ctx context.Context, key string, data []byte, contentType string) error {
 
 	opts := minio.PutObjectOptions{
 		ContentType: contentType,
@@ -172,7 +194,7 @@ func (m *minioStorage) PutObject(key string, data []byte, contentType string) er
 
 	// upload the object to the bucket
 	_, err := m.client.PutObject(
-		m.ctx,
+		ctx,
 		m.bucket,
 		key,
 		bytes.NewReader(data),

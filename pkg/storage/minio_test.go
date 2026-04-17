@@ -1,139 +1,157 @@
 package storage
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
+	"context"
+	"strings"
 	"testing"
 	"time"
-
-	onepassword "github.com/tdeslauriers/carapace/pkg/one_password"
 )
 
-const testImage = "uploads/a9a6e506-e7b4-457b-82e5-93a7152103f9.jpg"
+// TestMoveObjectSameKey verifies that MoveObject returns nil without
+// calling the MinIO SDK when src and dst are identical.
+func TestMoveObjectSameKey(t *testing.T) {
+	m := &minioStorage{
+		bucket: "my-bucket",
+		expiry: 15 * time.Minute,
+		// client intentionally nil: if the SDK is called, this test will panic,
+		// which is the correct signal that the early-return guard is broken.
+	}
 
-func TestGetSignedUrl(t *testing.T) {
-
-	config, tls, err := setUp()
+	err := m.MoveObject(context.Background(), "images/photo.jpg", "images/photo.jpg")
 	if err != nil {
-		t.Fatalf("failed to set up test: %v", err)
+		t.Fatalf("MoveObject with identical src and dst should return nil, got: %v", err)
 	}
-
-	minio, err := New(*config, tls, 10*time.Minute)
-	if err != nil {
-		t.Fatalf("failed to create minio client: %v", err)
-	}
-
-	signedUrl, err := minio.GetSignedUrl(testImage)
-	if err != nil {
-		t.Fatalf("failed to get signed URL: %v", err)
-	}
-	if signedUrl == nil {
-		t.Fatal("expected a signed URL, got nil")
-	}
-	if signedUrl.String() == "" {
-		t.Fatal("expected a non-empty signed URL")
-	}
-
-	t.Logf("Signed URL: %s", signedUrl.String())
 }
 
-func TestWithObject(t *testing.T) {
-
-	config, tls, err := setUp()
-	if err != nil {
-		t.Fatalf("failed to set up test: %v", err)
+// TestMoveObjectKeyValidation verifies that MoveObject rejects invalid src/dst
+// keys before reaching the MinIO SDK.
+func TestMoveObjectKeyValidation(t *testing.T) {
+	m := &minioStorage{
+		bucket: "my-bucket",
+		expiry: 15 * time.Minute,
+		// client intentionally nil: SDK must not be reached for these cases.
 	}
 
-	minio, err := New(*config, tls, 10*time.Minute)
-	if err != nil {
-		t.Fatalf("failed to create minio client: %v", err)
+	tests := []struct {
+		name      string
+		src       string
+		dst       string
+		errSubstr string
+	}{
+		{
+			name:      "invalid_src_empty",
+			src:       "",
+			dst:       "images/photo.jpg",
+			errSubstr: "source",
+		},
+		{
+			name:      "invalid_src_path_traversal",
+			src:       "../../etc/passwd",
+			dst:       "images/photo.jpg",
+			errSubstr: "source",
+		},
+		{
+			name:      "invalid_dst_empty",
+			src:       "images/photo.jpg",
+			dst:       "",
+			errSubstr: "destination",
+		},
+		{
+			name:      "invalid_dst_null_byte",
+			src:       "images/photo.jpg",
+			dst:       "images/\x00photo.jpg",
+			errSubstr: "destination",
+		},
 	}
 
-	err = minio.WithObject(testImage, func(r ReadSeekCloser) error {
-		if r == nil {
-			return fmt.Errorf("expected a non-nil ReadSeekCloser")
-		}
-		buf := make([]byte, 512)
-		n, err := r.Read(buf)
-		if err != nil {
-			return fmt.Errorf("failed to read from object stream: %v", err)
-		}
-		if n == 0 {
-			return fmt.Errorf("expected to read some bytes from object stream, got 0")
-		}
-		t.Logf("Read %d bytes from object stream", n)
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("WithObject failed: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := m.MoveObject(context.Background(), tt.src, tt.dst)
+			if err == nil {
+				t.Fatalf("expected error for src=%q dst=%q, got nil", tt.src, tt.dst)
+			}
+			if tt.errSubstr != "" && !strings.Contains(err.Error(), tt.errSubstr) {
+				t.Fatalf("expected error containing %q, got %q", tt.errSubstr, err.Error())
+			}
+		})
 	}
-
 }
 
-func setUp() (*Config, *tls.Config, error) {
+// invalidKeyTests is a shared set of invalid key cases used across method-level
+// key validation tests — each method validates keys the same way.
+var invalidKeyTests = []struct {
+	name  string
+	input string
+}{
+	{
+		name:  "empty_key",
+		input: "",
+	},
+	{
+		name:  "path_traversal",
+		input: "../../etc/passwd",
+	},
+	{
+		name:  "null_byte",
+		input: "uploads/file\x00name.jpg",
+	},
+}
 
-	op := onepassword.NewCli()
-
-	// get minio creds
-	minioCreds, err := op.GetItem("pixie_minio_dev", "world_site")
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get minio credentials: %v", err)
+// TestGetPreSignedPutUrlKeyValidation verifies that GetPreSignedPutUrl rejects
+// invalid object keys before reaching the MinIO SDK.
+func TestGetPreSignedPutUrlKeyValidation(t *testing.T) {
+	m := &minioStorage{
+		bucket: "my-bucket",
+		expiry: 15 * time.Minute,
+		// client intentionally nil: SDK must not be reached for these cases.
 	}
 
-	var accessKey, secretKey string
-	for _, cred := range minioCreds.Fields {
-		if cred.Label == "username" {
-			accessKey = cred.Value
-
-		}
-		if cred.Label == "password" {
-			secretKey = cred.Value
-
-		}
+	for _, tt := range invalidKeyTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := m.GetPreSignedPutUrl(context.Background(), tt.input)
+			if err == nil {
+				t.Fatalf("expected error for key %q, got nil", tt.input)
+			}
+		})
 	}
+}
 
-	config := Config{
-		Url:       "localhost:9000",
-		Bucket:    "gallerydev",
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-	}
-
-	// get CA cert for minio endpoint
-	ca, err := op.GetDocument("service_ca_dev_cert", "world_site")
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get CA certificate: %v", err)
+// TestGetSignedUrlKeyValidation verifies that GetSignedUrl rejects invalid
+// object keys before reaching the MinIO SDK.
+func TestGetSignedUrlKeyValidation(t *testing.T) {
+	m := &minioStorage{
+		bucket: "my-bucket",
+		expiry: 15 * time.Minute,
+		// client intentionally nil: SDK must not be reached for these cases.
 	}
 
-	certPem, err := op.GetDocument("pixie_service_client_dev_cert", "world_site")
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get client certificate: %v", err)
+	for _, tt := range invalidKeyTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := m.GetSignedUrl(context.Background(), tt.input)
+			if err == nil {
+				t.Fatalf("expected error for key %q, got nil", tt.input)
+			}
+		})
 	}
-	keyPem, err := op.GetDocument("pixie_service_client_dev_key", "world_site")
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get client key: %v", err)
+}
+
+// TestWithObjectKeyValidation verifies that WithObject rejects invalid object
+// keys before reaching the MinIO SDK.
+func TestWithObjectKeyValidation(t *testing.T) {
+	m := &minioStorage{
+		bucket: "my-bucket",
+		expiry: 15 * time.Minute,
+		// client intentionally nil: SDK must not be reached for these cases.
 	}
 
-	cert, err := tls.X509KeyPair([]byte(certPem), []byte(keyPem))
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse X509 key pair: %v", err)
+	for _, tt := range invalidKeyTests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := m.WithObject(context.Background(), tt.input, func(r ReadSeekCloser) error {
+				return nil
+			})
+			if err == nil {
+				t.Fatalf("expected error for key %q, got nil", tt.input)
+			}
+		})
 	}
-
-	// load CA certificates
-	systemCertPool, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get system cert pool: %v", err)
-	}
-	if ok := systemCertPool.AppendCertsFromPEM(ca); !ok {
-		return nil, nil, fmt.Errorf("failed to append additional ca cert to system cert pool")
-	}
-	// create tls config with CA cert
-	tlsConfig := &tls.Config{
-		Certificates:       []tls.Certificate{cert},
-		RootCAs:            systemCertPool,
-		InsecureSkipVerify: false,
-	}
-
-	return &config, tlsConfig, nil
 }
