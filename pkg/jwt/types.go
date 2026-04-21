@@ -20,7 +20,6 @@ const (
 
 	// UserForbdiddenErrMsg is a generalized error message returned when a user token is unauthorized.
 	UserForbdiddenErrMsg = "forbidden: user access token does not contain either the correct audience, the correct scopes, or both"
-
 )
 
 const (
@@ -163,4 +162,31 @@ func BuildFromToken(token string) (*Token, error) {
 		BaseString: segments[0] + "." + segments[1],
 		Signature:  sig,
 		Token:      token}, nil
+}
+
+// BuildAudiences is a helper func to build audience []string from a string of space-delimited scope string values, eg., "w:service:* r:service:*"
+// Note: it is included in this package because it refers directly to the Scope struct in this package.
+func BuildAudiences(scopes string) (audiences []string) {
+
+	var services []string
+
+	// split scopes by space
+	scps := strings.Split(scopes, " ")
+
+	// iterate over each scope and split by : to get the service name
+	for _, scope := range scps {
+		chunk := strings.Split(scope, ":") // splits scope by : -> w:service:*
+		services = append(services, chunk[1])
+	}
+
+	// build unique (no duplicates) list of services
+	uniqueServices := make(map[string]struct{}, 0) // ie, one of each value
+	for _, service := range services {
+		if _, ok := uniqueServices[service]; !ok {
+			uniqueServices[service] = struct{}{}
+			audiences = append(audiences, service)
+		}
+	}
+
+	return audiences
 }

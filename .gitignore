@@ -22,3 +22,6 @@ go.work
 
 # certs --> should never be here, but just in case
 *.pem
+
+# llm files
+.claude/
