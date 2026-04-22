@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/tdeslauriers/carapace/pkg/data"
@@ -11,13 +12,13 @@ type Repository interface {
 
 	// FindActiveTokens retrieves all active service tokens from the database for a specified service name.
 	// Active is defined by tokens tied to an unexpired refresh
-	FindActiveTokens(serviceName string) ([]S2sAuthorization, error)
+	FindActiveTokens(ctx context.Context, serviceName string) ([]S2sAuthorization, error)
 
 	// InsertToken inserts a new service token record into the database.
-	InsertToken(token S2sAuthorization) error
+	InsertToken(ctx context.Context, token S2sAuthorization) error
 
 	// DeleteServiceTknById deletes a service token by its uuid from the database.
-	DeleteTokenById(uuid string) error
+	DeleteTokenById(ctx context.Context, uuid string) error
 }
 
 // NewRepository creates a new instance of Repository, returning an underlying concrete impl.
@@ -36,7 +37,7 @@ type repository struct {
 
 // FindActiveTokens retrieves all active service tokens from the database.
 // Active is defined by tokens tied to an unexpired refresh
-func (r *repository) FindActiveTokens(serviceName string) ([]S2sAuthorization, error) {
+func (r *repository) FindActiveTokens(ctx context.Context, serviceName string) ([]S2sAuthorization, error) {
 
 	qry := `
 		SELECT 
@@ -54,7 +55,7 @@ func (r *repository) FindActiveTokens(serviceName string) ([]S2sAuthorization, e
 }
 
 // InsertToken inserts a new service token record into the database.
-func (r *repository) InsertToken(token S2sAuthorization) error {
+func (r *repository) InsertToken(ctx context.Context, token S2sAuthorization) error {
 
 	qry := `
 		INSERT INTO servicetoken (
@@ -70,7 +71,7 @@ func (r *repository) InsertToken(token S2sAuthorization) error {
 }
 
 // DeleteServiceTknById deletes a service token by its uuid from the database.
-func (r *repository) DeleteTokenById(uuid string) error {
+func (r *repository) DeleteTokenById(ctx context.Context, uuid string) error {
 
 	qry := `
 		DELETE FROM servicetoken

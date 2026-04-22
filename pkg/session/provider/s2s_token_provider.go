@@ -56,7 +56,7 @@ type s2sTokenProvider struct {
 // GetServiceToken implements the S2sTokenProvider interface for service-to-service token retrieval.
 // It looks fro active service tokens in the local db, and if none are found, it will attempt to refresh
 // the token using the refresh token. If no active refresh tokens are found, it will attempt to login and get a new token.
-func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName string) (jwt string, e error) {
+func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName string) (string, error) {
 
 	// local logger for the function to prevent field accumulation across calls
 	logger := p.logger
@@ -66,11 +66,11 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 	if ok && telemetry != nil {
 		logger = logger.With(telemetry.TelemetryFields()...)
 	} else {
-		logger.Warn("failed to extract telemetry from context of s2s GetServiceToken call")
+		logger.Debug("no telemetry found in context of s2s GetServiceToken call")
 	}
 
 	// pull tokens with un-expired refresh
-	tokens, err := p.retrieveS2sTokens(serviceName)
+	tokens, err := p.retrieveS2sTokens(ctx, serviceName)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve service tokens for %s: %v", serviceName, err)
 	}
@@ -81,12 +81,17 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 
 			// check for active s2s token
 			if token.TokenExpires.Time.After(time.Now().UTC()) {
-				logger.Info(fmt.Sprintf("active %s s2s token present, jti: %s", serviceName, token.Jti))
+				logger.Info("active s2s token present",
+					slog.String("service", serviceName),
+					slog.String("jti", token.Jti),
+				)
 
 				// decrypt service token
 				decrypted, err := p.cryptor.DecryptServiceData(token.ServiceToken)
 				if err != nil {
-					logger.Error(fmt.Sprintf("failed to decrypt %s s2s token: jti %s", serviceName, token.Jti),
+					logger.Error("failed to decrypt s2s token",
+						slog.String("service", serviceName),
+						slog.String("jti", token.Jti),
 						slog.String("err", err.Error()),
 					)
 				} else {
@@ -96,16 +101,21 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 				}
 			} else {
 				// opportunistically delete expired service token
-				go func(id string) {
+				go func(ctx context.Context, id string) {
 
-					if err := p.db.DeleteTokenById(id); err != nil {
-						logger.Error(fmt.Sprintf("failed to delete expired service token for %s: jti %s", serviceName, id),
+					if err := p.db.DeleteTokenById(ctx, id); err != nil {
+						logger.Error("failed to delete expired service token",
+							slog.String("service", serviceName),
+							slog.String("jti", id),
 							slog.String("err", err.Error()),
 						)
 						return
 					}
-					logger.Info(fmt.Sprintf("deleted expired %s s2s token: jti %s", serviceName, id))
-				}(token.Jti)
+					logger.Info("deleted expired s2s token",
+						slog.String("service", serviceName),
+						slog.String("jti", id),
+					)
+				}(ctx, token.Jti)
 			}
 		}
 
@@ -115,13 +125,17 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 		// token in s2s auth service.
 		// return first successful refresh
 		for _, token := range tokens {
-			logger.Info(fmt.Sprintf("refreshing %s s2s token, jti %s", serviceName, token.Jti))
+			logger.Info("refreshing s2s token",
+				slog.String("service", serviceName),
+				slog.String("jti", token.Jti),
+			)
 
 			// call s2s auth service to refresh token
 			authz, err := p.refreshS2sToken(ctx, token.RefreshToken, serviceName) // decrypts
 			if err != nil {
-				logger.Error(fmt.Sprintf("failed to refresh %s s2s token: jti %s",
-					token.ServiceName, token.Jti),
+				logger.Error("failed to refresh s2s token",
+					slog.String("service", token.ServiceName),
+					slog.String("jti", token.Jti),
 					slog.String("err", err.Error()),
 				)
 				continue
@@ -129,37 +143,49 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 
 			// persist new service token and replacement refresh token
 			// keeps the same refresh expiry as the token it is replacing
-			go func(a S2sAuthorization) {
-				if err := p.persistS2sToken(a); err != nil {
-					logger.Warn(fmt.Sprintf("failed to persist refreshed %s s2s token: jit %s", serviceName, a.Jti),
+			go func(ctx context.Context, a S2sAuthorization) {
+				if err := p.persistS2sToken(ctx, a); err != nil {
+					logger.Warn("failed to persist refreshed s2s token",
+						slog.String("service", serviceName),
+						slog.String("jti", a.Jti),
 						slog.String("err", err.Error()),
 					)
 					return
 				}
-			}(*authz)
+			}(ctx, *authz)
 
 			// opportunistically delete claimed refresh token/expired service token record
 			// since claimed refresh token will have been deleted by s2s auth service after use.
-			go func(id string) {
+			go func(ctx context.Context, id string) {
 
-				if err := p.db.DeleteTokenById(id); err != nil {
-					logger.Error(fmt.Sprintf("failed to delete claimed refresh token for %s: jti %s", serviceName, id),
+				if err := p.db.DeleteTokenById(ctx, id); err != nil {
+					logger.Error("failed to delete claimed refresh token",
+						slog.String("service", serviceName),
+						slog.String("jti", id),
 						slog.String("err", err.Error()),
 					)
 					return
 				}
 
-				logger.Info(fmt.Sprintf("deleted claimed refresh token for %s, jti %s", serviceName, id))
-			}(token.Jti)
+				logger.Info("deleted claimed refresh token",
+					slog.String("service", serviceName),
+					slog.String("jti", id),
+				)
+			}(ctx, token.Jti)
 
-			logger.Info(fmt.Sprintf("successfully refreshed %s s2s token: jti %s", serviceName, authz.Jti))
+			logger.Info("successfully refreshed s2s token",
+				slog.String("service", serviceName),
+				slog.String("jti", authz.Jti),
+			)
 
 			return authz.ServiceToken, nil
 		}
 	}
 
 	// no active s2s tokens, no active refresh tokens, get new service token
-	logger.Info(fmt.Sprintf("no active %s s2s access or refresh tokens found, authenticating", serviceName))
+	logger.Info("no active s2s access or refresh tokens found, authenticating",
+		slog.String("service", serviceName),
+	)
 
 	// login to s2s authn endpoint
 	authz, err := p.s2sLogin(ctx, serviceName)
@@ -168,17 +194,20 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 	}
 
 	// persist new service token, etc.
-	go func(a S2sAuthorization) {
-		if err := p.persistS2sToken(a); err != nil {
-			logger.Warn(fmt.Sprintf("failed to persist %s s2s token", serviceName),
+	go func(ctx context.Context, a S2sAuthorization) {
+		if err := p.persistS2sToken(ctx, a); err != nil {
+			logger.Warn("failed to persist s2s token",
+				slog.String("service", serviceName),
 				slog.String("err", err.Error()),
 			)
 			return
 		}
+	}(ctx, authz)
 
-	}(authz)
-
-	logger.Info(fmt.Sprintf("successfully authenticated to %s s2s authentication service: jti %s", serviceName, authz.Jti))
+	logger.Info("successfully authenticated to s2s authentication service",
+		slog.String("service", serviceName),
+		slog.String("jti", authz.Jti),
+	)
 	return authz.ServiceToken, nil
 }
 
@@ -210,7 +239,7 @@ func (p *s2sTokenProvider) s2sLogin(ctx context.Context, service string) (S2sAut
 // persistS2sToken encrypts and saves service tokens to local maria db
 // note: this new record will have the same refresh-expiry as the one it it replacing, so that
 // refresh cycles remain consistent, and cant go on forever.
-func (p *s2sTokenProvider) persistS2sToken(authz S2sAuthorization) error {
+func (p *s2sTokenProvider) persistS2sToken(ctx context.Context, authz S2sAuthorization) error {
 
 	// encrypt service token and refresh token
 	encServiceToken, err := p.cryptor.EncryptServiceData([]byte(authz.ServiceToken))
@@ -225,7 +254,7 @@ func (p *s2sTokenProvider) persistS2sToken(authz S2sAuthorization) error {
 	}
 	authz.RefreshToken = encRefreshToken
 
-	if err := p.db.InsertToken(authz); err != nil {
+	if err := p.db.InsertToken(ctx, authz); err != nil {
 		return fmt.Errorf("failed to persist service token (jti %s) for %s: %v", authz.Jti, authz.ServiceName, err)
 	}
 
@@ -233,9 +262,9 @@ func (p *s2sTokenProvider) persistS2sToken(authz S2sAuthorization) error {
 }
 
 // retrieveS2sTokens gets active service tokens from local store
-func (p *s2sTokenProvider) retrieveS2sTokens(service string) ([]S2sAuthorization, error) {
+func (p *s2sTokenProvider) retrieveS2sTokens(ctx context.Context, service string) ([]S2sAuthorization, error) {
 
-	tokens, err := p.db.FindActiveTokens(service)
+	tokens, err := p.db.FindActiveTokens(ctx, service)
 	if err != nil {
 		return tokens, fmt.Errorf("failed to select service token records for %s: %v", service, err)
 	}
