@@ -38,15 +38,20 @@ type verifier struct {
 
 // VerifySignature implements the Verifier interface.  It takes in a message and signature and verifies the signature against the message.
 func (v *verifier) VerifySignature(msg string, sig []byte) error {
+	return v.verifySignature(msg, sig)
+}
+
+// verifySignature takes in a message and signature and verifies the signature against the message.
+func (v *verifier) verifySignature(msg string, sig []byte) error {
 
 	// check for no msg
 	if msg == "" {
 		return fmt.Errorf("unauthorized: missing message")
 	}
 
-	// check for no signature
-	if len(sig) == 0 {
-		return fmt.Errorf("unauthorized: missing signature")
+	// ES512 raw r‖s serialization is always exactly 2*Keysize bytes.
+	if len(sig) != 2*Keysize {
+		return fmt.Errorf("unauthorized: invalid signature length: expected %d bytes, got %d", 2*Keysize, len(sig))
 	}
 
 	// hash base signature string
@@ -73,15 +78,33 @@ func (v *verifier) VerifySignature(msg string, sig []byte) error {
 // It also checks for "Bearer " and snips if present
 func (v *verifier) BuildAuthorized(allowedScopes []string, token string) (*Token, error) {
 
-	token = strings.TrimPrefix(token, "Bearer ")
+	trimmed := strings.TrimSpace(token)
 
-	jot, err := BuildFromToken(token)
+	token = strings.TrimPrefix(trimmed, "Bearer ")
+
+	// check for empty token
+	if token == "" {
+		return nil, fmt.Errorf("unauthorized: missing token")
+	}
+
+	jot, err := BuildTokenFromRaw(token)
 	if err != nil {
 		return nil, err
 	}
 
+	// quick input validation
+	// header is correct algorithm and type
+	if err := jot.Header.ValidateHeader(); err != nil {
+		return nil, fmt.Errorf("unauthorized: invalid token header: %v", err)
+	}
+
+	// claims have at minimum required fields
+	if err := jot.Claims.ValidateClaims(); err != nil {
+		return nil, fmt.Errorf("unauthorized: invalid token claims: %v", err)
+	}
+
 	// check signature
-	if err := v.VerifySignature(jot.BaseString, jot.Signature); err != nil {
+	if err := v.verifySignature(jot.BaseString, jot.Signature); err != nil {
 		return nil, err
 	}
 
@@ -97,7 +120,7 @@ func (v *verifier) BuildAuthorized(allowedScopes []string, token string) (*Token
 	}
 
 	// check audiences
-	if ok := v.hasValidAudences(jot); !ok {
+	if ok := v.hasValidAudiences(jot); !ok {
 		return nil, fmt.Errorf("forbidden: incorrect audience")
 	}
 
@@ -111,17 +134,11 @@ func (v *verifier) BuildAuthorized(allowedScopes []string, token string) (*Token
 
 // hasValidAudiences is a helper method which checks if the jwt token has the correct audience.
 // It does not validate the signature of the token.
-func (v *verifier) hasValidAudences(jot *Token) bool {
+func (v *verifier) hasValidAudiences(jot *Token) bool {
 
-	if len(jot.Claims.Audience) > 0 {
-		for _, aud := range jot.Claims.Audience {
-			if aud == v.ServiceName {
-				return true
-			}
-		}
-	}
+	audiences := jot.Claims.MapAudiences()
 
-	return false
+	return audiences[v.ServiceName]
 }
 
 // hasValidScopes is a helper method which checks if the jwt token has the correct scopes.
@@ -133,14 +150,8 @@ func (v *verifier) hasValidScopes(allowedScopes []string, jot *Token) bool {
 		return false
 	}
 
-	// parse scopes string to slice
-	scopes := strings.Split(jot.Claims.Scopes, " ")
-
 	// set jwt scopes to map
-	jwtScopes := make(map[string]bool)
-	for _, scope := range scopes {
-		jwtScopes[scope] = true
-	}
+	jwtScopes := jot.Claims.MapScopes()
 
 	// check if allowed scopes are in jwt scopes
 	for _, allowed := range allowedScopes {
@@ -149,6 +160,6 @@ func (v *verifier) hasValidScopes(allowedScopes []string, jot *Token) bool {
 		}
 	}
 
-	// default to false: unauthorized
+	// default to false -> unauthorized
 	return false
 }

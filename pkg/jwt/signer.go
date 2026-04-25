@@ -29,10 +29,24 @@ type signer struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
-// createSignature takes the BaseString (msg) comprised of 
+// createSignature takes the BaseString (msg) comprised of
 // the base64 encoded json header + . + claims of the jwt token
 // creates a cryptographic signature for the jwt token and adds it to the jwt Token struct
-func (signer *signer) createSignature(msg string, jwt *Token) error {
+func (sgn *signer) createSignature(msg string, jwt *Token) error {
+
+	// check for empty message
+	if msg == "" {
+		return fmt.Errorf("failed to create jwt signature: missing message")
+	}
+
+	// quick input validation of header and claims
+	if err := jwt.Header.ValidateHeader(); err != nil {
+		return fmt.Errorf("failed to create jwt signature: invalid token header: %w", err)
+	}
+
+	if err := jwt.Claims.ValidateClaims(); err != nil {
+		return fmt.Errorf("failed to create jwt signature: invalid token claims: %w", err)
+	}
 
 	// hash to sha512
 	hasher := sha512.New()
@@ -40,44 +54,46 @@ func (signer *signer) createSignature(msg string, jwt *Token) error {
 	hashedMsg := hasher.Sum(nil)
 
 	// sign with ecdsa 512 priv key
-	if r, s, err := ecdsa.Sign(rand.Reader, signer.PrivateKey, hashedMsg); err == nil {
-
-		// validate length in bits
-		curveBytes := signer.PrivateKey.Curve.Params().BitSize
-		keyBytes := curveBytes / 8
-		if curveBytes%8 > 0 {
-			keyBytes += 1
-		}
-
-		// serialize r and s
-		out := make([]byte, 2*keyBytes)
-		r.FillBytes(out[0:keyBytes])
-		s.FillBytes(out[keyBytes:])
-
-		jwt.Signature = out
-		return nil
-	} else {
-		return err
+	r, s, err := ecdsa.Sign(rand.Reader, sgn.PrivateKey, hashedMsg)
+	if err != nil {
+		return fmt.Errorf("failed to sign jwt token msg: %w", err)
 	}
+
+	// validate length in bits
+	curveBytes := sgn.PrivateKey.Curve.Params().BitSize
+	keyBytes := curveBytes / 8
+	if curveBytes%8 > 0 {
+		keyBytes++
+	}
+
+	// serialize r and s
+	out := make([]byte, 2*keyBytes)
+	r.FillBytes(out[0:keyBytes])
+	s.FillBytes(out[keyBytes:])
+
+	jwt.Signature = out
+
+	return nil
+
 }
 
 // Mint implements the Signer interface and creates, appends a cryptographic signature to the jwt Token.Signature field.
 // It also creates, appends the base64 encoded token to the jwt Token struct
 // Mint assumes the jwt Token.Header and jwt Token.Claims fields are already populated
-func (signer *signer) Mint(jwt *Token) error {
+func (sgn *signer) Mint(jwt *Token) error {
 
 	msg, err := jwt.BuildBaseString()
 	if err != nil {
-		return fmt.Errorf("failed to create jwt signature base string(message): %v", err)
+		return fmt.Errorf("failed to create jwt signature base string(message): %w", err)
 	}
 	jwt.BaseString = msg
 
-	if err := signer.createSignature(msg, jwt); err != nil {
-		return fmt.Errorf("failed to create jwt signature: %v", err)
+	if err := sgn.createSignature(msg, jwt); err != nil {
+		return fmt.Errorf("failed to create jwt signature: %w", err)
 	}
-	sig := base64.URLEncoding.EncodeToString(jwt.Signature)
+	sig := base64.RawURLEncoding.EncodeToString(jwt.Signature)
 
-	jwt.Token = msg + "." + sig
+	jwt.Raw = msg + "." + sig
 
 	return nil
 }

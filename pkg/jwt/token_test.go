@@ -172,7 +172,7 @@ func TestIsAuthorized(t *testing.T) {
 				},
 			},
 
-			err: errors.New("unauthorized: missing signature"),
+			err: errors.New("unauthorized: invalid signature length"),
 		},
 		{
 			name: "fail - invalid signature: truncated", // trucated signature
@@ -191,7 +191,7 @@ func TestIsAuthorized(t *testing.T) {
 				Signature: []byte("invalid-signature"),
 			},
 
-			err: errors.New("failed to decode signature from token:"),
+			err: errors.New("unauthorized: invalid signature length:"),
 		},
 		{
 			name: "fail - invalid signature: wrong signature", // taken from a different test case
@@ -231,26 +231,26 @@ func TestIsAuthorized(t *testing.T) {
 			// TEST: tampering with the base string for test name: "fail - valid signature, tampered base string"
 			if tc.jwt.Claims.Subject == "liar-liar" {
 				// taking the valid signature from successful test case token and adding it to the tampered base string
-				tc.jwt.Token = tc.jwt.BaseString + "." + "AZ1zKzfskIJNz3lP4f-QKK2VTIP9APxbLLnwVmZcLQi7PFC_PHmDkIlVQvc0AqTiGexMXdpcbzrQ2CocOrvM5fMoACcv2N8nYDRggKgOtoVHQEPXH1nknb4_H7_ZUqpLxuimip_6Tmdsj_PQh1c3YK3rbngxIgNuewCxgHCLG4Pq93B4"
+				tc.jwt.Raw = tc.jwt.BaseString + "." + "AZ1zKzfskIJNz3lP4f-QKK2VTIP9APxbLLnwVmZcLQi7PFC_PHmDkIlVQvc0AqTiGexMXdpcbzrQ2CocOrvM5fMoACcv2N8nYDRggKgOtoVHQEPXH1nknb4_H7_ZUqpLxuimip_6Tmdsj_PQh1c3YK3rbngxIgNuewCxgHCLG4Pq93B4"
 			}
 
 			// TEST: empty signature for test name: "fail - missing signature"
 			if tc.jwt.Claims.Subject == "empty signature" {
-				tc.jwt.Token = tc.jwt.BaseString + "."
+				tc.jwt.Raw = tc.jwt.BaseString + "."
 				tc.jwt.Signature = nil
 			}
 
 			// TEST: invalid signature for test name: "fail - invalid signature"
 			if tc.jwt.Claims.Subject == "truncated signature" {
-				tc.jwt.Token = tc.jwt.Token[0 : len(tc.jwt.Token)-10]
+				tc.jwt.Raw = tc.jwt.Raw[0 : len(tc.jwt.Raw)-10]
 			}
 
 			// TEST: wrong sigature: signature from a different token
 			if tc.jwt.Claims.Subject == "wrong signature" {
-				tc.jwt.Token = tc.jwt.BaseString + "." + "AHodklXjRKSu5Xu1_Fs5tfYm4l9IRv6l4gKAP8j1MEzmwvbWMziVl_3foJOAy5GFXBsxq7E40r9ZH9HOEP25NAvzAAai54I2twNS-DM81tbiaLpOjDwOqU4PImPcaKaoWAkLZKfm7jeFmYHqLu3o_-rcO3aHvb7CchRj8MLVXgE9UxgA"
+				tc.jwt.Raw = tc.jwt.BaseString + "." + "AHodklXjRKSu5Xu1_Fs5tfYm4l9IRv6l4gKAP8j1MEzmwvbWMziVl_3foJOAy5GFXBsxq7E40r9ZH9HOEP25NAvzAAai54I2twNS-DM81tbiaLpOjDwOqU4PImPcaKaoWAkLZKfm7jeFmYHqLu3o_-rcO3aHvb7CchRj8MLVXgE9UxgA"
 			}
 
-			_, err = verifier.BuildAuthorized(RealAllowedScopes, tc.jwt.Token)
+			_, err = verifier.BuildAuthorized(RealAllowedScopes, tc.jwt.Raw)
 			if err != nil && !strings.Contains(err.Error(), tc.err.Error()) {
 				t.Errorf("Expected error: %v, got: %v", tc.err, err)
 			}

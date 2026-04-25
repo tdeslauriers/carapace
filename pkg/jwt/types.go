@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/tdeslauriers/carapace/pkg/validate"
 )
 
 const (
@@ -34,6 +36,18 @@ type Header struct {
 	Typ string `json:"typ"`
 }
 
+// ValidateHeader checks that the jwt header fields match the expected algorithm and token type.
+// It rejects any algorithm other than ES512, including "none", which is an exploit vector.
+func (h *Header) ValidateHeader() error {
+	if h.Alg != ES512 {
+		return fmt.Errorf("invalid jwt header: alg must be %s, got %q", ES512, h.Alg)
+	}
+	if h.Typ != TokenType {
+		return fmt.Errorf("invalid jwt header: typ must be %s, got %q", TokenType, h.Typ)
+	}
+	return nil
+}
+
 // Claims is the second part of a jwt including the issuer, subject, audience, issued at, not before, and expiration
 // Scopes is a space delimited string of scopes
 // Fields for ID Token (OICD Conncet Standard) are included, but omitted if empty
@@ -56,24 +70,66 @@ type Claims struct {
 	Birthdate  string `json:"birthdate,omitempty"`   // date of birth
 }
 
+// ValidateClaims checks that required claims fields are present and well-formed.
+// Time-based checks (expiry, not-before) and semantic checks (audience match, scope match)
+// are the responsibility of the Verifier.
+func (c *Claims) ValidateClaims() error {
+
+	if c.Issuer == "" {
+		return fmt.Errorf("invalid jwt claims: issuer (iss) is required")
+	}
+
+	if c.Subject == "" {
+		return fmt.Errorf("invalid jwt claims: subject (sub) is required")
+	}
+
+	if len(c.Audience) == 0 {
+		return fmt.Errorf("invalid jwt claims: audience (aud) is required")
+	}
+
+	if c.IssuedAt == 0 {
+		return fmt.Errorf("invalid jwt claims: issued at (iat) is required")
+	}
+
+	if c.Expires == 0 {
+		return fmt.Errorf("invalid jwt claims: expiration (exp) is required")
+	}
+
+	if c.Jti != "" {
+		if err := validate.ValidateUuid(c.Jti); err != nil {
+			return fmt.Errorf("invalid jwt claims: jti must be a valid uuid: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // MapAudiences is a convenience method that creates a map of audiences from the claims for easy lookup.
 func (c *Claims) MapAudiences() map[string]bool {
 
-	audMap := make(map[string]bool, len(c.Audience))
+	if len(c.Audience) == 0 {
+		return nil
+	}
 
+	audMap := make(map[string]bool, len(c.Audience))
 	for _, aud := range c.Audience {
 		audMap[aud] = true
 	}
+
 	return audMap
 }
 
 // MapScopes is a convenience method that creates a map of scopes from the claims for easy lookup.
 func (c *Claims) MapScopes() map[string]bool {
 
-	scopes := strings.Split(c.Scopes, " ")
+	var scopeMap map[string]bool
+	for scope := range strings.FieldsSeq(c.Scopes) {
 
-	scopeMap := make(map[string]bool, len(scopes))
-	for _, scope := range scopes {
+		if scopeMap == nil {
+
+			scopeMap = make(map[string]bool)
+		}
+
 		scopeMap[scope] = true
 	}
 
@@ -87,7 +143,7 @@ type Token struct {
 	Claims     Claims
 	BaseString string // first two segments of the token, base64 encoded header.claims
 	Signature  []byte
-	Token      string // base 64 encoded token header.claims.signature
+	Raw        string // base 64 encoded token header.claims.signature
 }
 
 // BuildBaseString  is a helper funciton that returns a base64 encoded string of the jwt header and claims.
@@ -97,25 +153,25 @@ func (jwt *Token) BuildBaseString() (string, error) {
 	// header to json -> base64
 	jsonHeader, err := json.Marshal(jwt.Header)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal jwt header to json")
+		return "", fmt.Errorf("failed to marshal jwt header to json: %w", err)
 	}
-	encodedHeader := base64.URLEncoding.EncodeToString(jsonHeader)
+	encodedHeader := base64.RawURLEncoding.EncodeToString(jsonHeader)
 
 	// claims to json -> base64
 	jsonClaims, err := json.Marshal(jwt.Claims)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal jwt claims to json")
+		return "", fmt.Errorf("failed to marshal jwt claims to json: %w", err)
 	}
-	encodedClaims := base64.URLEncoding.EncodeToString(jsonClaims)
+	encodedClaims := base64.RawURLEncoding.EncodeToString(jsonClaims)
 
 	// chunks := [2]string{encodedHeader, encodedClaims}
 	// return strings.Join(chunks[:], "."), nil
 	return encodedHeader + "." + encodedClaims, nil
 }
 
-// BuildFromToken is a helper function that takes a jwt token string, decodes it, and returns a jwt Token struct.
-// NOTE: that the signature is NOT verified in this function.
-func BuildFromToken(token string) (*Token, error) {
+// BuildTokenFromRaw is a helper function that takes a jwt token string, decodes it, and returns a jwt Token struct.
+// NOTE: signature (and other data/fields) is NOT verified in this function: builder/decoder only.
+func BuildTokenFromRaw(token string) (*Token, error) {
 
 	// light weight validation
 	if len(token) < 16 || len(token) > 4096 { // larger than a typical token or a cookie can store
@@ -124,13 +180,13 @@ func BuildFromToken(token string) (*Token, error) {
 
 	// split token into segments
 	segments := strings.Split(token, ".")
-	if len(segments) < 3 || len(segments) > 3 {
+	if len(segments) != 3 {
 		return nil, fmt.Errorf("jwt token not properly formatted into 3 segments separated by '.'")
 	}
 
 	// parse header
 	var header Header
-	decodedHead, err := base64.URLEncoding.DecodeString(segments[0])
+	decodedHead, err := base64.RawURLEncoding.DecodeString(segments[0])
 	if err != nil {
 		return nil, fmt.Errorf("failed to base64 decode jwt header segment from token string: %v", err)
 	}
@@ -141,7 +197,7 @@ func BuildFromToken(token string) (*Token, error) {
 
 	// parse claims
 	var claims Claims
-	decodedClaims, err := base64.URLEncoding.DecodeString(segments[1])
+	decodedClaims, err := base64.RawURLEncoding.DecodeString(segments[1])
 	if err != nil {
 		return nil, fmt.Errorf("failed to base64 decode jwt claims segment from token string: %v", err)
 	}
@@ -151,7 +207,7 @@ func BuildFromToken(token string) (*Token, error) {
 	}
 
 	// decode signature from base64
-	sig, err := base64.URLEncoding.DecodeString(segments[2])
+	sig, err := base64.RawURLEncoding.DecodeString(segments[2])
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode signature from token: %v", err)
 	}
@@ -161,32 +217,28 @@ func BuildFromToken(token string) (*Token, error) {
 		Claims:     claims,
 		BaseString: segments[0] + "." + segments[1],
 		Signature:  sig,
-		Token:      token}, nil
+		Raw:        token}, nil
 }
 
 // BuildAudiences is a helper func to build audience []string from a string of space-delimited scope string values, eg., "w:service:* r:service:*"
-// Note: it is included in this package because it refers directly to the Scope struct in this package.
 func BuildAudiences(scopes string) (audiences []string) {
 
-	var services []string
+	uniqueServices := make(map[string]struct{})
 
-	// split scopes by space
-	scps := strings.Split(scopes, " ")
+	for scope := range strings.FieldsSeq(scopes) {
 
-	// iterate over each scope and split by : to get the service name
-	for _, scope := range scps {
-		chunk := strings.Split(scope, ":") // splits scope by : -> w:service:*
-		services = append(services, chunk[1])
-	}
+		chunks := strings.SplitN(scope, ":", 3)
+		if len(chunks) < 2 || chunks[1] == "" {
+			continue
+		}
 
-	// build unique (no duplicates) list of services
-	uniqueServices := make(map[string]struct{}, 0) // ie, one of each value
-	for _, service := range services {
-		if _, ok := uniqueServices[service]; !ok {
-			uniqueServices[service] = struct{}{}
-			audiences = append(audiences, service)
+		svc := chunks[1]
+		if _, ok := uniqueServices[svc]; !ok {
+
+			uniqueServices[svc] = struct{}{}
+			audiences = append(audiences, svc)
 		}
 	}
 
-	return audiences
+	return
 }
