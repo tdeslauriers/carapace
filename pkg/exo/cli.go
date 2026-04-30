@@ -21,15 +21,23 @@ type Exoskeleton interface {
 }
 
 // New is a factory function that returns a new Exo cli interface.
-func New(config Config) Exoskeleton {
+func New(
+	config Config,
+	sg data.SecretGenerator,
+	cb sign.CertBuilder,
+	kg sign.KeyGenerator,
+	i data.IndexBuilder,
+) Exoskeleton {
 	return &exoskeleton{
 		config:    config,
-		secretGen: data.NewSecretGenerator(),
-		certs:     sign.NewCertBuilder(),
-		keyGen:    sign.NewKeyGenerator(),
-		indexer:   data.NewIndexBuilder(),
+		secretGen: sg,
+		certs:     cb,
+		keyGen:    kg,
+		indexer:   i,
 
-		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentExo)),
+		logger: slog.Default().
+			With(slog.String(util.ComponentKey, util.ComponentExo)).
+			With(util.PackageKey, util.PackageExo),
 	}
 }
 

@@ -21,7 +21,7 @@ type Service interface {
 	GetItem(title, vault string) (*Item, error)
 
 	// UpsertItem upserts an item in 1password
-	// 
+	//
 	UpsertItem(item *Item) error
 }
 
@@ -52,13 +52,13 @@ func (s *service) GetDocument(title, vault string) ([]byte, error) {
 func (s *service) UpsertDocument(path, title, vault string, tags []string) error {
 
 	// light weight input validation
-	if len(path) < 1 {
+	if path == "" {
 		return fmt.Errorf("file path is required to upsert 1password item/document")
 	}
-	if len(title) < 1 {
+	if title == "" {
 		return fmt.Errorf("title is required to upsert 1password item/document")
 	}
-	if len(vault) < 1 {
+	if vault == "" {
 		return fmt.Errorf("vault is required to upsert 1password item/document")
 	}
 	if len(tags) < 1 {

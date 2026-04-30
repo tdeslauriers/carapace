@@ -11,10 +11,13 @@ type Indexer interface {
 	ObtainBlindIndex(string) (string, error)
 }
 
-func NewIndexer(secret []byte) Indexer {
-	return &hmacIndexer{
-		secret: secret,
+func NewIndexer(secret []byte) (Indexer, error) {
+
+	if len(secret) < 32 {
+		return nil, fmt.Errorf("hmac secret must be at least 32 bytes, got %d", len(secret))
 	}
+
+	return &hmacIndexer{secret: secret}, nil
 }
 
 var _ Indexer = (*hmacIndexer)(nil)
@@ -26,10 +29,7 @@ type hmacIndexer struct {
 func (i *hmacIndexer) ObtainBlindIndex(s string) (string, error) {
 
 	h := hmac.New(sha256.New, i.secret)
-	if _, err := h.Write([]byte(s)); err != nil {
-		return "", fmt.Errorf("failed to hmac/hash text to blind index: %v", err)
-	}
+	h.Write([]byte(s))
 
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
-

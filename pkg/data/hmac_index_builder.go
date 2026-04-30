@@ -9,14 +9,17 @@ import (
 	onepassword "github.com/tdeslauriers/carapace/pkg/one_password"
 )
 
+// hmacSecretLabel is the 1Password field label that holds the HMAC secret.
+const hmacSecretLabel = "secret"
+
 // IndexBuilder is an interface for building HMAC blind indexes when needed
 type IndexBuilder interface {
 
-	// BuildHMACIndex builds a HMAC blind index for a given value and secret name (+ the vault where the secret is stored)
+	// BuildHmacIndex builds a HMAC blind index for a given value and secret name (+ the vault where the secret is stored)
 	BuildHmacIndex(toIndex, secretName, vault string) (string, error)
 }
 
-// New IndexBuilder is a factory function that returns a new IndexBuilder interface and
+// NewIndexBuilder is a factory function that returns a new IndexBuilder interface and
 // an underlying concrete implementation.
 func NewIndexBuilder() IndexBuilder {
 	return &indexBuilder{
@@ -38,48 +41,54 @@ type indexBuilder struct {
 	logger *slog.Logger
 }
 
-// BuildHmacIndex is the concrete implementaiton of the interface method which
-//
-//	builds a HMAC blind index for a given secret name.
+// BuildHmacIndex is the concrete implementation of the interface method which
+// builds a HMAC blind index for a given secret name.
 func (ib *indexBuilder) BuildHmacIndex(toIndex, secretName, vault string) (string, error) {
 
-	// make sure the secret name is not empty
+	if toIndex == "" {
+		return "", fmt.Errorf("value to index cannot be empty")
+	}
+
 	if secretName == "" {
 		return "", fmt.Errorf("secret name cannot be empty")
 	}
 
-	// retrieve the secret from 1password
+	// get secret item record from 1password
 	opItem, err := ib.op.GetItem(secretName, vault)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve item %s from 1password vault %s: %v", secretName, vault, err)
+		return "", fmt.Errorf("failed to retrieve item %s from 1password vault %s: %w", secretName, vault, err)
 	}
 
-	// loop through the item's fields to find the hmac secret
-	// fields name actually is "secret"
+	// get the secret from the item fields
 	var itemSecret string
 	for _, field := range opItem.Fields {
-		if field.Label == "secret" {
+		if field.Label == hmacSecretLabel {
 			itemSecret = field.Value
 			break
 		}
 	}
 
-	// make sure found the secret --> should never fail here
 	if itemSecret == "" {
-		return "", fmt.Errorf("failed to find field 'secret' in 1password item %s in vault %s", secretName, vault)
+		return "", fmt.Errorf("failed to find field %q in 1password item %s in vault %s", hmacSecretLabel, secretName, vault)
 	}
 
-	// indexer
+	// decode
 	hmacSecret, err := base64.StdEncoding.DecodeString(itemSecret)
 	if err != nil {
-		return "", fmt.Errorf("failed to decode hmac secret: %v", err)
+		return "", fmt.Errorf("failed to decode hmac secret: %w", err)
+	}
+	defer clear(hmacSecret)
+
+	// instantiate the indexer
+	indexer, err := NewIndexer(hmacSecret)
+	if err != nil {
+		return "", fmt.Errorf("failed to create hmac indexer: %w", err)
 	}
 
-	// this is the indexer used by app services, of which this function is effectively a wrapper
-	indexer := NewIndexer(hmacSecret)
+	// get index value
 	blindIndex, err := indexer.ObtainBlindIndex(toIndex)
 	if err != nil {
-		return "", fmt.Errorf("failed to build hmac blind index: %v", err)
+		return "", fmt.Errorf("failed to build hmac blind index: %w", err)
 	}
 
 	return blindIndex, nil

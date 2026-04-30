@@ -34,8 +34,12 @@ type Cli interface {
 
 // NewCli is a factory function that returns a new one_password cli interface.
 func NewCli() Cli {
+
 	return &cli{
-		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentOnePassword)),
+
+		logger: slog.Default().
+			With(slog.String(util.ComponentKey, util.ComponentOnePassword)).
+			With(util.PackageKey, util.PackageOnePassword),
 	}
 }
 
@@ -69,23 +73,12 @@ func (c *cli) GetDocument(title, vault string) ([]byte, error) {
 
 func (c *cli) CreateDocument(file, title, vault string, tags []string) error {
 
-	// prepare tags
-	builder := strings.Builder{}
-	counter := 0
-	for _, tag := range tags {
-		builder.WriteString(tag)
-		if counter < len(tags)-1 {
-			builder.WriteString(", ")
-		}
-		counter++
-	}
-
 	// prepar op command
 	cmd := exec.Command(
 		"op", "document", "create", file,
 		"--title", title,
 		"--vault", vault,
-		"--tags", builder.String(),
+		"--tags", strings.Join(tags, ", "),
 	)
 
 	var out bytes.Buffer
@@ -158,14 +151,17 @@ func (c *cli) GetItem(title, vault string) (*Item, error) {
 // CreateItem creates an item in 1password
 func (c *cli) CreateItem(item *Item) error {
 
+	// create copy to prevent side effects
+	copy := *item
+
 	// op cli needs the --category argument to work: Login, Password, Server, etc.,
 	// However, MUST be omitted from template/json in that case.
 	// Handling here so that nothing needs to be remembered when createing items.
-	category := item.Category
-	item.Category = "" // --> becomes omitempty in the marshalled json object below.
+	category := copy.Category
+	copy.Category = "" // --> becomes omitempty in the marshalled json object below.
 
 	// marshal 1password item to json
-	itemJson, err := json.Marshal(item)
+	itemJson, err := json.Marshal(&copy)
 	if err != nil {
 		return fmt.Errorf("failed to marshal item: %v", err)
 	}
@@ -174,14 +170,14 @@ func (c *cli) CreateItem(item *Item) error {
 	// --template= needs a real file path to a template file.
 	// "-" lets you pass in standard input: see https://developer.1password.com/docs/cli/reference/management-commands/item#create-an-item-using-a-json-template
 	cmd := exec.Command("op", "item", "create", "--category", category, "-")
-	cmd.Stdin = strings.NewReader(string(itemJson))
+	cmd.Stdin = bytes.NewReader(itemJson)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error running `op item create --category %s - <item json>`: %v; output: %s", category, err, output)
 	}
 
-	c.logger.Info(fmt.Sprintf("1password item created: %s", item.Title))
+	c.logger.Info(fmt.Sprintf("1password item created: %s", copy.Title))
 
 	return nil
 }
@@ -203,7 +199,7 @@ func (c *cli) EditItem(item *Item) error {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("error running `op item edit `: %v; output: %s", err, output)
+		return fmt.Errorf("error running `op item edit %s`: %v; output: %s", item.Title, err, output)
 	}
 
 	c.logger.Info(fmt.Sprintf("1password item edited: %s", item.Title))

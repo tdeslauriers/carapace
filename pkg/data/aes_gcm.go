@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -17,13 +18,14 @@ func GenerateAesGcmKey() []byte {
 	if _, err := io.ReadFull(rand.Reader, key); err != nil {
 		panic(err.Error())
 	}
+
 	return key
 }
 
 // Cryptor is an interface for encrypting and decrypting service data
 type Cryptor interface {
 
-	// Encrypt encrypts a single field and sends the ciphertext or error to the ciphertext channel
+	// EncryptField encrypts a single field and sends the ciphertext or error to the ciphertext channel
 	EncryptField(
 		fieldname string,
 		plaintext string,
@@ -48,20 +50,40 @@ type Cryptor interface {
 	DecryptServiceData(string) ([]byte, error)
 }
 
-// NewServiceAesGcmKey returns a new Cryptor interface for encrypting and decrypting service data
-func NewServiceAesGcmKey(secret []byte) Cryptor {
-	return &serviceAesGcmKey{
-		secret: secret,
+// NewServiceAesGcmKey returns a new Cryptor for encrypting and decrypting service data.
+// The secret must be exactly 32 bytes (AES-256).
+func NewServiceAesGcmKey(secret []byte) (Cryptor, error) {
+
+	if len(secret) != 32 {
+		return nil, fmt.Errorf("AES-256 key must be exactly 32 bytes, got %d", len(secret))
 	}
+
+	return &serviceAesGcmKey{secret: secret}, nil
 }
 
 var _ Cryptor = (*serviceAesGcmKey)(nil)
 
 type serviceAesGcmKey struct {
-	secret []byte // Env Var
+	secret []byte
 }
 
-// Encrypt is a helper function that encrypts a sensitive field.
+// newGCM constructs the AES-GCM AEAD from the stored key.
+func (key *serviceAesGcmKey) newGCM() (cipher.AEAD, error) {
+
+	c, err := aes.NewCipher(key.secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create AES cipher: %w", err)
+	}
+
+	gcm, err := cipher.NewGCM(c)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	return gcm, nil
+}
+
+// EncryptField encrypts a single field and sends the ciphertext or error to the respective channel.
 func (key *serviceAesGcmKey) EncryptField(
 	fieldname string,
 	plaintext string,
@@ -76,54 +98,41 @@ func (key *serviceAesGcmKey) EncryptField(
 		return
 	}
 
-	// encrypt the plaintext
 	ciphertext, err := key.encryptServiceData([]byte(plaintext))
 	if err != nil {
-		errCh <- err
+		errCh <- fmt.Errorf("failed to encrypt field '%s': %w", fieldname, err)
 		return
 	}
 
-	// send the ciphertext to the channel
 	ciphertextCh <- ciphertext
 }
 
-// EncryptServiceData is the concrete implementation of the Cryptor interface function
-// Note: takes in a byte array (for versatility) and returns a base64 encoded string
+// EncryptServiceData is the concrete implementation of the Cryptor interface method.
+// It takes a byte slice for versatility and returns a base64-encoded ciphertext string.
 func (key *serviceAesGcmKey) EncryptServiceData(clear []byte) (string, error) {
 
 	return key.encryptServiceData(clear)
 }
 
-// EncryptServiceData is the concrete implementation of the Cryptor interface function
-// Note: takes in a byte array (for versatility) and returns a base64 encoded string
 func (key *serviceAesGcmKey) encryptServiceData(clear []byte) (string, error) {
 
-	if len(key.secret) != 32 {
-		panic("AES key must be exactly 32 bytes long")
-	}
-
-	c, err := aes.NewCipher(key.secret)
-	if err != nil {
-		return "", err
-	}
-
-	gcm, err := cipher.NewGCM(c)
+	gcm, err := key.newGCM()
 	if err != nil {
 		return "", err
 	}
 
 	nonce := make([]byte, gcm.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate nonce: %w", err)
 	}
 
-	// nonce is prepended to the encrypted value so it can be extracted on decryption
+	// nonce is prepended to the ciphertext so it can be extracted on decryption
 	encrypted := gcm.Seal(nonce, nonce, clear, nil)
 
 	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 
-// DecryptField decrypts a single field and sends the plaintext or error to the respective channel
+// DecryptField decrypts a single field and sends the plaintext or error to the respective channel.
 func (key *serviceAesGcmKey) DecryptField(
 	fieldname string,
 	ciphertext string,
@@ -138,55 +147,42 @@ func (key *serviceAesGcmKey) DecryptField(
 		return
 	}
 
-	// decrypt the ciphertext
 	plaintext, err := key.decryptServiceData(ciphertext)
 	if err != nil {
-		errCh <- err
+		errCh <- fmt.Errorf("failed to decrypt field '%s': %w", fieldname, err)
 		return
 	}
 
-	// send the plaintext to the channel
 	plaintextCh <- string(plaintext)
 }
 
-// DecryptServiceData is the concrete implementation of the Cryptor interface function
+// DecryptServiceData is the concrete implementation of the Cryptor interface method.
 func (key *serviceAesGcmKey) DecryptServiceData(ciphertext string) ([]byte, error) {
 
 	return key.decryptServiceData(ciphertext)
 }
 
-// decryptServiceData is the concrete implementation of the Cryptor interface function
 func (key *serviceAesGcmKey) decryptServiceData(ciphertext string) ([]byte, error) {
 
-	if len(key.secret) != 32 {
-		panic("AES key must be exactly 32 bytes long")
-	}
-
-	c, err := aes.NewCipher(key.secret)
+	gcm, err := key.newGCM()
 	if err != nil {
 		return nil, err
 	}
 
-	gcm, err := cipher.NewGCM(c)
-	if err != nil {
-		return nil, err
-	}
-
-	// decode ciphertext to bytes
 	encrypted, err := base64.StdEncoding.DecodeString(ciphertext)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to base64-decode ciphertext: %w", err)
 	}
 
 	nonceSize := gcm.NonceSize()
 	if len(encrypted) < nonceSize {
-		return nil, fmt.Errorf("ciphertext too short")
+		return nil, errors.New("ciphertext too short")
 	}
 
 	nonce, cipherBytes := encrypted[:nonceSize], encrypted[nonceSize:]
 	decrypted, err := gcm.Open(nil, nonce, cipherBytes, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("authentication failed: ciphertext may be tampered or corrupted: %w", err)
 	}
 
 	return decrypted, nil

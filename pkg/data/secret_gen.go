@@ -18,9 +18,9 @@ type SecretGenerator interface {
 	GenerateKey(name string, length int) error
 }
 
-func NewSecretGenerator() SecretGenerator {
+func NewSecretGenerator(op onepassword.Service) SecretGenerator {
 	return &secretGenerator{
-		op: onepassword.NewService(onepassword.NewCli()),
+		op: op,
 
 		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentSecretGen)),
 	}
@@ -34,22 +34,22 @@ type secretGenerator struct {
 	logger *slog.Logger
 }
 
+// GenerateKey creates a cryptographcially random secretkey,
+// encodes it to base 64 and upserts it into 1password
 func (sg *secretGenerator) GenerateKey(name string, length int) error {
 
-	// length must be at least 32 bytes for secure algorithms such as AES GCM and hmac hashing
-	if length < 32 {
-		sg.logger.Warn(fmt.Sprintf("length is less than 32 bytes, which is the minimum for several secure algorithms, got %d", length))
+	// only allow key sizes that map to real cryptographic use cases:
+	// 16 = AES-128, 32 = AES-256 / HMAC-SHA256, 64 = HMAC-SHA512
+	switch length {
+	case 16, 32, 64:
+	default:
+		return fmt.Errorf("length must be 16, 32, or 64 bytes, got %d", length)
 	}
 
-	// check if it is a power of 2 so we can use it for AES GCM or blind index hashing
-	if length&(length-1) != 0 {
-		return fmt.Errorf("length must be a power of 2, got %d", length)
-	}
-
-	// generete cryptographically random secret key of specified length
+	// generate cryptographically random secret key of specified length
 	secret := make([]byte, length)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
-		panic(err.Error())
+		return fmt.Errorf("failed to generate random secret: %w", err)
 	}
 
 	// encode key to base64
@@ -72,7 +72,10 @@ func (sg *secretGenerator) GenerateKey(name string, length int) error {
 		return err
 	}
 
-	sg.logger.Info(fmt.Sprintf("successfully generated, base64 encoded, and upserted 32 byte secret '%s' to 1password", name))
+	sg.logger.Info("successfully generated, base64 encoded, and upserted secret to 1password",
+		slog.String("secret_name", name),
+		slog.Int("length_bytes", length),
+	)
 
 	return nil
 }

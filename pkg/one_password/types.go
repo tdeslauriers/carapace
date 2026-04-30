@@ -10,7 +10,7 @@ type Vault struct {
 type Item struct {
 	Id             string   `json:"id"`
 	Title          string   `json:"title"`
-	Tags           []string `json:"tags"`
+	Tags           []string `json:"tags,omitempty"`
 	Version        int      `json:"version,omitempty"`
 	Vault          Vault    `json:"vault"`
 	Category       string   `json:"category,omitempty"`
@@ -32,13 +32,13 @@ type Url struct {
 
 // Field is a model for the json output of the fields object from the 1password cli
 type Field struct {
-	Id              string          `json:"id"`
-	Type            string          `json:"type"`
-	Purpose         string          `json:"purpose"`
-	Label           string          `json:"label"`
-	Value           string          `json:"value"`
-	Reference       string          `json:"reference"`
-	PasswordDetails PasswordDetails `json:"password_details"`
+	Id              string           `json:"id"`
+	Type            string           `json:"type"`
+	Purpose         string           `json:"purpose"`
+	Label           string           `json:"label"`
+	Value           string           `json:"value"`
+	Reference       string           `json:"reference"`
+	PasswordDetails *PasswordDetails `json:"password_details,omitempty"`
 }
 
 // PasswordDetails is a model for the json output of the password_details object from the 1password cli

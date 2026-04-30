@@ -26,7 +26,9 @@ const (
 
 	PackageKey         string = "package"
 	PackageConnect     string = "connect"
+	PackageExo         string = "exo"
 	PackageMain        string = "main"
+	PackageOnePassword string = "1password"
 	PackagePat         string = "pat"
 	PackagePermissions string = "permissions"
 	PackageSession     string = "session"
