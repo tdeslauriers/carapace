@@ -20,11 +20,13 @@ type KeyGenerator interface {
 
 var _ KeyGenerator = (*keyGenerator)(nil)
 
-func NewKeyGenerator() KeyGenerator {
+func NewKeyGenerator(op onepassword.Service) KeyGenerator {
 	return &keyGenerator{
-		op: onepassword.NewService(onepassword.NewCli()),
+		op: op,
 
-		logger: slog.Default().With(slog.String(util.ComponentKey, util.ComponentKeyGen)),
+		logger: slog.Default().
+			With(slog.String(util.ComponentKey, util.ComponentKeyGen)).
+			With(slog.String(util.PackageKey, util.PackageSign)),
 	}
 }
 
@@ -36,30 +38,31 @@ type keyGenerator struct {
 
 func (kg *keyGenerator) GenerateEcdsaSigningKey(service, env string) error {
 
-	if len(service) < 1 || len(env) < 1 {
+	if service == "" || env == "" {
 		return fmt.Errorf("service name and env are required to generate ecdsa key pair")
 	}
 
 	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
-		return fmt.Errorf("failed to generate ecdsa key: %v", err)
+		return fmt.Errorf("failed to generate ecdsa key: %w", err)
 	}
-	pulicKey := &privateKey.PublicKey
 
-	privBytes, err := x509.MarshalECPrivateKey(privateKey)
+	privBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
 	if err != nil {
-		return fmt.Errorf("failed to marshal EC (ecdsa) private key: %v", err)
+		return fmt.Errorf("failed to marshal EC (ecdsa) private key: %w", err)
 	}
+
 	privPem :=
 		pem.EncodeToMemory(&pem.Block{
-			Type:  "EC PRIVATE KEY",
+			Type:  "PRIVATE KEY",
 			Bytes: privBytes,
 		})
 
-	pubBytes, err := x509.MarshalPKIXPublicKey(pulicKey)
+	pubBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		return fmt.Errorf("failed to marshal PKIX (ecdsa) public key: %v", err)
+		return fmt.Errorf("failed to marshal PKIX (ecdsa) public key: %w", err)
 	}
+
 	pubPem :=
 		pem.EncodeToMemory(&pem.Block{
 			Type:  "PUBLIC KEY",
@@ -69,7 +72,11 @@ func (kg *keyGenerator) GenerateEcdsaSigningKey(service, env string) error {
 	privBase64 := base64.StdEncoding.EncodeToString(privPem)
 	pubBase64 := base64.StdEncoding.EncodeToString(pubPem)
 
-	kg.logger.Info(fmt.Sprintf("successfully generated jwt ecdsa key pair for %s %s", env, service))
+	kg.logger.Info(
+		"successfully generated jwt ecdsa key pair",
+		slog.String("env", env),
+		slog.String("service", service),
+	)
 
 	item := &onepassword.Item{
 		Title: fmt.Sprintf("%s_%s_%s", service, util.OpSigningKeyPairTitle, env),
@@ -85,10 +92,13 @@ func (kg *keyGenerator) GenerateEcdsaSigningKey(service, env string) error {
 	}
 
 	if err := kg.op.UpsertItem(item); err != nil {
-		return fmt.Errorf("failed to upsert ecdsa key pair to 1password: %v", err)
+		return fmt.Errorf("failed to upsert ecdsa key pair to 1password: %w", err)
 	}
 
-	kg.logger.Info(fmt.Sprintf("successfully upserted jwt signing ecdsa key pair %s in 1password", item.Title))
+	kg.logger.Info(
+		"successfully upserted jwt signing ecdsa key pair in 1password",
+		slog.String("item_title", item.Title),
+	)
 
 	return nil
 }

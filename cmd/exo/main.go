@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/tdeslauriers/carapace/internal/util"
@@ -21,11 +20,11 @@ func main() {
 		*config,
 		data.NewSecretGenerator(onepassword.NewService(onepassword.NewCli())),
 		sign.NewCertBuilder(),
-		sign.NewKeyGenerator(),
+		sign.NewKeyGenerator(onepassword.NewService(onepassword.NewCli())),
 		data.NewIndexBuilder(),
 	)
 
 	if err := exoskeleton.Execute(); err != nil {
-		logger.Error(fmt.Sprintf("error executing exo command: %w", err))
+		logger.Error("error executing exo command", "err", err.Error())
 	}
 }

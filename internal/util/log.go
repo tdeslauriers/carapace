@@ -32,6 +32,7 @@ const (
 	PackagePat         string = "pat"
 	PackagePermissions string = "permissions"
 	PackageSession     string = "session"
+	PackageSign        string = "sign"
 	PackageStorage     string = "storage"
 	PackageSchedule    string = "schedule"
 	PackageValidate    string = "validate"
