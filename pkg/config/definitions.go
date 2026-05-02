@@ -4,6 +4,7 @@ package config
 type ServerTls string
 
 const (
+	NoneTls     ServerTls = "none"
 	StandardTls ServerTls = "standard"
 	MutualTls   ServerTls = "mutual"
 )
