@@ -45,7 +45,7 @@ type patTokener struct {
 	pepper []byte
 }
 
-// Generate is the concerte implementation of the interface method which
+// Generate is the concrete implementation of the interface method which
 // generates a new 64 byte random secret byte-slice, a base64 url encoded string representation,
 // and an error if any.
 func (p *patTokener) Generate() ([]byte, string, error) {
@@ -83,9 +83,7 @@ func (p *patTokener) obtainIndex(token []byte) (string, error) {
 	}
 
 	h := hmac.New(sha256.New, p.pepper)
-	if _, err := h.Write(token); err != nil {
-		return "", fmt.Errorf("failed to hmac/hash PAT token to blind index: %v", err)
-	}
+	h.Write(token) // hmac docs indicate that Write on the hash will never return an error can ignore it here
 
 	return hex.EncodeToString(h.Sum(nil)), nil
 }

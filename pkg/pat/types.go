@@ -26,7 +26,7 @@ type IntrospectResponse struct {
 	Active      bool   `json:"active"`                // all tokens returned here are active or inactive no matter what the reaason
 	Scope       string `json:"scope,omitempty"`       // string with a space delimited list of scopes
 	Sub         string `json:"sub,omitempty"`         // client id associated with the token
-	ServiceName string `json:"client_name,omitempty"` // cleint name associated with the token (convenience field added by me)
+	ServiceName string `json:"client_name,omitempty"` // client name associated with the token (convenience field added by me)
 	Iss         string `json:"iss,omitempty"`         // issueing service name
 }
 
