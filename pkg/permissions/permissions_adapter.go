@@ -8,7 +8,7 @@ import (
 	"github.com/tdeslauriers/carapace/pkg/data"
 )
 
-// PerissionsRepository defines the interface for permissions database operations.
+// PermissionsRepository defines the interface for permissions database operations.
 type PermissionsRepository interface {
 
 	// FindAll retrieves all permissions from the database.
@@ -38,9 +38,16 @@ func NewPermissionsRepository(db *sql.DB) PermissionsRepository {
 
 var _ PermissionsRepository = (*permissionsRepository)(nil)
 
+// sqlDB combines Selector and Execer so the repository field can be satisfied by
+// *sql.DB in production and by a mock in tests.
+type sqlDB interface {
+	data.Selector
+	data.Execer
+}
+
 // permissionsRepository implements the PermissionsRepository interface for managing permissions in the database.
 type permissionsRepository struct {
-	sql *sql.DB
+	sql sqlDB
 }
 
 // FindAll gets all permissions from the database.

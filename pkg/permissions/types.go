@@ -27,16 +27,6 @@ type Permission struct {
 	Slug        string          `db:"slug" json:"slug,omitempty"`
 }
 
-var allowedServices = map[string]struct{}{
-	"pixie":      {},
-	"apprentice": {},
-}
-
-func isServiceAllowed(input string) bool {
-	_, ok := allowedServices[input]
-	return ok
-}
-
 // validate checks if the permission's fields are valid/well-formed.
 func (p *Permission) Validate() error {
 
@@ -60,11 +50,6 @@ func (p *Permission) Validate() error {
 	// check service name
 	if err := validate.ValidateServiceName(strings.TrimSpace(p.ServiceName)); err != nil {
 		return fmt.Errorf("invalid service name in permission payload: %v", err)
-	}
-
-	// check if service is allowed
-	if !isServiceAllowed(strings.TrimSpace(p.ServiceName)) {
-		return fmt.Errorf("service %s is not a valid service name", p.ServiceName)
 	}
 
 	// check description length
@@ -167,5 +152,3 @@ func (cmd *UpdatePermissionsCmd) Validate() error {
 
 	return nil
 }
-
-

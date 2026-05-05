@@ -32,7 +32,7 @@ type permissionCryptor struct {
 	cryptor data.Cryptor // cryptor is the cryptographic service used to encrypt and decrypt
 }
 
-// decryptPermission is a method that decrypts sensitive fields  and removes uncessary fields in the permission data model.
+// decryptPermission is a method that decrypts sensitive fields and removes unnecessary fields in the permission data model.
 func (c *permissionCryptor) DecryptPermission(p PermissionRecord) (*PermissionRecord, error) {
 
 	var (
@@ -86,6 +86,7 @@ func (c *permissionCryptor) decrypt(fieldname, encrpyted string, fieldCh chan st
 	decrypted, err := c.cryptor.DecryptServiceData(encrpyted)
 	if err != nil {
 		errCh <- fmt.Errorf("failed to decrypt '%s' field: %v", fieldname, err)
+		return
 	}
 
 	fieldCh <- string(decrypted)

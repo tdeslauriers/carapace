@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,11 +31,18 @@ type Service interface {
 }
 
 // NewService creates a new permissions service and provides a pointer to a concrete implementation.
-func NewService(sql *sql.DB, i data.Indexer, c data.Cryptor) Service {
+func NewService(
+	sql *sql.DB,
+	i data.Indexer,
+	c data.Cryptor,
+	allowedServices map[string]struct{},
+) Service {
+
 	return &permissionsService{
-		sql:     NewPermissionsRepository(sql),
-		indexer: i,
-		cryptor: NewPermissionCryptor(c),
+		sql:             NewPermissionsRepository(sql),
+		indexer:         i,
+		cryptor:         NewPermissionCryptor(c),
+		allowedServices: allowedServices,
 
 		logger: slog.Default().
 			With(slog.String(util.FrameworkKey, util.FrameworkCarapace)).
@@ -47,9 +55,10 @@ var _ Service = (*permissionsService)(nil)
 
 // permissionsService implements the Service interface for managing permissions to gallery data models and images.
 type permissionsService struct {
-	sql     PermissionsRepository
-	indexer data.Indexer
-	cryptor PermissionCryptor
+	sql             PermissionsRepository
+	indexer         data.Indexer
+	cryptor         PermissionCryptor
+	allowedServices map[string]struct{}
 
 	logger *slog.Logger
 }
@@ -60,7 +69,7 @@ func (s *permissionsService) GetAllPermissions() (map[string]PermissionRecord, [
 	// retrieve all permissions from the database
 	ps, err := s.sql.FindAll()
 	if err != nil {
-		s.logger.Error("Failed to retrieve permissions", slog.Any("error", err))
+		s.logger.Error("Failed to retrieve permissions", "err", err.Error())
 		return nil, nil, err
 	}
 
@@ -103,9 +112,7 @@ func (s *permissionsService) GetAllPermissions() (map[string]PermissionRecord, [
 		for e := range errs {
 			errsList = append(errsList, e)
 		}
-		if len(errsList) > 0 {
-			return nil, nil, errors.Join(errsList...)
-		}
+		return nil, nil, errors.Join(errsList...)
 	}
 
 	// collect decrypted permissions
@@ -124,17 +131,20 @@ func (s *permissionsService) GetAllPermissions() (map[string]PermissionRecord, [
 // GetPermissionBySlug implements the Service interface method to retrieve a permission by its slug from the database/persistence layer.
 func (s *permissionsService) GetPermissionBySlug(slug string) (*PermissionRecord, error) {
 
+	// trim whitespace from slug: should not be necessary, but good practice
+	slug = strings.TrimSpace(slug)
+
 	// validate slug
 	// redundant check, but good practice
 	if err := validate.ValidateUuid(slug); err != nil {
-		s.logger.Error("Invalid slug provided", slog.String("slug", slug))
+		s.logger.Error("Invalid slug provided", "slug", slug, "err", err.Error())
 		return nil, fmt.Errorf("invalid slug: %s", slug)
 	}
 
 	// get blind index for the slug
 	index, err := s.indexer.ObtainBlindIndex(slug)
 	if err != nil {
-		s.logger.Error("Failed to generate blind index for slug", slog.Any("error", err))
+		s.logger.Error("Failed to generate blind index for slug", "slug", slug, "err", err.Error())
 		return nil, fmt.Errorf("failed to generate blind index for slug: %v", err)
 	}
 
@@ -147,7 +157,7 @@ func (s *permissionsService) GetPermissionBySlug(slug string) (*PermissionRecord
 	// prepare the permission by decrypting sensitive fields and removing unnecessary fields
 	prepared, err := s.cryptor.DecryptPermission(*p)
 	if err != nil {
-		s.logger.Error(fmt.Sprintf("failed to prepare permission '%s': %v", slug, err))
+		s.logger.Error("failed to prepare permission for response", "slug", slug, "err", err.Error())
 		return nil, fmt.Errorf("failed to prepare permission 'slug %s': %v", slug, err)
 	}
 
@@ -160,14 +170,20 @@ func (s *permissionsService) CreatePermission(p *PermissionRecord) (*PermissionR
 	// validate the permission
 	// redundant check, but but good practice
 	if err := p.Validate(); err != nil {
-		s.logger.Error("Failed to validate permission", slog.Any("error", err))
+		s.logger.Error("Failed to validate permission", "err", err.Error())
 		return nil, fmt.Errorf("invalid permission: %v", err)
+	}
+
+	// check if service is allowed to have permissions
+	if _, ok := s.allowedServices[strings.TrimSpace(p.ServiceName)]; !ok {
+		s.logger.Error("Service is not allowed", "service_name", p.ServiceName)
+		return nil, fmt.Errorf("service '%s' is not a valid service name", p.ServiceName)
 	}
 
 	// create uuid and set it in the permission record
 	id, err := uuid.NewRandom()
 	if err != nil {
-		s.logger.Error("Failed to generate UUID for permission", slog.Any("error", err))
+		s.logger.Error("Failed to generate UUID for permission", "err", err.Error())
 		return nil, fmt.Errorf("failed to generate UUID for permission: %v", err)
 	}
 	p.Id = id.String()
@@ -179,7 +195,7 @@ func (s *permissionsService) CreatePermission(p *PermissionRecord) (*PermissionR
 	// create a slug for the permission and set it in the permission record
 	slug, err := uuid.NewRandom()
 	if err != nil {
-		s.logger.Error("Failed to generate slug for permission", slog.Any("error", err))
+		s.logger.Error("Failed to generate slug for permission", "err", err.Error())
 		return nil, fmt.Errorf("failed to generate slug for permission: %v", err)
 	}
 	p.Slug = slug.String()
@@ -187,7 +203,7 @@ func (s *permissionsService) CreatePermission(p *PermissionRecord) (*PermissionR
 	// generate a blind index for the slug and set it in the permission record
 	index, err := s.indexer.ObtainBlindIndex(p.Slug)
 	if err != nil {
-		s.logger.Error("Failed to generate blind index for slug", slog.Any("error", err))
+		s.logger.Error("Failed to generate blind index for slug", "err", err.Error())
 		return nil, fmt.Errorf("failed to generate blind index for slug: %v", err)
 	}
 	p.SlugIndex = index
@@ -195,17 +211,17 @@ func (s *permissionsService) CreatePermission(p *PermissionRecord) (*PermissionR
 	// encrypt the sensitive fields in the permission record
 	encrypted, err := s.cryptor.EncryptPermission(p)
 	if err != nil {
-		s.logger.Error(fmt.Sprintf("Failed to encrypt permission '%s': %v", p.Id, err))
+		s.logger.Error("Failed to encrypt permission", "permission_id", p.Id, "err", err.Error())
 		return nil, fmt.Errorf("failed to encrypt permission '%s': %v", p.Id, err)
 	}
 
 	// insert the permission record into the database
 	if err := s.sql.InsertPermission(*encrypted); err != nil {
-		s.logger.Error("failed to insert permission record into database", slog.Any("error", err))
+		s.logger.Error("failed to insert permission record into database", "err", err.Error())
 		return nil, err
 	}
 
-	s.logger.Info(fmt.Sprintf("created permission '%s' in the database", encrypted.Id))
+	s.logger.Info("successfully created permission in the database", "permission_id", encrypted.Id)
 
 	// return unencrypted permission record
 	// remove slug index as it is not needed in the response
@@ -220,21 +236,25 @@ func (s *permissionsService) UpdatePermission(p *PermissionRecord) error {
 	// validate the permission
 	// redundant check, but good practice
 	if err := p.Validate(); err != nil {
-		s.logger.Error("Failed to validate permission", slog.Any("error", err))
+		s.logger.Error("Failed to validate permission", "err", err.Error())
 		return fmt.Errorf("invalid permission: %v", err)
 	}
 
 	// get the blind index for the slug
 	index, err := s.indexer.ObtainBlindIndex(p.Slug)
 	if err != nil {
-		s.logger.Error(fmt.Sprintf("Failed to generate blind index for slug '%s': %v", p.Slug, err))
+		s.logger.Error(
+			"Failed to generate blind index for slug",
+			"slug", p.Slug,
+			"err", err.Error(),
+		)
 		return fmt.Errorf("failed to generate blind index for slug '%s': %v", p.Slug, err)
 	}
 
 	// encrypt fields for persisting the updated permission
 	encrypted, err := s.cryptor.EncryptPermission(p)
 	if err != nil {
-		s.logger.Error(fmt.Sprintf("Failed to encrypt permission '%s': %v", p.Id, err))
+		s.logger.Error("failed to encrypt permission", "permission_id", p.Id, "err", err.Error())
 		return fmt.Errorf("failed to encrypt permission '%s': %v", p.Id, err)
 	}
 
@@ -246,10 +266,15 @@ func (s *permissionsService) UpdatePermission(p *PermissionRecord) error {
 		Active:      encrypted.Active,      // to update
 		SlugIndex:   index,                 // WHERE clause
 	}); err != nil {
-		s.logger.Error(fmt.Sprintf("failed to update permission '%s - %s' in the database: %v", p.Id, p.Name, err))
+		s.logger.Error(
+			"failed to update permission in the database",
+			"permission_id", p.Id,
+			"permission_name", p.Name,
+			"err", err.Error(),
+		)
 		return fmt.Errorf("failed to update permission '%s' in the database: %v", p.Name, err)
 	}
 
-	s.logger.Info(fmt.Sprintf("updated permission '%s' in the database", p.Id))
+	s.logger.Info("successfully updated permission in the database", "permission_id", p.Id)
 	return nil
 }
