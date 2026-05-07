@@ -40,25 +40,24 @@ func validatePort(port string) error {
 	return nil
 }
 
-// validateURL checks that raw is a well-formed URL with an http or https scheme and a non-empty host.
+// validateURL checks that raw is a well-formed URL with an http or https scheme
+// and a non-empty host. The scheme check is performed before url.Parse because
+// bare host:port values (e.g. "192.168.68.54:9003") are misread by url.Parse
+// as relative path references, producing the opaque error "first path segment
+// in URL cannot contain colon". Checking the prefix first gives a clear error
+// and prevents url.Parse from ever seeing the ambiguous input.
 func validateURL(raw string) error {
 
-	// pars the url to validate format
-	u, err := url.Parse(raw)
-	if err != nil {
-
-		return fmt.Errorf("invalid url %q: %w", raw, err)
-	}
-
-	// check schema
-	if u.Scheme != "https" && u.Scheme != "http" {
-
+	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
 		return fmt.Errorf("invalid url %q: scheme must be http or https", raw)
 	}
 
-	// check for host
-	if u.Host == "" {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid url %q: %w", raw, err)
+	}
 
+	if u.Host == "" {
 		return fmt.Errorf("invalid url %q: host is empty", raw)
 	}
 
@@ -528,10 +527,8 @@ func (config *Config) profilesServiceEnvVars(def SvcDefinition) error {
 		return err
 	}
 
-	if err = validateURL(url); err != nil {
-
-		return err
-	}
+	// Note: cannot use validate url here because https:// can NOT be on the front of ip address or
+	// grpc will append :443 to it even though there will already be a port included.
 
 	config.Profiles.Url = url
 
