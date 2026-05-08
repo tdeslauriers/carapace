@@ -588,10 +588,7 @@ func (config *Config) objectStorageEnvVars(def SvcDefinition) error {
 		return err
 	}
 
-	if err = validateURL(url); err != nil {
-
-		return err
-	}
+	// Note: cannot use validate url here because minio does not use the schema for instantiation
 
 	config.ObjectStorage.Url = url
 
