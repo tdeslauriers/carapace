@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/tdeslauriers/carapace/pkg/connect/telemetry"
 )
 
 // DeleteFromService makes a DELETE request to a downstream service's endpoint with
@@ -32,7 +34,7 @@ func DeleteFromService[TResp any](
 	url := fmt.Sprintf("%s%s", caller.ServiceUrl, endpoint)
 
 	// extract telemetry from context if exists
-	telemetry, ok := GetTelemetryFromContext(ctx)
+	telemetry, ok := ctx.Value(telemetry.TelemetryKey).(*telemetry.Telemetry)
 	if !ok {
 		caller.logger.Warn("failed to extract telemetry from context of s2s DeleteFromService call")
 	}
@@ -69,7 +71,7 @@ func DeleteFromService[TResp any](
 
 		// set traceparent header from context if exists
 		if telemetry != nil {
-			request.Header.Set("traceparent", telemetry.Traceparent.BuildTraceparent(attemptLogger))
+			request.Header.Set("traceparent", telemetry.Traceparent.BuildTraceparentString(attemptLogger))
 		}
 
 		// set service token service-authorization header

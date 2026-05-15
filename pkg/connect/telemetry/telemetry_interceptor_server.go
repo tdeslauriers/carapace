@@ -1,4 +1,4 @@
-package grpc
+package telemetry
 
 import (
 	"context"
@@ -21,8 +21,7 @@ func UnaryServerWithTelemetry(logger *slog.Logger) grpc.UnaryServerInterceptor {
 		telemetry := ObtainGrpcTelemetry(ctx, info.FullMethod, logger)
 
 		// add telemtry to the call stack context
-		ctx = AddGrpcTelemetryToContext(ctx, telemetry)
-
+		ctx = context.WithValue(ctx, TelemetryKey, telemetry)
 
 		return handler(ctx, req)
 	}

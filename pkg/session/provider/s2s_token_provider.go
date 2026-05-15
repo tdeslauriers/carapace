@@ -9,6 +9,7 @@ import (
 
 	"github.com/tdeslauriers/carapace/internal/util"
 	"github.com/tdeslauriers/carapace/pkg/connect"
+	"github.com/tdeslauriers/carapace/pkg/connect/telemetry"
 	"github.com/tdeslauriers/carapace/pkg/data"
 	"github.com/tdeslauriers/carapace/pkg/session/types"
 )
@@ -62,7 +63,7 @@ func (p *s2sTokenProvider) GetServiceToken(ctx context.Context, serviceName stri
 	logger := p.logger
 
 	// get telemetry from context if exists
-	telemetry, ok := connect.GetTelemetryFromContext(ctx)
+	telemetry, ok := ctx.Value(telemetry.TelemetryKey).(*telemetry.Telemetry)
 	if ok && telemetry != nil {
 		logger = logger.With(telemetry.TelemetryFields()...)
 	} else {

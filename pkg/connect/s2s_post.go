@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/tdeslauriers/carapace/pkg/connect/telemetry"
 )
 
 // PostToService makes a POST request to a downstream service's endpoint with
@@ -31,7 +33,7 @@ func PostToService[TCmd any, TResp any](
 	url := fmt.Sprintf("%s%s", caller.ServiceUrl, endpoint)
 
 	// extract telemetry from context if exists
-	telemetry, ok := GetTelemetryFromContext(ctx)
+	telemetry, ok := ctx.Value(telemetry.TelemetryKey).(*telemetry.Telemetry)
 	if !ok {
 		caller.logger.Warn("failed to extract telemetry from context of s2s PostToService call")
 	}
@@ -81,7 +83,7 @@ func PostToService[TCmd any, TResp any](
 
 		// set traceparent header from context if exists
 		if telemetry != nil {
-			request.Header.Set("traceparent", telemetry.Traceparent.BuildTraceparent(attemptLogger))
+			request.Header.Set("traceparent", telemetry.Traceparent.BuildTraceparentString(attemptLogger))
 		}
 
 		// set service token service-authorization header

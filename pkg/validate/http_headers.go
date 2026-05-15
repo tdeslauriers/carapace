@@ -179,3 +179,36 @@ func SanitizeReferrer(ref string) string {
 
 	return ref
 }
+
+// SanitizeXForwardedFor attempts to clean up the X-Forwarded-For header by truncating it, 
+// removing control characters, 
+func SanitizeXForwardedFor(xff string) string {
+
+    if xff == "" {
+        return ""
+    }
+
+    if len(xff) > 200 {
+        xff = xff[:200]
+    }
+
+    for _, part := range strings.Split(xff, ",") {
+
+        // strip control characters before any further parsing
+        clean := strings.Map(func(r rune) rune {
+
+            if r < 32 || r == 127 {
+				
+                return -1
+            }
+
+            return r
+        }, strings.TrimSpace(part))
+
+        if net.ParseIP(clean) != nil {
+            return clean
+        }
+    }
+
+    return "invalid"
+}

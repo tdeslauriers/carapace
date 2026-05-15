@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/tdeslauriers/carapace/pkg/connect"
+	"github.com/tdeslauriers/carapace/pkg/connect/telemetry"
 	"github.com/tdeslauriers/carapace/pkg/data"
 )
 
@@ -350,17 +351,17 @@ func TestGetServiceToken(t *testing.T) {
 			// Functionally identical to active_token_found; validates the telemetry code path.
 			name: "active_token_with_telemetry_in_context",
 			ctx: func() context.Context {
-				t := &connect.Telemetry{
-					Traceparent: connect.Traceparent{
+				t := &telemetry.Telemetry{
+					Traceparent: telemetry.Traceparent{
 						Version: "00",
-						TraceId: connect.GenerateTraceId(),
-						SpanId:  connect.GenerateSpanId(),
+						TraceId: telemetry.GenerateTraceId(),
+						SpanId:  telemetry.GenerateSpanId(),
 						Flags:   "01",
 					},
 				}
 				req, _ := http.NewRequest(http.MethodGet, "http://test", nil)
-				req = connect.AddTelemetryToContext(req, t)
-				return req.Context()
+				ctx := context.WithValue(req.Context(), telemetry.TelemetryKey, t)
+				return ctx
 			}(),
 			serviceName: serviceName,
 			repo: &mockRepository{
