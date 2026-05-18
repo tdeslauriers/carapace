@@ -127,7 +127,7 @@ func PostToService[TCmd any, TResp any](
 
 				// jump out of retry loop and return error
 				return data, &ErrorHttp{
-					StatusCode: http.StatusInternalServerError,
+					StatusCode: http.StatusServiceUnavailable,
 					Message:    fmt.Sprintf("service unavailable: %v", err),
 				}
 			}
@@ -137,7 +137,7 @@ func PostToService[TCmd any, TResp any](
 				slog.String("err", err.Error()))
 
 			return data, &ErrorHttp{
-				StatusCode: http.StatusInternalServerError,
+				StatusCode: http.StatusServiceUnavailable,
 				Message:    fmt.Sprintf("service unavailable: %v", err),
 			}
 		}
@@ -157,7 +157,7 @@ func PostToService[TCmd any, TResp any](
 		}
 
 		// read response body
-		body, err := io.ReadAll(response.Body)
+		body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBodyBytes))
 		response.Body.Close()
 		if err != nil {
 
@@ -203,7 +203,6 @@ func PostToService[TCmd any, TResp any](
 				// apply backoff/jitter to 5xx
 				backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
 				attemptLogger.Error(fmt.Sprintf("attempt %d - POST request to %s service's endpoint %s failed: (retrying in %v...)", attempt+1, caller.ServiceName, endpoint, backoff),
-					slog.Int("status_code", e.StatusCode),
 					slog.String("err", e.Message),
 					slog.Duration("retry.backoff", backoff),
 					slog.Bool("will_retry", willRetry(e.StatusCode, attempt, caller.RetryConfig.MaxRetries)),
@@ -238,7 +237,7 @@ func PostToService[TCmd any, TResp any](
 
 	// should never reach here, but just in case
 	return data, &ErrorHttp{
-		StatusCode: http.StatusInternalServerError,
+		StatusCode: http.StatusServiceUnavailable,
 		Message:    fmt.Sprintf("retries exhausted: %v", lastErr),
 	}
 }

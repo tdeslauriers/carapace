@@ -158,7 +158,7 @@ func PutToService[TCmd any, TResp any](
 		}
 
 		// read response body
-		body, err := io.ReadAll(response.Body)
+		body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBodyBytes))
 		response.Body.Close()
 		if err != nil {
 

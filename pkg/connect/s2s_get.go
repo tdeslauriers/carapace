@@ -52,7 +52,7 @@ func GetServiceData[T any](
 	var lastErr error
 
 	// retry loop
-	for attempt := 0; attempt <= caller.RetryConfig.MaxRetries; attempt++ {
+	for attempt := 0; attempt < caller.RetryConfig.MaxRetries; attempt++ {
 
 		// add attempt counter to logger
 		attemptLogger := baseLogger.With(slog.Int("retry.attempt", attempt))
@@ -95,7 +95,6 @@ func GetServiceData[T any](
 						// apply backoff/jitter to timeout
 						backoff := addJitter(attempt, caller.RetryConfig.BaseBackoff, caller.RetryConfig.MaxBackoff)
 						attemptLogger.Error("request timed out",
-							slog.Int("status_code", response.StatusCode),
 							slog.String("err", err.Error()),
 							slog.Duration("retry.backoff", backoff),
 							slog.Bool("retry.will_retry", willRetry(response.StatusCode, attempt, caller.RetryConfig.MaxRetries)),
@@ -144,7 +143,7 @@ func GetServiceData[T any](
 		}
 
 		// read response body
-		body, err := io.ReadAll(response.Body)
+		body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBodyBytes))
 		response.Body.Close()
 		if err != nil {
 

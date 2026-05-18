@@ -9,6 +9,8 @@ import (
 	"github.com/tdeslauriers/carapace/internal/util"
 )
 
+const maxResponseBodyBytes int64 = 5 << 20 // 5MB ceiling to guard against runaway response bodies
+
 var rng *rand.Rand
 
 // retries and jitter
@@ -78,6 +80,6 @@ func NewS2sCaller(url, name string, client TlsClient, retry RetryConfiguration) 
 		logger: slog.Default().
 			With(slog.String(util.PackageKey, util.PackageConnect)).
 			With(slog.String(util.ComponentKey, util.ComponentS2sCaller)).
-			With(slog.String(util.ServiceKey, util.FrameworkCarapace)),
+			With(slog.String(util.FrameworkKey, util.FrameworkCarapace)),
 	}
 }

@@ -31,7 +31,7 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 			Message:    errMsg.Message,
 		}
 		e.SendJsonErr(w)
-
+		return
 	case http.StatusUnauthorized:
 
 		// s2s token unauthorized
@@ -41,7 +41,7 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 				Message:    "internal server error",
 			}
 			e.SendJsonErr(w)
-			break
+			return
 		}
 
 		// user token unauthorized
@@ -51,7 +51,7 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 				Message:    "unauthorized",
 			}
 			e.SendJsonErr(w)
-			break
+			return
 		}
 
 		// all other unauthorized errors
@@ -60,7 +60,7 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 			Message:    errMsg.Message,
 		}
 		e.SendJsonErr(w)
-
+		return
 	case http.StatusForbidden:
 		// call returned forbidden for s2s token
 		if strings.Contains(errMsg.Message, jwt.S2sForbiddenErrMsg) {
@@ -70,7 +70,7 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 				Message:    "internal server error", // this should never happen --> means I didnt provision the service correctly
 			}
 			e.SendJsonErr(w)
-			break
+			return
 		}
 
 		// call returned forbidden for user token
@@ -80,7 +80,7 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 				Message:    "forbidden",
 			}
 			e.SendJsonErr(w)
-			break
+			return
 		}
 
 		// call returned forbidden for permissions
@@ -90,22 +90,30 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 				Message:    "forbidden",
 			}
 			e.SendJsonErr(w)
-			break
+			return
 		}
+
+		// all other forbidden errors
+		e := ErrorHttp{
+			StatusCode: http.StatusForbidden,
+			Message:    errMsg.Message,
+		}
+		e.SendJsonErr(w)
+		return
 	case http.StatusNotFound:
 		e := ErrorHttp{
 			StatusCode: http.StatusNotFound,
 			Message:    errMsg.Message,
 		}
 		e.SendJsonErr(w)
-
+		return
 	case http.StatusMethodNotAllowed:
 		e := ErrorHttp{
 			StatusCode: http.StatusInternalServerError,
 			Message:    "internal server error", // this should never happen -> means calling service was written using wrong method
 		}
 		e.SendJsonErr(w)
-
+		return
 		// returns conflict error from the upstream service, eg. "username unavailable"
 	case http.StatusConflict:
 		e := ErrorHttp{
@@ -113,7 +121,7 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 			Message:    errMsg.Message,
 		}
 		e.SendJsonErr(w)
-
+		return
 		// this returns validation errors from the upstream service
 	case http.StatusUnprocessableEntity:
 		e := ErrorHttp{
@@ -121,7 +129,7 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 			Message:    errMsg.Message,
 		}
 		e.SendJsonErr(w)
-
+		return
 		// this returns data processing errors from the upstream service like "unexpected content type"
 	case http.StatusUnsupportedMediaType:
 		e := ErrorHttp{
@@ -129,19 +137,20 @@ func (caller *S2sCaller) RespondUpstreamError(err error, w http.ResponseWriter) 
 			Message:    errMsg.Message,
 		}
 		e.SendJsonErr(w)
-
+		return
 	case http.StatusServiceUnavailable:
 		e := ErrorHttp{
 			StatusCode: http.StatusServiceUnavailable,
 			Message:    "required service unavailable",
 		}
 		e.SendJsonErr(w)
-
+		return
 	default:
 		e := ErrorHttp{
 			StatusCode: http.StatusInternalServerError,
 			Message:    "internal server error",
 		}
 		e.SendJsonErr(w)
+		return
 	}
 }
