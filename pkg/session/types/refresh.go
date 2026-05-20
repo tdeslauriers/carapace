@@ -37,6 +37,7 @@ type S2sRefresh struct {
 	RefreshToken string          `db:"refresh_token"`
 	ClientId     string          `db:"client_uuid"`
 	ClientIndex  string          `db:"client_index"`
+	ClientName   string          `db:"client_name"`
 	CreatedAt    data.CustomTime `db:"created_at"`
 	Revoked      bool            `db:"revoked"`
 }

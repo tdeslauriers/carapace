@@ -121,6 +121,8 @@ func ObtainHttpTelemetry(request *http.Request, logger *slog.Logger) *Telemetry 
 			slog.String("host", host),
 			slog.String("referrer", referrer),
 		)
+	} else {
+		tp.GenerateSpanId() // generate new span id for the current service's operation
 	}
 
 	return &Telemetry{
@@ -190,6 +192,8 @@ func ObtainGrpcTelemetry(ctx context.Context, method string, logger *slog.Logger
 			slog.String("user_agent", userAgent),
 			slog.String("authority", authority),
 		)
+	} else {
+		tp.GenerateSpanId() // generate new span id for the current service's operation
 	}
 
 	return &Telemetry{
