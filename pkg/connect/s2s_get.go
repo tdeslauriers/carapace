@@ -97,7 +97,7 @@ func GetServiceData[T any](
 						attemptLogger.Error("request timed out",
 							slog.String("err", err.Error()),
 							slog.Duration("retry.backoff", backoff),
-							slog.Bool("retry.will_retry", willRetry(response.StatusCode, attempt, caller.RetryConfig.MaxRetries)),
+							slog.Bool("retry.will_retry", willRetry(0, attempt, caller.RetryConfig.MaxRetries)),
 						)
 						time.Sleep(backoff)
 						continue // jump to next loop iteration

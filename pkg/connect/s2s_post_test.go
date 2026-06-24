@@ -12,11 +12,6 @@ func TestPostToService(t *testing.T) {
 	payload := testPayload{ID: "abc", Name: "test"}
 	cmd := testCmd{Field: "value"}
 
-	// NOTE: The POST timeout-retry path (attempt < MaxRetries-1 while timing out)
-	// dereferences response.StatusCode when response is nil, causing a panic.
-	// Only the timeout-exhausted path is exercised here.
-	// See the review finding: nil pointer dereference in s2s_post.go.
-
 	tests := []struct {
 		name            string
 		ctx             func() context.Context
@@ -288,18 +283,29 @@ func TestPostToService(t *testing.T) {
 			wantCallCount:   2,
 		},
 		// ---- network errors -------------------------------------------------
-		// MaxRetries=1: attempt 0 times out, guard (0<0) is false → exhausted path,
-		// avoiding the nil-deref retry path.
+		// POST guard is attempt < MaxRetries-1.
+		// MaxRetries=2: attempt 0 times out (guard 0<1 → retry), attempt 1 succeeds.
 		{
-			name:            "timeout with no retries remaining returns 503",
+			name:          "timeout retries and then succeeds",
+			ctx:           noTelemetryCtx,
+			maxRetries:    2,
+			responses:     []*http.Response{nil, jsonResp(t, http.StatusCreated, payload)},
+			errs:          []error{&mockNetError{isTimeout: true}, nil},
+			wantData:      &payload,
+			wantCallCount: 2,
+		},
+		{
+			// MaxRetries=2: attempt 0 times out (guard 0<1 → retry), attempt 1 times out
+			// (guard 1<1 false → exhausted return inside loop).
+			name:            "timeout retries exhausted returns 503",
 			ctx:             noTelemetryCtx,
-			maxRetries:      1,
-			responses:       []*http.Response{nil},
-			errs:            []error{&mockNetError{isTimeout: true}},
+			maxRetries:      2,
+			responses:       []*http.Response{nil, nil},
+			errs:            []error{&mockNetError{isTimeout: true}, &mockNetError{isTimeout: true}},
 			wantErr:         true,
 			wantStatusCode:  http.StatusServiceUnavailable,
 			wantMsgContains: "retries exhausted: timeout",
-			wantCallCount:   1,
+			wantCallCount:   2,
 		},
 		{
 			name:           "non-timeout network error returns 503",

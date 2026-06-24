@@ -11,14 +11,6 @@ import (
 func TestGetServiceData(t *testing.T) {
 	payload := testPayload{ID: "abc", Name: "test"}
 
-	// NOTE: The GET timeout path cannot be safely tested:
-	// - The loop bound and the inner retry guard are both "attempt < MaxRetries",
-	//   so the in-switch "retries exhausted: timeout" branch is dead code.
-	// - Any timeout that occurs inside the loop will try to retry and will
-	//   dereference response.StatusCode (nil) → panic.
-	// These are known bugs identified in the review; fix them before adding
-	// a GET timeout test.
-
 	tests := []struct {
 		name            string
 		ctx             func() context.Context
@@ -277,6 +269,31 @@ func TestGetServiceData(t *testing.T) {
 			responses:       []*http.Response{errResp(t, http.StatusServiceUnavailable, "down"), errResp(t, http.StatusServiceUnavailable, "down")},
 			errs:            []error{nil, nil},
 			wantErr:         true,
+			wantMsgContains: "retries exhausted",
+			wantCallCount:   2,
+		},
+		// ---- network errors -------------------------------------------------
+		// GET guard is attempt < MaxRetries (same as loop bound).
+		// MaxRetries=2: attempt 0 times out (guard 0<2 → retry), attempt 1 succeeds.
+		{
+			name:          "timeout retries and then succeeds",
+			ctx:           noTelemetryCtx,
+			maxRetries:    2,
+			responses:     []*http.Response{nil, jsonResp(t, http.StatusOK, payload)},
+			errs:          []error{&mockNetError{isTimeout: true}, nil},
+			wantData:      &payload,
+			wantCallCount: 2,
+		},
+		{
+			// MaxRetries=2: attempt 0 times out (guard 0<2 → retry), attempt 1 times out
+			// (guard 1<2 → retry), loop exits, post-loop fallback returns "retries exhausted".
+			name:            "timeout retries exhausted returns 503",
+			ctx:             noTelemetryCtx,
+			maxRetries:      2,
+			responses:       []*http.Response{nil, nil},
+			errs:            []error{&mockNetError{isTimeout: true}, &mockNetError{isTimeout: true}},
+			wantErr:         true,
+			wantStatusCode:  http.StatusServiceUnavailable,
 			wantMsgContains: "retries exhausted",
 			wantCallCount:   2,
 		},

@@ -109,7 +109,7 @@ func PostToService[TCmd any, TResp any](
 						attemptLogger.Error("request timed out",
 							slog.String("err", err.Error()),
 							slog.Duration("retry.backoff", backoff),
-							slog.Bool("will_retry", willRetry(response.StatusCode, attempt, caller.RetryConfig.MaxRetries)),
+							slog.Bool("will_retry", willRetry(0, attempt, caller.RetryConfig.MaxRetries)),
 						)
 						time.Sleep(backoff)
 						continue // jump out of the loop to next iteration
