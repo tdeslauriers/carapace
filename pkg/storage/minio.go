@@ -207,3 +207,27 @@ func (m *minioStorage) PutObject(ctx context.Context, key string, data []byte, c
 
 	return nil
 }
+
+// DeleteObject is the concrete implementation of the ObjectStorage interface method
+// which removes an object from the MinIO storage service.
+func (m *minioStorage) DeleteObject(ctx context.Context, key string) error {
+
+	if err := validate.ValidateKey(key); err != nil {
+		return fmt.Errorf("invalid object key: %v", err)
+	}
+
+	// check the object exists in the bucket before attempting to remove it
+	if _, err := m.client.StatObject(ctx, m.bucket, key, minio.StatObjectOptions{}); err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return fmt.Errorf("object '%s' does not exist in bucket '%s'", key, m.bucket)
+		}
+		return fmt.Errorf("failed to stat storage object '%s': %v", key, err)
+	}
+
+	// remove the object from the bucket
+	if err := m.client.RemoveObject(ctx, m.bucket, key, minio.RemoveObjectOptions{}); err != nil {
+		return fmt.Errorf("failed to delete object '%s' from bucket '%s': %v", key, m.bucket, err)
+	}
+
+	return nil
+}

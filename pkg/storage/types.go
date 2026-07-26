@@ -36,6 +36,9 @@ type ObjectStorage interface {
 
 	// PutObject uploads an object to the MinIO storage service.
 	PutObject(ctx context.Context, key string, data []byte, contentType string) error
+
+	// DeleteObject removes an object from the storage service.
+	DeleteObject(ctx context.Context, key string) error
 }
 
 // ReadSeekCloser is an interface that combines io.Reader, io.Seeker, and io.Closer, it is
