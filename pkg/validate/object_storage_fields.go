@@ -109,6 +109,38 @@ func IsAllowedEvent(eventName string) bool {
 	return allowedS3Events[eventName]
 }
 
+// ValidateKeyPrefix checks if the provided object key prefix is valid.
+func ValidateKeyPrefix(prefix string) error {
+
+	// an empty prefix would list the entire bucket for example -> require explicit intent
+	if prefix == "" {
+		return fmt.Errorf("prefix must not be empty")
+	}
+
+	// prefix can be shorter than a full key, but not longer
+	if len(prefix) > KeyMaxLength {
+		return fmt.Errorf("prefix must not exceed %d characters", KeyMaxLength)
+	}
+
+	// no path traversal
+	if strings.Contains(prefix, "..") {
+		return fmt.Errorf("prefix must not contain path traversal sequences")
+	}
+
+	// no null bytes
+	if strings.ContainsRune(prefix, '\x00') {
+		return fmt.Errorf("prefix must not contain null bytes")
+	}
+
+	// object keys in the bucket are relative -> no leading slash
+	if strings.HasPrefix(prefix, "/") {
+		return fmt.Errorf("prefix must not begin with a forward slash")
+	}
+
+	return nil
+}
+
+// ValidateKey checks if the provided object key is valid.
 func ValidateKey(key string) error {
 	key = strings.TrimSpace(key)
 

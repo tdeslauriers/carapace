@@ -117,6 +117,95 @@ func TestValidateKey(t *testing.T) {
 	}
 }
 
+func TestValidateKeyPrefix(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantErr   bool
+		errSubstr string
+	}{
+		{
+			name:    "valid_simple_prefix",
+			input:   "photo.jpg",
+			wantErr: false,
+		},
+		{
+			name:    "valid_path_style",
+			input:   "users/123/",
+			wantErr: false,
+		},
+		{
+			name:    "valid_single_char",
+			input:   "a",
+			wantErr: false,
+		},
+		{
+			name:    "valid_with_unicode",
+			input:   "uploads/façade",
+			wantErr: false,
+		},
+		{
+			name:    "valid_exact_max",
+			input:   strings.Repeat("a", KeyMaxLength),
+			wantErr: false,
+		},
+		{
+			name:      "invalid_empty",
+			input:     "",
+			wantErr:   true,
+			errSubstr: "must not be empty",
+		},
+		{
+			name:      "invalid_too_long",
+			input:     strings.Repeat("a", KeyMaxLength+1),
+			wantErr:   true,
+			errSubstr: "must not exceed",
+		},
+		{
+			name:      "invalid_path_traversal_relative",
+			input:     "../../etc/passwd",
+			wantErr:   true,
+			errSubstr: "path traversal",
+		},
+		{
+			name:      "invalid_path_traversal_embedded",
+			input:     "uploads/../../../secret",
+			wantErr:   true,
+			errSubstr: "path traversal",
+		},
+		{
+			name:      "invalid_null_byte",
+			input:     "uploads/file\x00name",
+			wantErr:   true,
+			errSubstr: "null bytes",
+		},
+		{
+			name:      "invalid_leading_slash",
+			input:     "/uploads/photo.jpg",
+			wantErr:   true,
+			errSubstr: "forward slash",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateKeyPrefix(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for input %q", tt.input)
+				}
+				if tt.errSubstr != "" && !strings.Contains(err.Error(), tt.errSubstr) {
+					t.Fatalf("expected error containing %q, got %q", tt.errSubstr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error for input %q: %v", tt.input, err)
+			}
+		})
+	}
+}
+
 func TestIsAllowedEvent(t *testing.T) {
 	tests := []struct {
 		name  string

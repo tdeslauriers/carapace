@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -58,6 +59,35 @@ type minioStorage struct {
 	expiry time.Duration
 
 	logger *slog.Logger
+}
+
+// ListObjects is the concrete implementation of the ObjectStorage interface method
+// which lists all object keys in the MinIO storage service that begin with the provided prefix.
+// NOTE: the underlying SDK call streams results over a channel and handles pagination
+// internally, so this is safe for prefixes matching many objects.
+func (m *minioStorage) ListObjects(ctx context.Context, prefix string) ([]string, error) {
+
+	// validate the prefix before touching the SDK
+	if err := validate.ValidateKeyPrefix(prefix); err != nil {
+		return nil, fmt.Errorf("invalid object prefix: %v", err)
+	}
+
+	keys := make([]string, 0)
+	for obj := range m.client.ListObjects(ctx, m.bucket, minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+	}) {
+
+		// each streamed result may carry an error, e.g., ctx cancellation or a
+		// service error mid-listing -> fail closed rather than return a partial list
+		if obj.Err != nil {
+			return nil, fmt.Errorf("failed to list objects with prefix '%s' in bucket '%s': %v", prefix, m.bucket, obj.Err)
+		}
+
+		keys = append(keys, obj.Key)
+	}
+
+	return keys, nil
 }
 
 // WithObject is the concrete implementation of the ObjectStorage interface method
@@ -203,6 +233,52 @@ func (m *minioStorage) PutObject(ctx context.Context, key string, data []byte, c
 	)
 	if err != nil {
 		return fmt.Errorf("failed to put object '%s' to bucket '%s': %v", key, m.bucket, err)
+	}
+
+	return nil
+}
+
+// DeleteObjects is the concrete implementation of the ObjectStorage interface method
+// which removes multiple objects from the MinIO storage service via the SDK's
+// streaming bulk-remove. Unlike DeleteObject, it does not stat each key first:
+// non-existent keys are silently skipped by the service, so the operation is idempotent.
+func (m *minioStorage) DeleteObjects(ctx context.Context, keys []string) error {
+
+	// nothing to do
+	if len(keys) == 0 {
+		return nil
+	}
+
+	// validate every key before touching the SDK -> all-or-nothing on validation
+	for _, key := range keys {
+		if err := validate.ValidateKey(key); err != nil {
+			return fmt.Errorf("invalid object key '%s': %v", key, err)
+		}
+	}
+
+	// stream the keys to the SDK's bulk remove
+	objectsCh := make(chan minio.ObjectInfo)
+	go func() {
+		defer close(objectsCh)
+		for _, key := range keys {
+			select {
+			case <-ctx.Done():
+				return
+			case objectsCh <- minio.ObjectInfo{Key: key}:
+			}
+		}
+	}()
+
+	// collect any per-object removal errors
+	var errs []error
+	for rErr := range m.client.RemoveObjects(ctx, m.bucket, objectsCh, minio.RemoveObjectsOptions{}) {
+		if rErr.Err != nil {
+			errs = append(errs, fmt.Errorf("failed to delete object '%s' from bucket '%s': %v", rErr.ObjectName, m.bucket, rErr.Err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	return nil

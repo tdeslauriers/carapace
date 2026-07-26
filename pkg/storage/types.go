@@ -21,6 +21,11 @@ type Config struct {
 // It can be implemented by various object storage clients, such as MinIO, AWS S3, etc.
 type ObjectStorage interface {
 
+	// ListObjects lists all object keys in the storage service that begin with the
+	// provided prefix, e.g., "2026/0074b422-f69c-4f0b-8a9e-72dff7b876fe" will match
+	// the original image and all of its derived resolution/tile/blur files.
+	ListObjects(ctx context.Context, prefix string) ([]string, error)
+
 	// GetSignedUrl generates a signed URL for accessing an object in the storage service.
 	GetSignedUrl(ctx context.Context, objectKey string) (*url.URL, error)
 
@@ -36,6 +41,11 @@ type ObjectStorage interface {
 
 	// PutObject uploads an object to the MinIO storage service.
 	PutObject(ctx context.Context, key string, data []byte, contentType string) error
+
+	// DeleteObjects removes multiple objects from the storage service in a single
+	// streaming operation. Keys that do not exist are silently skipped by the
+	// storage service, making this operation idempotent.
+	DeleteObjects(ctx context.Context, keys []string) error
 
 	// DeleteObject removes an object from the storage service.
 	DeleteObject(ctx context.Context, key string) error
