@@ -16,9 +16,9 @@ var (
 // mustNewCryptor creates a Cryptor or immediately fails the test.
 func mustNewCryptor(t *testing.T, key []byte) Cryptor {
 	t.Helper()
-	c, err := NewServiceAesGcmKey(key)
+	c, err := NewServiceAesGcm(key)
 	if err != nil {
-		t.Fatalf("setup: NewServiceAesGcmKey failed: %v", err)
+		t.Fatalf("setup: NewServiceAesGcm failed: %v", err)
 	}
 	return c
 }
@@ -100,14 +100,14 @@ func TestGenerateAesGcmKey(t *testing.T) {
 		t.Error("two consecutive calls produced the same key: possible RNG failure")
 	}
 
-	if _, err := NewServiceAesGcmKey(k); err != nil {
-		t.Errorf("generated key rejected by NewServiceAesGcmKey: %v", err)
+	if _, err := NewServiceAesGcm(k); err != nil {
+		t.Errorf("generated key rejected by NewServiceAesGcm: %v", err)
 	}
 
 	t.Logf("sample AES-256 key (base64): %s", base64.StdEncoding.EncodeToString(k))
 }
 
-func TestNewServiceAesGcmKey(t *testing.T) {
+func TestNewServiceAesGcm(t *testing.T) {
 	tests := []struct {
 		name      string
 		key       []byte
@@ -171,7 +171,7 @@ func TestNewServiceAesGcmKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, err := NewServiceAesGcmKey(tt.key)
+			c, err := NewServiceAesGcm(tt.key)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
